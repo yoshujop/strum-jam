@@ -33,6 +33,9 @@ test harness, and the TODO list in priority order.
 - `node test/drumsheet.js out.png <level>`: drummer frames of the real in-game groove; `node test/drumgame.js`
   checks his clock is smooth in a real run.
 
+- `node test/suggestshot.js`, `node test/battleshot.js`, `node test/curatedshot.js` (needs /tmp/career.json):
+  song suggestions, a two-player battle end to end, ready-made careers + career share links.
+
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`
 (full standalone page). `dist/` is gitignored.

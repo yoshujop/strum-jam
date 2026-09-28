@@ -25,6 +25,7 @@ const UI = {
     this.letters = [...document.querySelectorAll('#logo .lt')];
     this.bind();
     Story.init();
+    Suggest.init();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -33,13 +34,14 @@ const UI = {
       window.claude.use('downloads').then(d => { this.downloads = d; this.refreshEnv(); }).catch(() => {});
     }
     requestAnimationFrame(() => this.loop());
+    if (location.hash) this.openShared();
   },
 
   /* ---------- helpers ---------- */
   show(name, instant){
     const swap = () => {
       this.screen = name;
-      for (const s of ['title', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
+      for (const s of ['title', 'play', 'battle', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
       if (name === 'title') Story.renderChips();
       if (name === 'game') requestAnimationFrame(() => Stage.resize());
       if (name === 'title') TitleArt.resize();
@@ -150,6 +152,7 @@ const UI = {
     return b;
   },
   renderLists(){
+    Challenge.render();
     const lib = $('library'); lib.textContent = '';
     LIBRARY.forEach(s => lib.appendChild(this.card(validateSong(s, 'library'))));
     const mine = this.mine(), box = $('my-songs'); box.textContent = '';
@@ -502,6 +505,7 @@ const UI = {
     Stage.scene = t && L ? L.scene : null;
     const ok = G.start(this.chart, mode, t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
       : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
+      : mode === 'stage' && this.battleOpts ? this.battleOpts
       : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
     if (!ok) { this.show('song'); }
   },
@@ -591,12 +595,14 @@ const UI = {
     // story mode: record the run, say what it means for the career
     const so = this.storyCtx ? Story.record(r) : null, rs = $('res-story');
     this.resStory = so;
-    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : null;
+    const br = Battle.record(r), cr = !this.storyCtx && !br ? Challenge.record(r) : null;
+    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : br || cr;
     rs.hidden = !sr; rs.className = 'res-story' + (sr && sr.big ? ' big' : ''); rs.innerHTML = sr ? sr.html : '';
+    rs.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => Battle.after());
     $('btn-res-home').hidden = !!this.storyCtx; $('btn-res-career').hidden = !this.storyCtx;
     Music.fanfareNext();
     this.show('results').then(() => {
-      if (so && (so.levelClear || so.mastered)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
+      if ((so && (so.levelClear || so.mastered)) || (cr && cr.won) || (br && br.won)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
       setTimeout(() => { Sfx.stamp(); }, 380);
       const good = r.mode === 'practice' || ['S', 'A', 'B'].includes(r.grade);
       if (good) setTimeout(() => Fx.confetti(r.grade === 'S' ? 260 : 150), 420);
@@ -790,35 +796,49 @@ const UI = {
     if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty); const i = G.list.indexOf(ev); this.sideUpdate(ev, G.list[i + 1] || null); } }
   },
   musicBtn(){ const b = $('btn-music'); b.setAttribute('aria-pressed', String(Settings.musicOn)); b.textContent = Settings.musicOn ? '♪ Music on' : '♪ Music off'; },
-  openCode(mode){
+  // song and career codes: text anyone can paste, or a link that opens straight into the game
+  async openCode(mode){
     this.open('m-code');
     this.codeMode = mode;
-    $('code-msg').textContent = '';
-    if (mode === 'show') {
-      $('m-code-h').textContent = 'Song code';
-      $('code-help').textContent = this.inViewer ? 'Copy this code, then paste it into the Strum Jam game file on your computer (Paste a song code) to play with your guitar.' : 'Share this code, or paste it into another copy of Strum Jam.';
-      $('code-text').value = songToCode(this.song); $('code-text').readOnly = true;
-      $('btn-code-act').textContent = 'Copy';
+    $('code-msg').textContent = ''; $('btn-code-link').hidden = true;
+    const show = mode === 'show' || mode === 'career-show', career = mode.startsWith('career');
+    $('m-code-h').textContent = show ? (career ? 'Share this career' : 'Song code') : (career ? 'Paste a career code' : 'Paste a song code');
+    if (show) {
+      $('code-help').textContent = career ? 'Send this code (or the link) to a friend: they get the same eras and songs, with their own progress.'
+        : this.inViewer ? 'Copy this code, then paste it into the Strum Jam game file on your computer (Paste a song code) to play with your guitar.' : 'Share this code or the link, or paste it into another copy of Strum Jam.';
+      $('code-text').value = career ? await careerToCode(Story.cur) : songToCode(this.song); $('code-text').readOnly = true;
+      $('btn-code-act').textContent = 'Copy code'; $('btn-code-link').hidden = this.inViewer;
       $('code-text').select();
     } else {
-      $('m-code-h').textContent = 'Paste a song code';
-      $('code-help').textContent = 'Paste a code that starts with SJ1. (from the claude.ai version or a friend).';
+      $('code-help').textContent = career ? 'Paste a code that starts with SJC1. from a friend.' : 'Paste a code that starts with SJ1. (from the claude.ai version or a friend).';
       $('code-text').value = ''; $('code-text').readOnly = false;
-      $('btn-code-act').textContent = 'Load song';
+      $('btn-code-act').textContent = career ? 'Add career' : 'Load song';
       $('code-text').focus();
     }
   },
-  async codeAction(){
+  async codeAction(link){
     const ta = $('code-text');
-    if (this.codeMode === 'show') {
-      try { await navigator.clipboard.writeText(ta.value); $('code-msg').textContent = 'Copied.'; }
+    if (this.codeMode === 'show' || this.codeMode === 'career-show') {
+      const text = link ? location.href.split('#')[0] + '#' + (this.codeMode === 'show' ? 'song=' : 'career=') + ta.value : ta.value;
+      try { await navigator.clipboard.writeText(text); $('code-msg').textContent = link ? 'Link copied.' : 'Copied.'; }
       catch (e) { ta.select(); $('code-msg').textContent = 'Press Ctrl+C (or ⌘C) to copy.'; }
       return;
     }
     try {
+      if (this.codeMode === 'career-paste') { const c = await careerFromCode(ta.value); this.closeModal(); Story.openCareer(c.id); return; }
       const song = songFromCode(ta.value);
       this.saveMine(song); this.renderLists(); this.closeModal(); this.openSong(song);
     } catch (e) { $('code-msg').textContent = e.message; }
+  },
+  // a shared link: #song=SJ1… or #career=SJC1…
+  async openShared(){
+    const m = /^#(song|career)=(.+)$/.exec(location.hash || ''); if (!m) return;
+    history.replaceState(null, '', location.href.split('#')[0]);
+    try {
+      const code = decodeURIComponent(m[2]);
+      if (m[1] === 'career') { const c = await careerFromCode(code); Story.openCareer(c.id); }
+      else { const song = songFromCode(code); this.saveMine(song); this.renderLists(); this.openSong(song); }
+    } catch (e) { alert(e.message || 'That shared link didn’t work.'); }
   },
   openImport(pre){
     this.open('m-import');
@@ -899,8 +919,11 @@ const UI = {
     $('mic-chip').style.cursor = 'pointer'; $('mic-chip').onclick = () => this.openMic();
     $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
     $('btn-paste').onclick = () => this.openCode('paste');
+    $('btn-code-link').onclick = () => this.codeAction(true);
+    $('btn-career-share').onclick = () => { if (Story.cur) this.openCode('career-show'); };
+    $('btn-career-import').onclick = () => this.openCode('career-paste');
     $('btn-import').onclick = () => this.openImport(null);
-    $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('title'); };
+    $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('play'); };
     $('btn-song-code').onclick = () => this.openCode('show');
     $('btn-practice').onclick = () => this.startGame('practice');
     $('btn-stage').onclick = () => this.startGame('stage');
@@ -918,7 +941,7 @@ const UI = {
     $('btn-pause').onclick = () => { G.pause(); this.open('m-pause'); };
     $('btn-resume').onclick = () => this.closeModal();
     $('btn-restart').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.startGame(G.mode, true); };
-    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.show('song'); this.renderSong(); };
+    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); if (Battle.active()) { Battle.st.playing = false; this.battleOpts = null; Battle.renderTurn(); return; } this.show('song'); this.renderSong(); };
     $('btn-hear').onclick = () => { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev && ev.notes) { const how = AudioEngine.playChord(ev.notes, 'now:' + ev.label + '|' + ev.v.frets.join(',')); const b = $('btn-hear'); b.dataset.next = how === 'strum' ? 'arpeggio' : 'strum'; b.querySelector('small') && (b.querySelector('small').textContent = how === 'strum' ? 'tap again: arpeggio' : 'tap again: strum'); } };
     $('btn-skip').onclick = () => G.skip();
     // redraw the fretboard when the layout switches between phone and wide (e.g. rotating the phone)
@@ -931,7 +954,13 @@ const UI = {
 
     $('btn-again').onclick = () => this.startGame(G.mode, true);
     $('btn-res-song').onclick = () => { this.show('song'); this.renderSong(); };
-    $('btn-res-home').onclick = () => this.show('title');
+    $('btn-res-home').onclick = () => this.show('play');
+    $('btn-play').onclick = () => { Sfx.open(); this.show('play').then(() => $('search-input').focus()); };
+    $('btn-play-home').onclick = () => this.show('title');
+    $('btn-battle-home').onclick = () => { Battle.st = null; this.show('title'); };
+    $('btn-tune-play').onclick = () => $('btn-tune-title').click();
+    $('btn-mic-play').onclick = () => $('btn-mic-setup').click();
+    $('btn-battle').onclick = () => { Sfx.open(); Battle.open(); };
     $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li + 1 < ((Story.get(x.careerId) || {}).levels || []).length ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
@@ -998,7 +1027,7 @@ const UI = {
   loop(){
     this.frameN++;
     try {
-      Music.update(!Splash.on && ['title', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
+      Music.update(!Splash.on && ['title', 'play', 'battle', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
@@ -1123,27 +1152,29 @@ const TitleArt = {
     const bpm = 112, beat = playing ? Music.beat() : t * bpm / 60, ph = ((beat % 1) + 1) % 1;
     const now = playing && actx ? actx.currentTime : t;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
-    // spotlight + stage
-    // a record spinning on the turntable behind the band (33 1/3 rpm)
-    drawVinyl(c, W * 0.5, H * 0.46, W * 0.44, H * 0.42, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
-    const floorY = H * 0.83;
-    c.fillStyle = COL.coral; rr(c, W * 0.08, floorY - 4, W * 0.84, H * 0.1, 14); c.fill(); c.stroke();
+    // a record spinning behind the band at 33⅓ rpm: a true circle
+    const R = Math.min(W * 0.45, H * 0.4), vx = W * 0.5, vy = H * 0.42;
+    drawVinyl(c, vx, vy, R, R, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
     // floating chord cards
     ['G', 'C', 'D', 'Em'].forEach((name, i) => {
-      const x = W * (0.2 + i * 0.2), y = H * 0.17 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
+      const x = W * (0.2 + i * 0.2), y = H * 0.1 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
       const col = cardColor(name); c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
-      c.fillStyle = col; rr(c, -26, -18, 52, 36, 10); c.fill(); c.lineWidth = 3; c.stroke();
+      c.fillStyle = col; rr(c, -26, -18, 52, 36, 10); c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
       c.fillStyle = textOn(col); c.font = `22px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 0, 2); c.restore();
     });
-    const s = Math.min(H * 0.42, W * 0.3);
+    // the band sized and spaced so Pip (guitar neck out to the left) and the kit never overlap
+    const floorY = H * 0.64;
+    let s = Math.min(H * 0.32, W * 0.3);
+    const lay = s => { const h = s * 2.1, pipL = 0.8 * s, pipR = 0.5 * s, gap = 0.22 * s, dw = h * 0.72; return { h, total: pipL + pipR + gap + dw, pipL, pipR, gap, dw }; };
+    let L = lay(s); if (L.total > W * 0.94) { s *= W * 0.94 / L.total; L = lay(s); }
+    const x0 = W / 2 - L.total / 2, pipX0 = x0 + L.pipL, drumX0 = pipX0 + L.pipR + L.gap + L.dw / 2;
+    const pipX = Settings.lefty ? W - pipX0 : pipX0, drumX = Settings.lefty ? W - drumX0 : drumX0;
+    this.drawStage(c, W, H, floorY, beat, ph, playing);
     let hits = Music.hits;
     if (!playing) { hits = []; for (let n = 0; n < 2; n++) { const bb = Math.floor(beat) - n; hits.push({ t: bb * 60 / bpm, kind: bb % 2 ? 'snare' : 'kick' }); hits.push({ t: (bb + 0.5) * 60 / bpm, kind: 'hat' }); } }
     let strum = 0;
     if (playing) { for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (h.kind === 'gtr' && h.t <= now) { const d = now - h.t; strum = d < 0.2 ? Math.sin(d / 0.2 * Math.PI) : 0; break; } } }
     else strum = ph < 0.25 ? Math.sin(ph / 0.25 * Math.PI) : 0;
-    drawPip(c, W * 0.34, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
-    c.save(); c.beginPath(); c.ellipse(W * 0.5, H * 0.46, W * 0.44, H * 0.42, 0, 0, Math.PI * 2); c.rect(0, H * 0.84, W, H); c.clip();
-    c.translate(0, H * 0.02); c.scale(1, 0.8); drawCrowd(c, W, H * 1.25, ph, playing ? 0.8 : 0.4, now, playing ? 3 : 0); c.restore();
     // the funk drummer, grooving to a simple beat (locked to the menu music when it plays)
     if (typeof FunkDrummer !== 'undefined') {
       const spb = 60 / bpm, tb = beat * spb, ev = [], b0 = Math.floor(beat);
@@ -1152,9 +1183,106 @@ const TitleArt = {
         if (((bb % 16) + 16) % 16 === 0) ev.push({ t, kind: 'crash' });
         if (((bb % 8) + 8) % 8 === 7) ev.push({ t: t + spb / 2, kind: 'tom' }, { t: t + spb * 0.75, kind: 'tom' }); }
       ev.sort((a, b) => a.t - b.t);
-      const h = s * 2.1;
-      FunkDrummer.draw(c, this.dSt || (this.dSt = FunkDrummer.create()), { x: Settings.lefty ? W * 0.28 : W * 0.72, floorY: floorY + h * 0.012, h, now: tb, beat, spb, level: playing ? 2 : 1, events: ev, playing: true, missAgo: 9 });
+      FunkDrummer.draw(c, this.dSt || (this.dSt = FunkDrummer.create()), { x: drumX, floorY: floorY + L.h * 0.012, h: L.h, now: tb, beat, spb, level: playing ? 2 : 1, events: ev, playing: true, missAgo: 9 });
     }
+    drawPip(c, pipX, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
+    // the crowd in front of the stage, whole: their round bodies sit above the bottom edge
+    const crowdH = H * 0.17;
+    c.save(); c.translate(0, H - crowdH * 1.02); const k = crowdH / 80; c.scale(k, k);
+    drawCrowd(c, W / k, 80 - 16, ph, playing ? 0.8 : 0.4, now, playing ? 3 : 0); c.restore();
+  },
+  // the stage: a wooden deck on a riser with chase lights, a lip of light along the front
+  drawStage(c, W, H, floorY, beat, ph, playing){
+    const x0 = W * 0.04, x1 = W * 0.96, top = floorY - H * 0.02, deck = H * 0.045, face = H * 0.085;
+    c.save(); c.lineJoin = 'round';
+    // glow on the deck from the lights above
+    const g = c.createRadialGradient(W / 2, top, 0, W / 2, top, W * 0.5); g.addColorStop(0, 'rgba(255,236,170,.55)'); g.addColorStop(1, 'rgba(255,236,170,0)');
+    c.fillStyle = g; c.fillRect(0, top - H * 0.3, W, H * 0.35);
+    // deck: warm planks in perspective
+    c.beginPath(); c.moveTo(x0 + W * 0.03, top); c.lineTo(x1 - W * 0.03, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
+    const dg = c.createLinearGradient(0, top, 0, top + deck); dg.addColorStop(0, '#F2C27A'); dg.addColorStop(1, '#D9954E');
+    c.fillStyle = dg; c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.save(); c.clip(); c.strokeStyle = 'rgba(122,62,20,.45)'; c.lineWidth = 1.5;
+    for (let i = 1; i < 14; i++) { const u = i / 14, xa = x0 + W * 0.03 + (x1 - x0 - W * 0.06) * u, xb = x0 + (x1 - x0) * u; c.beginPath(); c.moveTo(xa, top); c.lineTo(xb, top + deck); c.stroke(); }
+    c.beginPath(); c.moveTo(x0, top + deck * 0.5); c.lineTo(x1, top + deck * 0.5); c.stroke(); c.restore();
+    // riser front: deep plum with a gold trim and chase-light bulbs that run on the beat
+    const fy = top + deck;
+    c.fillStyle = '#3B2366'; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.fillStyle = '#2A1850'; c.fillRect(x0 + 4, fy + face * 0.62, x1 - x0 - 8, face * 0.3);
+    c.fillStyle = COL.sun; c.fillRect(x0 + 2, fy + 1, x1 - x0 - 4, 4);
+    const n = Math.max(8, Math.round((x1 - x0) / 30)), step = Math.floor(beat * 2);
+    for (let i = 0; i < n; i++) {
+      const x = x0 + (i + 0.5) * (x1 - x0) / n, y = fy + face * 0.34, on = reduceMotion ? i % 2 === 0 : (i + step) % 3 === 0;
+      const r = Math.max(3, face * 0.13);
+      if (on) { c.fillStyle = 'rgba(255,214,90,.35)'; c.beginPath(); c.arc(x, y, r * 2.2, 0, Math.PI * 2); c.fill(); }
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = on ? '#FFE37A' : '#6B4E8F'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
+    }
+    c.restore();
+  },
+};
+
+/* ---------- suggestions while typing (songs on the search box, artists on the Story box) ---------- */
+const Suggest = {
+  attach(input, o){
+    const box = document.createElement('div'); box.className = 'sugg-list'; box.id = input.id + '-sugg'; box.setAttribute('role', 'listbox'); box.hidden = true;
+    input.parentNode.style.position = 'relative'; input.parentNode.appendChild(box);
+    input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', box.id); input.setAttribute('aria-expanded', 'false');
+    const st = { items: [], hi: -1, t: 0, ctl: null, q: '' };
+    const close = () => { box.hidden = true; input.setAttribute('aria-expanded', 'false'); st.hi = -1; };
+    const paint = () => {
+      box.innerHTML = st.items.map((it, i) => `<div class="sg${i === st.hi ? ' hi' : ''}" role="option" id="${box.id}-${i}" aria-selected="${i === st.hi}" data-i="${i}">${o.render(it)}</div>`).join('');
+      box.hidden = !st.items.length; input.setAttribute('aria-expanded', String(!box.hidden));
+      if (st.hi >= 0) input.setAttribute('aria-activedescendant', box.id + '-' + st.hi); else input.removeAttribute('aria-activedescendant');
+    };
+    const pick = i => { const it = st.items[i]; if (!it) return; close(); st.items = []; o.pick(it); };
+    input.addEventListener('input', () => {
+      clearTimeout(st.t); const q = input.value.trim();
+      if (q.length < 2) { st.items = []; close(); return; }
+      st.t = setTimeout(async () => {
+        if (st.ctl) st.ctl.abort(); const ctl = st.ctl = new AbortController(); st.q = q;
+        try { const items = await o.fetch(q, ctl.signal); if (ctl.signal.aborted || input.value.trim() !== q || document.activeElement !== input) return; st.items = items.slice(0, 8); st.hi = -1; paint(); }
+        catch (e) { /* suggestions are a nicety: the full search still works */ }
+      }, 260);
+    });
+    input.addEventListener('keydown', e => {
+      if (box.hidden) return;
+      if (e.key === 'ArrowDown') { st.hi = (st.hi + 1) % st.items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { st.hi = (st.hi - 1 + st.items.length) % st.items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'Enter' && st.hi >= 0) { e.preventDefault(); e.stopPropagation(); pick(st.hi); }
+      else if (e.key === 'Escape') { close(); e.stopPropagation(); }
+    });
+    input.addEventListener('blur', () => setTimeout(close, 150));
+    input.form && input.form.addEventListener('submit', () => { clearTimeout(st.t); if (st.ctl) st.ctl.abort(); close(); });
+    box.addEventListener('pointerdown', e => { const d = e.target.closest('[data-i]'); if (d) { e.preventDefault(); pick(+d.dataset.i); } });
+  },
+  // a recording that's in the chord dataset (a quick local check on the embedded index)
+  inData(r){ const tv = Lookup.normTitle(r.title), av = Lookup.artistVariants(r.artist); return tv.some(t => av.some(a => Lookup.findKey(t + '|' + a).length)); },
+  init(){
+    Suggest.attach($('search-input'), {
+      fetch: async (q, signal) => {
+        const words = q.toLowerCase().split(/\s+/);
+        const local = [...UI.mine(), ...LIBRARY.map(s => validateSong(s, 'library'))].filter(s => words.every(w => (s.title + ' ' + s.artist).toLowerCase().includes(w))).slice(0, 3).map(song => ({ song }));
+        let recs = [];
+        try { recs = await Lookup.itunes(q, { signal, limit: 12 }); } catch (e) { if (e.name === 'AbortError') throw e; }
+        // originals first (no live cuts, covers or karaoke), the ones with chord data ahead of the rest
+        const seen = new Set(), out = [];
+        for (const r of recs) { const k = Lookup.normTitle(r.title)[0] + '|' + Lookup.normArtist(r.artist); if (seen.has(k) || (Lookup.isVersion(r) && !Lookup.VER.test(q))) continue; seen.add(k); out.push({ rec: r, data: Suggest.inData(r) }); }
+        out.sort((a, b) => b.data - a.data);
+        return [...local, ...out.slice(0, 8 - local.length)];
+      },
+      render: it => it.song ? `<span class="noart lib">♪</span><span class="st"><b>${esc(it.song.title)}</b><small>${esc(it.song.artist || '')} · ${it.song.source === 'library' ? 'Strum Jam library' : 'your songs'}</small></span>`
+        : `${it.rec.art ? `<img alt="" src="${esc(it.rec.art)}">` : '<span class="noart"></span>'}<span class="st"><b>${esc(it.rec.title)}</b><small>${esc(it.rec.artist)}${it.rec.year ? ' · ' + it.rec.year : ''}</small></span>${it.data ? '<em>in chord data</em>' : ''}`,
+      pick: it => { if (it.song) { $('search-input').value = ''; UI.openSong(it.song); } else { $('search-input').value = it.rec.title + ' ' + it.rec.artist; UI.pickRecording(it.rec); } },
+    });
+    Suggest.attach($('story-input'), {
+      fetch: async (q, signal) => {
+        const j = await Lookup.getJson(Lookup.ITUNES + '?media=music&entity=musicArtist&limit=8&country=US&term=' + encodeURIComponent(q), { signal });
+        const seen = new Set();
+        return (j.results || []).filter(r => r.artistName && !seen.has(r.artistName.toLowerCase()) && seen.add(r.artistName.toLowerCase())).map(r => ({ name: r.artistName, genre: r.primaryGenreName || '' }));
+      },
+      render: it => `<span class="noart lib">★</span><span class="st"><b>${esc(it.name)}</b><small>${esc(it.genre)}</small></span>`,
+      pick: it => { $('story-input').value = it.name; $('story-input').focus(); },
+    });
   },
 };
 

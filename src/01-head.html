@@ -64,8 +64,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .logo .l2{color:var(--coral)}
 .logo.flash .w1 .lt:nth-child(odd){color:var(--sun)}
 .logo.flash .w2 .lt{color:var(--teal)}
-.tag{font-size:19px;font-weight:700;max-width:34ch;margin:14px 0 0}
-#title-canvas{width:100%;aspect-ratio:1.35;max-width:100%;display:block}
+#title-canvas{width:100%;aspect-ratio:1.2;max-width:100%;display:block}
 .title-art{position:relative;min-width:0}
 .search{display:flex;gap:10px;padding:12px;border:3px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
 .search input{border-width:0;background:transparent;font-size:20px;font-weight:700;min-width:0}
@@ -144,7 +143,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .splash.opening .splash-in{transform:translateY(-60vh) scale(.9);opacity:0}
 
 /* ---------- title extras ---------- */
-.ticker{position:relative;z-index:2;overflow:hidden;white-space:nowrap;background:var(--ink);color:var(--sun);font-family:var(--display);font-size:17px;padding:7px 0 5px;letter-spacing:.04em}
+.ticker{position:relative;z-index:2;overflow:hidden;white-space:nowrap;background:var(--ink);color:var(--sun);font-family:var(--display);font-size:22px;padding:10px 0 7px;letter-spacing:.04em}
 .tk{display:inline-flex;animation:tick 34s linear infinite}
 @keyframes tick{to{transform:translateX(-50%)}}
 #scr-title{isolation:isolate}
@@ -609,6 +608,114 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .fb-key{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;font-weight:800}
 .fb-key span{display:inline-flex;align-items:center;gap:4px}
 .fb-key i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+/* ---------- suggestions ---------- */
+.sugg-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;display:grid;max-height:min(420px,60vh);overflow-y:auto;border:3px solid var(--ink);border-radius:16px;background:var(--paper);box-shadow:0 6px 0 var(--ink);color:var(--ink)}
+.sugg-list[hidden]{display:none}
+.sg{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;cursor:pointer;border-bottom:2px solid rgba(30,27,46,.08)}
+.sg:last-child{border-bottom:0}
+.sg.hi,.sg:hover{background:var(--sun)}
+.sg img,.sg .noart{width:44px;height:44px;border-radius:8px;border:2px solid var(--ink);object-fit:cover;display:grid;place-items:center;background:var(--paper2);font-weight:800}
+.sg .noart.lib{background:var(--coral);color:#fff;font-size:20px}
+.sg .st{display:grid;min-width:0}
+.sg b{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg small{font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sg em{font-style:normal;font-weight:800;font-size:11px;padding:2px 8px;border:2px solid var(--ink);border-radius:999px;background:var(--mint);white-space:nowrap}
+/* ---------- setlist challenge ---------- */
+#challenge-box{margin-top:18px}
+.ch-promo{position:relative;display:grid;gap:2px;width:100%;padding:14px 18px;border:4px solid var(--ink);border-radius:20px;background:var(--teal);color:var(--ink);box-shadow:0 6px 0 var(--ink);text-align:left;cursor:pointer;transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+.ch-promo:hover{transform:translateY(-3px) rotate(-.4deg)}
+.ch-promo b{font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.ch-promo span{font-weight:700}
+.ch-promo .mi{position:absolute;right:14px;top:8px;font-size:40px}
+.ch-card{display:grid;gap:10px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
+.ch-card.won{background:var(--mint)}
+.ch-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.ch-card p{margin:0;font-weight:600}
+.ch-need{display:flex;gap:6px;align-items:center;font-weight:800}
+.ch-need button{min-width:40px;padding:3px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;font:inherit;font-weight:800;cursor:pointer}
+.ch-need button.on{background:var(--sun)}
+.ch-pick{display:grid;gap:6px;max-height:320px;overflow-y:auto}
+.ch-bar{height:14px;border:3px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}.ch-bar i{display:block;height:100%;background:var(--mint)}
+.ch-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ch-song{display:grid;grid-template-columns:36px 1fr;gap:8px;align-items:center;padding:8px 10px;border:3px solid var(--ink);border-radius:14px;background:#fff;text-align:left;font:inherit;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.ch-song.ok{background:#E9FBEF}
+.ch-song .n{display:grid;place-items:center;width:36px;height:36px;border:3px solid var(--ink);border-radius:10px;background:var(--sun);font-family:var(--display);font-size:20px}
+.ch-song.ok .n{background:var(--mint)}
+.ch-song .t{display:grid;min-width:0}.ch-song b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ch-song small{font-weight:700;opacity:.7}
+/* ---------- battle ---------- */
+.battle{background-color:#2A2150}
+.battle .page-h span{color:var(--grape)}
+#battle-body{display:grid;gap:14px}
+.bt-card{display:grid;gap:10px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
+.bt-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.bt-names{display:grid;gap:8px}
+.bt-names label{display:flex;gap:8px;align-items:center}
+.bt-names input{flex:1;font:inherit;font-weight:800;font-size:18px;padding:6px 10px;border:3px solid var(--ink);border-radius:12px}
+.pn{display:inline-grid;place-items:center;flex:none;width:34px;height:34px;border:3px solid var(--ink);border-radius:50%;font-family:var(--display);font-size:18px;color:#fff}
+.p0{background:var(--coral)}.p1{background:var(--teal)}.p2{background:var(--amber)}.p3{background:var(--grape)}
+b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
+#bt-song{font:inherit;font-weight:700;padding:8px 10px;border:3px solid var(--ink);border-radius:12px}
+.bt-go{display:flex;flex-wrap:wrap;gap:12px;align-items:center;color:var(--paper)}
+.bt-go .muted{color:rgba(255,247,230,.75)!important}
+.bt-turn{display:grid;justify-items:center;gap:14px;padding:26px 16px;text-align:center;color:var(--paper)}
+.bt-turn small{font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.bt-turn h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(30px,5vw,48px);line-height:1}
+.bt-turn h2 b{font-size:clamp(44px,9vw,90px);font-weight:400;text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),6px 7px 0 #000}
+.bt-row{display:grid;grid-template-columns:34px 34px 1fr auto auto;gap:10px;align-items:center;padding:6px 10px;border:3px solid var(--ink);border-radius:14px;background:#fff}
+.bt-row.win{background:var(--sun)}
+.bt-row .rk{font-family:var(--display);font-size:22px;text-align:center}
+.bt-row .gr{font-family:var(--display);font-size:24px}
+.bt-row .sc{font-weight:800;font-variant-numeric:tabular-nums}
+.res-story .btn{margin-top:6px}
+/* ---------- ready-made careers ---------- */
+.curated{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cur-card{display:grid;gap:4px;padding:8px;border:3px solid var(--ink);border-radius:16px;background:var(--paper);color:var(--ink);text-align:left;font:inherit;cursor:pointer;box-shadow:0 4px 0 #000;transition:transform .2s cubic-bezier(.3,1.8,.5,1)}
+.cur-card:hover{transform:translateY(-3px) rotate(-.5deg)}
+.cur-card img{width:100%;aspect-ratio:2;object-fit:cover;border-radius:10px;border:2px solid var(--ink);display:block}
+.cur-card b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1}
+.cur-card small{font-weight:700;font-size:12px;opacity:.75;line-height:1.25}
+.story-share{margin-top:16px}
+/* ---------- main menu ---------- */
+.menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
+.menu .hero{flex:1;margin-block:0 10px}
+.hero-txt{display:grid;gap:10px;align-content:center}
+.tag{font-size:clamp(18px,2.2vw,24px);font-weight:600;max-width:30ch;margin:8px 0 0;line-height:1.25}
+.tag b{font-weight:800;color:var(--coral);text-shadow:1px 1px 0 var(--ink)}
+.feats{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:4px 0 0;padding:0}
+.feats li{padding:4px 12px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);font-weight:800;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.title-art{justify-self:center;width:100%;max-width:calc((100dvh - 330px) * 1.2)}
+.modes3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.mcard{position:relative;display:grid;align-content:end;gap:4px;min-height:132px;padding:14px 16px;border:4px solid var(--ink);border-radius:22px;box-shadow:0 7px 0 var(--ink);cursor:pointer;text-align:left;color:var(--ink);overflow:hidden;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.mcard:hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 11px 0 var(--ink)}
+.mcard:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
+.mcard b{font-family:var(--display);font-weight:400;font-size:clamp(28px,3.4vw,40px);line-height:.95}
+.mcard .md{font-weight:700;font-size:14px;line-height:1.25;opacity:.9}
+.mcard .mi{position:absolute;right:12px;top:8px;font-size:44px;transform:rotate(8deg)}
+.m-play{background:var(--coral);color:#fff}
+.m-play b{text-shadow:2px 2px 0 var(--ink)}
+.m-story{background:var(--ink);color:var(--paper)}
+.m-story b{color:var(--sun)}
+.m-story .sp-art{position:absolute;right:10px;top:10px;width:46%;aspect-ratio:2.4;display:grid;grid-template-columns:repeat(3,1fr);gap:3px;border-radius:10px;overflow:hidden;border:3px solid var(--paper);background:#000}
+.m-story .sp-art img{width:100%;height:100%;object-fit:cover;display:block}
+.m-battle{background:var(--grape);color:#fff}
+.m-battle b{text-shadow:2px 2px 0 var(--ink)}
+.page-h{font-family:var(--display);font-weight:400;font-size:clamp(46px,8vw,84px);line-height:.9;margin:6px 0 16px;color:var(--paper);text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),6px 7px 0 var(--ink)}
+.page-h span{color:var(--coral)}
+@media (max-width:760px){
+  .menu{min-height:calc(100dvh - 44px)}
+  .menu .topbar .grp .btn{padding:4px 8px;font-size:12px}
+  .menu .logo{font-size:clamp(46px,14vw,70px)}
+  .menu .hero{gap:4px}
+  .tag{font-size:16px;margin-top:4px}
+  .feats{display:none}
+  .title-art{max-width:calc((100dvh - 460px) * 1.2);min-width:240px}
+  .modes3{gap:8px}
+  .mcard{min-height:92px;padding:10px;border-radius:18px;align-content:end}
+  .mcard b{font-size:22px}
+  .mcard .md{display:none}
+  .mcard .mi{font-size:30px;right:6px;top:4px}
+  .m-story .sp-art{width:70%;right:6px;top:6px}
+}
 /* ---------- mic check extras ---------- */
 .warnbox{padding:10px 12px;border:3px solid var(--ink);border-radius:14px;background:#FFE0E1;font-weight:700;font-size:14px}
 .okbox{padding:10px 12px;border:3px solid var(--ink);border-radius:14px;background:#D6F5E0;font-weight:700;font-size:14px}
@@ -735,9 +842,9 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 
 <!-- ============ TITLE ============ -->
 <section id="scr-title" class="screen dots">
-  <div class="ticker" aria-hidden="true"><div class="tk"><span>★ SEARCH ANY SONG ★ SEE WHERE EVERY FINGER GOES ★ PRACTICE AT YOUR OWN PACE ★ HIT THE STAGE ★ CHASE THE S RANK ★ TUNE UP FIRST ★&nbsp;</span><span>★ SEARCH ANY SONG ★ SEE WHERE EVERY FINGER GOES ★ PRACTICE AT YOUR OWN PACE ★ HIT THE STAGE ★ CHASE THE S RANK ★ TUNE UP FIRST ★&nbsp;</span></div></div>
+  <div class="ticker" aria-hidden="true"><div class="tk"><span>★ ANY SONG, CHARTED ★ SEE WHERE EVERY FINGER GOES ★ THE BAND PLAYS ALONG ★ LIVE AN ARTIST'S CAREER ★ BATTLE YOUR FRIENDS ★ CHASE THE S RANK ★&nbsp;</span><span>★ ANY SONG, CHARTED ★ SEE WHERE EVERY FINGER GOES ★ THE BAND PLAYS ALONG ★ LIVE AN ARTIST'S CAREER ★ BATTLE YOUR FRIENDS ★ CHASE THE S RANK ★&nbsp;</span></div></div>
   <div class="beam a" aria-hidden="true"></div><div class="beam b" aria-hidden="true"></div>
-  <div class="wrap">
+  <div class="wrap menu">
     <div class="topbar">
       <span class="chip" id="mic-chip" role="button" tabindex="0"><span class="dot" id="mic-dot"></span><span id="mic-chip-text">Mic off</span></span>
       <div class="grp">
@@ -748,13 +855,39 @@ input[type=range]{width:100%;accent-color:var(--coral)}
       </div>
     </div>
     <header class="hero">
-      <div>
+      <div class="hero-txt">
         <h1 class="logo" id="logo" aria-label="Strum Jam"><span class="w1" aria-hidden="true"><span class="lt">S</span><span class="lt">t</span><span class="lt">r</span><span class="lt">u</span><span class="lt">m</span></span><br><span class="w2 l2" aria-hidden="true"><span class="lt">J</span><span class="lt">a</span><span class="lt">m</span></span></h1>
-        <p class="tag">Pick up your guitar and play real songs, one chord at a time. The game listens and grooves along with you.</p>
+        <p class="tag">Grab your guitar. <b>Play real songs.</b> The band follows you.</p>
+        <ul class="feats"><li>🎸 Any song, charted</li><li>👂 Listens as you play</li><li>🥁 A band that grooves along</li></ul>
       </div>
       <div class="title-art"><canvas id="title-canvas" aria-hidden="true"></canvas></div>
     </header>
+    <nav class="modes3" aria-label="Game modes">
+      <button class="mcard m-play" id="btn-play" type="button"><span class="mi" aria-hidden="true">🎸</span><b>Play &amp; Learn</b><span class="md">Search any song, or pick from your songs and the Strum Jam library</span></button>
+      <button class="mcard m-story" id="btn-story" type="button"><span class="sp-art" aria-hidden="true"><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span><b>Story</b><span class="md">Live an artist's career, era by era</span></button>
+      <button class="mcard m-battle" id="btn-battle" type="button"><span class="mi" aria-hidden="true">⚔️</span><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></button>
+    </nav>
+    <div class="careers" id="careers-title" hidden></div>
+  </div>
+</section>
 
+<!-- ============ BATTLE ============ -->
+<section id="scr-battle" class="screen dots battle" hidden>
+  <div class="wrap">
+    <div class="topbar"><button class="btn btn-sm" id="btn-battle-home" type="button" data-sfx="back">← Home</button></div>
+    <h1 class="page-h">Battle <span>mode</span></h1>
+    <div id="battle-body"></div>
+  </div>
+</section>
+
+<!-- ============ PLAY & LEARN ============ -->
+<section id="scr-play" class="screen dots" hidden>
+  <div class="wrap">
+    <div class="topbar">
+      <button class="btn btn-sm" id="btn-play-home" type="button" data-sfx="back">← Home</button>
+      <div class="grp"><button class="btn btn-sm" id="btn-tune-play" type="button">Tune up</button><button class="btn btn-sm" id="btn-mic-play" type="button">Mic check</button></div>
+    </div>
+    <h1 class="page-h">Play <span>&amp; Learn</span></h1>
     <form id="search-form" class="search" autocomplete="off">
       <input id="search-input" type="search" placeholder="Search any song: title and artist" aria-label="Search for a song">
       <button class="btn btn-go" type="submit">Find it</button>
@@ -778,14 +911,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
     <div id="rec-results" class="recs"></div>
     <div id="search-results" class="song-grid"></div>
     <div id="search-notice"></div>
-
-    <button class="story-promo" id="btn-story" type="button">
-      <span class="sp-art" aria-hidden="true"><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span>
-      <span class="sp-txt"><em>Story mode</em><b>Live an artist's career</b><span>Pick any artist. Play through their eras from the first gigs to the biggest stages: 3 levels, 3 songs each, easy to hard.</span></span>
-      <span class="sp-go">Start a career →</span>
-    </button>
-    <div class="careers" id="careers-title"></div>
-
+    <div id="challenge-box"></div>
     <h2 class="sec-h">My songs <small>Songs you've searched or pasted</small></h2>
     <div id="my-songs" class="song-grid"></div>
 
@@ -894,6 +1020,9 @@ input[type=range]{width:100%;accent-color:var(--coral)}
       </form>
       <div class="status" id="story-status" aria-live="polite"></div>
       <div class="custom" id="story-custom" hidden></div>
+      <h2 class="sec-h">Ready-made careers <small>Built and checked in advance. No API key needed.</small></h2>
+      <div class="curated" id="story-curated"></div>
+      <div class="row story-share"><button class="btn btn-sm" type="button" id="btn-career-import">Paste a career code</button></div>
       <div id="story-notice"></div>
       <h2 class="sec-h" id="story-saved-h">Your careers</h2>
       <div class="careers" id="story-saved"></div>
@@ -905,7 +1034,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
       </header>
       <p class="notice career-note" id="career-note" hidden></p>
       <div id="story-levels"></div>
-      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
+      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><button class="btn btn-sm" id="btn-career-share" type="button">Share this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
     </div>
   </div>
 </section>
@@ -922,7 +1051,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
     <div class="row">
       <button class="btn btn-go" id="btn-again" type="button">Play again</button>
       <button class="btn" id="btn-res-song" type="button">Song menu</button>
-      <button class="btn" id="btn-res-home" type="button" data-sfx="back">All songs</button>
+      <button class="btn" id="btn-res-home" type="button" data-sfx="back">Songs</button>
       <button class="btn btn-teal" id="btn-res-career" type="button" data-sfx="back" hidden>Career</button>
     </div>
   </div>
@@ -1012,7 +1141,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
     <div class="hd"><h2 id="m-code-h">Song code</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Close</button></div>
     <p class="small" id="code-help"></p>
     <textarea id="code-text" spellcheck="false" aria-label="Song code"></textarea>
-    <div class="row"><button class="btn btn-go" id="btn-code-act" type="button">Copy</button><span class="small" id="code-msg"></span></div>
+    <div class="row"><button class="btn btn-go" id="btn-code-act" type="button">Copy</button><button class="btn" id="btn-code-link" type="button" hidden>Copy link</button><span class="small" id="code-msg"></span></div>
   </div>
 </div>
 

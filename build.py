@@ -2,7 +2,7 @@ import sys, re, os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 hosted_url = sys.argv[1] if len(sys.argv) > 1 else ''
 head = open('src/01-head.html', encoding='utf-8').read()
-parts = ['05-settings.js','10-theory.js','20-songs.js','25-lookup.js','26-chart.js','30-audio.js','35-music.js','36-sfx.js','40-mic.js','45-ear.js','46-listen.js','47-analyze.js','48-scenes.js','50-render.js','52-drummer.js','60-game.js','65-story.js','70-ui.js']
+parts = ['05-settings.js','10-theory.js','20-songs.js','25-lookup.js','26-chart.js','30-audio.js','35-music.js','36-sfx.js','40-mic.js','45-ear.js','46-listen.js','47-analyze.js','48-scenes.js','50-render.js','52-drummer.js','60-game.js','64-curated.js','65-story.js','66-battle.js','67-challenge.js','70-ui.js']
 js = '\n'.join(open('src/'+p, encoding='utf-8').read() for p in parts)
 # the neural listener's engine and model, embedded so the page needs no network
 import json, base64
