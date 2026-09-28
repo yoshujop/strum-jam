@@ -151,6 +151,7 @@ const UI = {
     return b;
   },
   renderLists(){
+    Challenge.render();
     const lib = $('library'); lib.textContent = '';
     LIBRARY.forEach(s => lib.appendChild(this.card(validateSong(s, 'library'))));
     const mine = this.mine(), box = $('my-songs'); box.textContent = '';
@@ -592,12 +593,13 @@ const UI = {
     // story mode: record the run, say what it means for the career
     const so = this.storyCtx ? Story.record(r) : null, rs = $('res-story');
     this.resStory = so;
-    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : null;
+    const cr = !this.storyCtx ? Challenge.record(r) : null;
+    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : cr;
     rs.hidden = !sr; rs.className = 'res-story' + (sr && sr.big ? ' big' : ''); rs.innerHTML = sr ? sr.html : '';
     $('btn-res-home').hidden = !!this.storyCtx; $('btn-res-career').hidden = !this.storyCtx;
     Music.fanfareNext();
     this.show('results').then(() => {
-      if (so && (so.levelClear || so.mastered)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
+      if ((so && (so.levelClear || so.mastered)) || (cr && cr.won)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
       setTimeout(() => { Sfx.stamp(); }, 380);
       const good = r.mode === 'practice' || ['S', 'A', 'B'].includes(r.grade);
       if (good) setTimeout(() => Fx.confetti(r.grade === 'S' ? 260 : 150), 420);

@@ -620,6 +620,28 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .sg b{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sg small{font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sg em{font-style:normal;font-weight:800;font-size:11px;padding:2px 8px;border:2px solid var(--ink);border-radius:999px;background:var(--mint);white-space:nowrap}
+/* ---------- setlist challenge ---------- */
+#challenge-box{margin-top:18px}
+.ch-promo{position:relative;display:grid;gap:2px;width:100%;padding:14px 18px;border:4px solid var(--ink);border-radius:20px;background:var(--teal);color:var(--ink);box-shadow:0 6px 0 var(--ink);text-align:left;cursor:pointer;transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+.ch-promo:hover{transform:translateY(-3px) rotate(-.4deg)}
+.ch-promo b{font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.ch-promo span{font-weight:700}
+.ch-promo .mi{position:absolute;right:14px;top:8px;font-size:40px}
+.ch-card{display:grid;gap:10px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
+.ch-card.won{background:var(--mint)}
+.ch-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.ch-card p{margin:0;font-weight:600}
+.ch-need{display:flex;gap:6px;align-items:center;font-weight:800}
+.ch-need button{min-width:40px;padding:3px 10px;border:3px solid var(--ink);border-radius:10px;background:#fff;font:inherit;font-weight:800;cursor:pointer}
+.ch-need button.on{background:var(--sun)}
+.ch-pick{display:grid;gap:6px;max-height:320px;overflow-y:auto}
+.ch-bar{height:14px;border:3px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}.ch-bar i{display:block;height:100%;background:var(--mint)}
+.ch-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ch-song{display:grid;grid-template-columns:36px 1fr;gap:8px;align-items:center;padding:8px 10px;border:3px solid var(--ink);border-radius:14px;background:#fff;text-align:left;font:inherit;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.ch-song.ok{background:#E9FBEF}
+.ch-song .n{display:grid;place-items:center;width:36px;height:36px;border:3px solid var(--ink);border-radius:10px;background:var(--sun);font-family:var(--display);font-size:20px}
+.ch-song.ok .n{background:var(--mint)}
+.ch-song .t{display:grid;min-width:0}.ch-song b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ch-song small{font-weight:700;opacity:.7}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
