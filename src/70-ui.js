@@ -39,7 +39,7 @@ const UI = {
   show(name, instant){
     const swap = () => {
       this.screen = name;
-      for (const s of ['title', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
+      for (const s of ['title', 'play', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
       if (name === 'title') Story.renderChips();
       if (name === 'game') requestAnimationFrame(() => Stage.resize());
       if (name === 'title') TitleArt.resize();
@@ -900,7 +900,7 @@ const UI = {
     $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
     $('btn-paste').onclick = () => this.openCode('paste');
     $('btn-import').onclick = () => this.openImport(null);
-    $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('title'); };
+    $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('play'); };
     $('btn-song-code').onclick = () => this.openCode('show');
     $('btn-practice').onclick = () => this.startGame('practice');
     $('btn-stage').onclick = () => this.startGame('stage');
@@ -931,7 +931,12 @@ const UI = {
 
     $('btn-again').onclick = () => this.startGame(G.mode, true);
     $('btn-res-song').onclick = () => { this.show('song'); this.renderSong(); };
-    $('btn-res-home').onclick = () => this.show('title');
+    $('btn-res-home').onclick = () => this.show('play');
+    $('btn-play').onclick = () => { Sfx.open(); this.show('play').then(() => $('search-input').focus()); };
+    $('btn-play-home').onclick = () => this.show('title');
+    $('btn-tune-play').onclick = () => $('btn-tune-title').click();
+    $('btn-mic-play').onclick = () => $('btn-mic-setup').click();
+    $('btn-battle').onclick = () => { Sfx.open(); Battle.open(); };
     $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li + 1 < ((Story.get(x.careerId) || {}).levels || []).length ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
@@ -998,7 +1003,7 @@ const UI = {
   loop(){
     this.frameN++;
     try {
-      Music.update(!Splash.on && ['title', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
+      Music.update(!Splash.on && ['title', 'play', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
@@ -1123,27 +1128,29 @@ const TitleArt = {
     const bpm = 112, beat = playing ? Music.beat() : t * bpm / 60, ph = ((beat % 1) + 1) % 1;
     const now = playing && actx ? actx.currentTime : t;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
-    // spotlight + stage
-    // a record spinning on the turntable behind the band (33 1/3 rpm)
-    drawVinyl(c, W * 0.5, H * 0.46, W * 0.44, H * 0.42, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
-    const floorY = H * 0.83;
-    c.fillStyle = COL.coral; rr(c, W * 0.08, floorY - 4, W * 0.84, H * 0.1, 14); c.fill(); c.stroke();
+    // a record spinning behind the band at 33⅓ rpm: a true circle
+    const R = Math.min(W * 0.45, H * 0.4), vx = W * 0.5, vy = H * 0.42;
+    drawVinyl(c, vx, vy, R, R, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
     // floating chord cards
     ['G', 'C', 'D', 'Em'].forEach((name, i) => {
-      const x = W * (0.2 + i * 0.2), y = H * 0.17 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
+      const x = W * (0.2 + i * 0.2), y = H * 0.1 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
       const col = cardColor(name); c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
-      c.fillStyle = col; rr(c, -26, -18, 52, 36, 10); c.fill(); c.lineWidth = 3; c.stroke();
+      c.fillStyle = col; rr(c, -26, -18, 52, 36, 10); c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
       c.fillStyle = textOn(col); c.font = `22px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 0, 2); c.restore();
     });
-    const s = Math.min(H * 0.42, W * 0.3);
+    // the band sized and spaced so Pip (guitar neck out to the left) and the kit never overlap
+    const floorY = H * 0.64;
+    let s = Math.min(H * 0.32, W * 0.3);
+    const lay = s => { const h = s * 2.1, pipL = 0.8 * s, pipR = 0.5 * s, gap = 0.22 * s, dw = h * 0.72; return { h, total: pipL + pipR + gap + dw, pipL, pipR, gap, dw }; };
+    let L = lay(s); if (L.total > W * 0.94) { s *= W * 0.94 / L.total; L = lay(s); }
+    const x0 = W / 2 - L.total / 2, pipX0 = x0 + L.pipL, drumX0 = pipX0 + L.pipR + L.gap + L.dw / 2;
+    const pipX = Settings.lefty ? W - pipX0 : pipX0, drumX = Settings.lefty ? W - drumX0 : drumX0;
+    this.drawStage(c, W, H, floorY, beat, ph, playing);
     let hits = Music.hits;
     if (!playing) { hits = []; for (let n = 0; n < 2; n++) { const bb = Math.floor(beat) - n; hits.push({ t: bb * 60 / bpm, kind: bb % 2 ? 'snare' : 'kick' }); hits.push({ t: (bb + 0.5) * 60 / bpm, kind: 'hat' }); } }
     let strum = 0;
     if (playing) { for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (h.kind === 'gtr' && h.t <= now) { const d = now - h.t; strum = d < 0.2 ? Math.sin(d / 0.2 * Math.PI) : 0; break; } } }
     else strum = ph < 0.25 ? Math.sin(ph / 0.25 * Math.PI) : 0;
-    drawPip(c, W * 0.34, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
-    c.save(); c.beginPath(); c.ellipse(W * 0.5, H * 0.46, W * 0.44, H * 0.42, 0, 0, Math.PI * 2); c.rect(0, H * 0.84, W, H); c.clip();
-    c.translate(0, H * 0.02); c.scale(1, 0.8); drawCrowd(c, W, H * 1.25, ph, playing ? 0.8 : 0.4, now, playing ? 3 : 0); c.restore();
     // the funk drummer, grooving to a simple beat (locked to the menu music when it plays)
     if (typeof FunkDrummer !== 'undefined') {
       const spb = 60 / bpm, tb = beat * spb, ev = [], b0 = Math.floor(beat);
@@ -1152,9 +1159,41 @@ const TitleArt = {
         if (((bb % 16) + 16) % 16 === 0) ev.push({ t, kind: 'crash' });
         if (((bb % 8) + 8) % 8 === 7) ev.push({ t: t + spb / 2, kind: 'tom' }, { t: t + spb * 0.75, kind: 'tom' }); }
       ev.sort((a, b) => a.t - b.t);
-      const h = s * 2.1;
-      FunkDrummer.draw(c, this.dSt || (this.dSt = FunkDrummer.create()), { x: Settings.lefty ? W * 0.28 : W * 0.72, floorY: floorY + h * 0.012, h, now: tb, beat, spb, level: playing ? 2 : 1, events: ev, playing: true, missAgo: 9 });
+      FunkDrummer.draw(c, this.dSt || (this.dSt = FunkDrummer.create()), { x: drumX, floorY: floorY + L.h * 0.012, h: L.h, now: tb, beat, spb, level: playing ? 2 : 1, events: ev, playing: true, missAgo: 9 });
     }
+    drawPip(c, pipX, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
+    // the crowd in front of the stage, whole: their round bodies sit above the bottom edge
+    const crowdH = H * 0.17;
+    c.save(); c.translate(0, H - crowdH * 1.02); const k = crowdH / 80; c.scale(k, k);
+    drawCrowd(c, W / k, 80 - 16, ph, playing ? 0.8 : 0.4, now, playing ? 3 : 0); c.restore();
+  },
+  // the stage: a wooden deck on a riser with chase lights, a lip of light along the front
+  drawStage(c, W, H, floorY, beat, ph, playing){
+    const x0 = W * 0.04, x1 = W * 0.96, top = floorY - H * 0.02, deck = H * 0.045, face = H * 0.085;
+    c.save(); c.lineJoin = 'round';
+    // glow on the deck from the lights above
+    const g = c.createRadialGradient(W / 2, top, 0, W / 2, top, W * 0.5); g.addColorStop(0, 'rgba(255,236,170,.55)'); g.addColorStop(1, 'rgba(255,236,170,0)');
+    c.fillStyle = g; c.fillRect(0, top - H * 0.3, W, H * 0.35);
+    // deck: warm planks in perspective
+    c.beginPath(); c.moveTo(x0 + W * 0.03, top); c.lineTo(x1 - W * 0.03, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
+    const dg = c.createLinearGradient(0, top, 0, top + deck); dg.addColorStop(0, '#F2C27A'); dg.addColorStop(1, '#D9954E');
+    c.fillStyle = dg; c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.save(); c.clip(); c.strokeStyle = 'rgba(122,62,20,.45)'; c.lineWidth = 1.5;
+    for (let i = 1; i < 14; i++) { const u = i / 14, xa = x0 + W * 0.03 + (x1 - x0 - W * 0.06) * u, xb = x0 + (x1 - x0) * u; c.beginPath(); c.moveTo(xa, top); c.lineTo(xb, top + deck); c.stroke(); }
+    c.beginPath(); c.moveTo(x0, top + deck * 0.5); c.lineTo(x1, top + deck * 0.5); c.stroke(); c.restore();
+    // riser front: deep plum with a gold trim and chase-light bulbs that run on the beat
+    const fy = top + deck;
+    c.fillStyle = '#3B2366'; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.fillStyle = '#2A1850'; c.fillRect(x0 + 4, fy + face * 0.62, x1 - x0 - 8, face * 0.3);
+    c.fillStyle = COL.sun; c.fillRect(x0 + 2, fy + 1, x1 - x0 - 4, 4);
+    const n = Math.max(8, Math.round((x1 - x0) / 30)), step = Math.floor(beat * 2);
+    for (let i = 0; i < n; i++) {
+      const x = x0 + (i + 0.5) * (x1 - x0) / n, y = fy + face * 0.34, on = reduceMotion ? i % 2 === 0 : (i + step) % 3 === 0;
+      const r = Math.max(3, face * 0.13);
+      if (on) { c.fillStyle = 'rgba(255,214,90,.35)'; c.beginPath(); c.arc(x, y, r * 2.2, 0, Math.PI * 2); c.fill(); }
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = on ? '#FFE37A' : '#6B4E8F'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
+    }
+    c.restore();
   },
 };
 
