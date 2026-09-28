@@ -98,6 +98,47 @@ ${sceneRules()}
 NO LYRICS anywhere. Reply with the JSON only.`;
 }
 
+// a ready-made career as a plan in Claude's shape, its album titles turned into this discography's ids
+function curatedPlan(cur, disc){
+  const idOf = t => { const a = disc.albums.find(x => Lookup.albumKey(x.title) === Lookup.albumKey(t)); return a ? a.id : ''; };
+  return { found: true, artist: cur.artist, tagline: cur.tagline, levels: cur.levels.map(L => ({ albums: L.albums.map(idOf).filter(Boolean), name: L.name, period: L.period, blurb: L.blurb, scene: L.scene,
+    songs: L.songs.map(([title, album, why, bpm, changes]) => ({ title, album: idOf(album), why, bpm, changes })) })) };
+}
+/* ---------- career codes: a career as text (gzip + base64url), without anyone's progress ---------- */
+const b64u = { enc: bytes => { let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b)); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec: str => { let b = str.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; return Uint8Array.from(atob(b), c => c.charCodeAt(0)); } };
+async function gz(bytes, dir){ const s = new Blob([bytes]).stream().pipeThrough(dir === 'in' ? new CompressionStream('gzip') : new DecompressionStream('gzip')); return new Uint8Array(await new Response(s).arrayBuffer()); }
+async function careerToCode(c){
+  const o = { artist: c.artist, tagline: c.tagline, few: !!c.few, custom: !!c.custom, disc: c.disc, levels: c.levels.map(L => ({ name: L.name, claim: L.claim, period: L.period, blurb: L.blurb, scene: L.scene, pool: L.pool, songs: L.songs, alts: L.alts || [] })) };
+  return 'SJC1.' + b64u.enc(await gz(new TextEncoder().encode(JSON.stringify(o)), 'in'));
+}
+// everything in a code is checked like anything else from outside: shapes, lengths, the era rules
+async function careerFromCode(code){
+  const m = /SJC1\.([A-Za-z0-9_\-]+)/.exec(String(code).replace(/\s+/g, ''));
+  if (!m) throw new Error('That doesn’t look like a Strum Jam career code. Codes start with SJC1.');
+  let o;
+  try { o = JSON.parse(new TextDecoder().decode(await gz(b64u.dec(m[1]), 'out'))); } catch (e) { throw new Error('The career code is incomplete. Copy the whole thing and try again.'); }
+  const albums = (o.disc && Array.isArray(o.disc.albums) ? o.disc.albums : []).slice(0, 60).map(a => ({ id: cleanStr(a && a.id, 8), title: cleanStr(a && a.title, 90), year: Math.round(clampNum(a && a.year, 1900, 2100, 0)) })).filter(a => a.id && a.title);
+  const url = v => /^https:\/\//.test(v || '') ? String(v).slice(0, 400) : '';
+  const tr = t => t && typeof t === 'object' && +t.trackId ? { trackId: +t.trackId, title: cleanStr(t.title, 120), artist: cleanStr(t.artist, 90), artistId: +t.artistId || 0, album: cleanStr(t.album, 120), year: Math.round(clampNum(t.year, 1900, 2100, 0)),
+    durationMs: Math.round(clampNum(t.durationMs, 0, 3600000, 0)), previewUrl: url(t.previewUrl), genre: cleanStr(t.genre, 40), art: url(t.art), url: url(t.url) } : null;
+  const song = s => s && typeof s === 'object' && cleanStr(s.title, 90) ? { title: cleanStr(s.title, 90), album: cleanStr(s.album, 90), albumId: cleanStr(s.albumId, 8), year: Math.round(clampNum(s.year, 1900, 2100, 0)) || '',
+    why: cleanStr(s.why, 70), score: clampNum(s.score, 0, 50, 0), src: cleanStr(s.src, 12),
+    stats: s.stats && typeof s.stats === 'object' ? { distinct: clampNum(s.stats.distinct, 0, 40, 0), barre: clampNum(s.stats.barre, 0, 1, 0), cpb: clampNum(s.stats.cpb, 0, 8, 0), bpm: clampNum(s.stats.bpm, 0, 260, 0), capo: clampNum(s.stats.capo, 0, 9, 0) } : {}, track: tr(s.track) } : null;
+  const levels = (Array.isArray(o.levels) ? o.levels : []).slice(0, 3).map(L => {
+    L = L && typeof L === 'object' ? L : {};
+    const songs = (Array.isArray(L.songs) ? L.songs : []).slice(0, 5).map(song).filter(Boolean);
+    return songs.length ? { claim: cleanStr(L.claim || L.name, 32), period: cleanStr(L.period, 32), blurb: cleanStr(L.blurb, 240), scene: Scenes.validate(L.scene), pool: (Array.isArray(L.pool) ? L.pool : []).map(x => cleanStr(x, 8)).slice(0, 20),
+      songs: songs.sort((a, b) => a.score - b.score), alts: (Array.isArray(L.alts) ? L.alts : []).slice(0, 6).map(song).filter(Boolean), few: 0 } : null;
+  }).filter(Boolean).map((L, li) => Career.meta(L, albums, li));
+  if (!levels.length) throw new Error('That career code has no songs in it.');
+  const artist = cleanStr(o.artist, 60) || 'Artist';
+  const c = { v: 2, shared: true, custom: !!o.custom, artist, tagline: cleanStr(o.tagline, 110), few: !!o.few, charts: {}, progress: {}, created: Date.now(), disc: { source: 'shared', albums }, levels };
+  c.id = 'c-' + slug(artist) + '-' + Lookup.fnv(m[1]).toString(36).slice(0, 6);
+  Story.save(c);
+  return c;
+}
+
 // Claude's plan, cleaned: nothing in it is trusted until it's checked against the discography and the chord data
 function planSong(s){
   return s && typeof s === 'object' && cleanStr(s.title, 90) ? { title: cleanStr(s.title, 90), album: cleanStr(s.album, 8), why: cleanStr(s.why, 70),
@@ -294,6 +335,12 @@ const Story = {
     const demo = [{ setting: 'street', props: ['cd-table'] }, { setting: 'campus', props: ['pennants'] }, { setting: 'arena', props: ['lasers'] }];
     demo.forEach((d, i) => { $('sp-a' + (i + 1)).src = Scenes.dataUrl(Scenes.validate(d), 240, 200, { floorY: 170 }); });
     this.renderChips();
+    this.renderCurated();
+  },
+  renderCurated(){
+    const box = $('story-curated'); if (!box) return;
+    box.innerHTML = CURATED.map((x, i) => `<button type="button" class="cur-card" data-cur="${i}"><img alt="" src="${Scenes.dataUrl(Scenes.validate(x.levels[1] ? x.levels[1].scene : x.levels[0].scene), 240, 120, { floorY: 104 })}"><b>${esc(x.artist)}</b><small>${x.levels.map(L => esc(L.name)).join(' → ')}</small></button>`).join('');
+    box.querySelectorAll('[data-cur]').forEach(b => b.onclick = () => { const x = CURATED[+b.dataset.cur]; Sfx.open(); $('story-input').value = x.artist; this.build(x.artist, false, x); });
   },
   chip(c, onRemove){
     const b = document.createElement('div'); b.className = 'cchip'; b.tabIndex = 0; b.setAttribute('role', 'button');
@@ -328,9 +375,11 @@ const Story = {
     n.appendChild(d);
   },
   stopBuild(){ if (this.buildCtl) { this.buildCtl.abort(); this.buildCtl = null; } },
-  async build(q, rebuild){
+  // cur: a ready-made career (CURATED): its plan replaces Claude's, the checks stay the same
+  async build(q, rebuild, cur){
     q = String(q || '').trim(); if (!q) { $('story-input').focus(); return; }
-    if (!UI.aiAvailable()) { this.envNotice(); Sfx.fail(); return; }
+    if (!cur) cur = CURATED.find(x => Lookup.normArtist(x.artist) === Lookup.normArtist(q)) || null;
+    if (!cur && !UI.aiAvailable()) { this.envNotice(); Sfx.fail(); return; }
     const existing = this.all().find(c => c.artist.toLowerCase() === q.toLowerCase() || c.id === 'c-' + slug(q));
     if (existing && !rebuild) { this.openCareer(existing.id); return; }
     this.stopBuild();
@@ -351,7 +400,7 @@ const Story = {
       // 2. Claude maps the eras and suggests songs, from that discography only
       step(1, `Mapping ${disc.artist}’s career into eras…`);
       const web = UI.canWeb(), ask = p => UI.askClaude(p, signal, 'default', web ? { webSearch: true } : undefined);
-      const data = await ask(careerPrompt(disc.artist, disc, web));
+      const data = cur ? curatedPlan(cur, disc) : await ask(careerPrompt(disc.artist, disc, web));
       if (signal.aborted) return;
       if (!data || data.found === false) {
         Sfx.fail(); st.innerHTML = `I couldn’t build a career for “${esc(q)}”. Try one of these?`;
@@ -365,7 +414,7 @@ const Story = {
       const probeCtx = { signal, web, webLeft: web ? 3 : 0 };
       const res = await Career.verify(plan, disc, {
         probe: (track, hint) => this.probe(track, hint, probeCtx),
-        askMore: asks => ask(careerMorePrompt(disc.artist, disc, asks, web)),
+        askMore: UI.aiAvailable() ? asks => ask(careerMorePrompt(disc.artist, disc, asks, web)) : null,
         onStep: text => step(2, text + '…'),
       });
       if (signal.aborted) return;

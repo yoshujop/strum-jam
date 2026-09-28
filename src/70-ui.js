@@ -34,6 +34,7 @@ const UI = {
       window.claude.use('downloads').then(d => { this.downloads = d; this.refreshEnv(); }).catch(() => {});
     }
     requestAnimationFrame(() => this.loop());
+    if (location.hash) this.openShared();
   },
 
   /* ---------- helpers ---------- */
@@ -795,35 +796,49 @@ const UI = {
     if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty); const i = G.list.indexOf(ev); this.sideUpdate(ev, G.list[i + 1] || null); } }
   },
   musicBtn(){ const b = $('btn-music'); b.setAttribute('aria-pressed', String(Settings.musicOn)); b.textContent = Settings.musicOn ? '♪ Music on' : '♪ Music off'; },
-  openCode(mode){
+  // song and career codes: text anyone can paste, or a link that opens straight into the game
+  async openCode(mode){
     this.open('m-code');
     this.codeMode = mode;
-    $('code-msg').textContent = '';
-    if (mode === 'show') {
-      $('m-code-h').textContent = 'Song code';
-      $('code-help').textContent = this.inViewer ? 'Copy this code, then paste it into the Strum Jam game file on your computer (Paste a song code) to play with your guitar.' : 'Share this code, or paste it into another copy of Strum Jam.';
-      $('code-text').value = songToCode(this.song); $('code-text').readOnly = true;
-      $('btn-code-act').textContent = 'Copy';
+    $('code-msg').textContent = ''; $('btn-code-link').hidden = true;
+    const show = mode === 'show' || mode === 'career-show', career = mode.startsWith('career');
+    $('m-code-h').textContent = show ? (career ? 'Share this career' : 'Song code') : (career ? 'Paste a career code' : 'Paste a song code');
+    if (show) {
+      $('code-help').textContent = career ? 'Send this code (or the link) to a friend: they get the same eras and songs, with their own progress.'
+        : this.inViewer ? 'Copy this code, then paste it into the Strum Jam game file on your computer (Paste a song code) to play with your guitar.' : 'Share this code or the link, or paste it into another copy of Strum Jam.';
+      $('code-text').value = career ? await careerToCode(Story.cur) : songToCode(this.song); $('code-text').readOnly = true;
+      $('btn-code-act').textContent = 'Copy code'; $('btn-code-link').hidden = this.inViewer;
       $('code-text').select();
     } else {
-      $('m-code-h').textContent = 'Paste a song code';
-      $('code-help').textContent = 'Paste a code that starts with SJ1. (from the claude.ai version or a friend).';
+      $('code-help').textContent = career ? 'Paste a code that starts with SJC1. from a friend.' : 'Paste a code that starts with SJ1. (from the claude.ai version or a friend).';
       $('code-text').value = ''; $('code-text').readOnly = false;
-      $('btn-code-act').textContent = 'Load song';
+      $('btn-code-act').textContent = career ? 'Add career' : 'Load song';
       $('code-text').focus();
     }
   },
-  async codeAction(){
+  async codeAction(link){
     const ta = $('code-text');
-    if (this.codeMode === 'show') {
-      try { await navigator.clipboard.writeText(ta.value); $('code-msg').textContent = 'Copied.'; }
+    if (this.codeMode === 'show' || this.codeMode === 'career-show') {
+      const text = link ? location.href.split('#')[0] + '#' + (this.codeMode === 'show' ? 'song=' : 'career=') + ta.value : ta.value;
+      try { await navigator.clipboard.writeText(text); $('code-msg').textContent = link ? 'Link copied.' : 'Copied.'; }
       catch (e) { ta.select(); $('code-msg').textContent = 'Press Ctrl+C (or ⌘C) to copy.'; }
       return;
     }
     try {
+      if (this.codeMode === 'career-paste') { const c = await careerFromCode(ta.value); this.closeModal(); Story.openCareer(c.id); return; }
       const song = songFromCode(ta.value);
       this.saveMine(song); this.renderLists(); this.closeModal(); this.openSong(song);
     } catch (e) { $('code-msg').textContent = e.message; }
+  },
+  // a shared link: #song=SJ1… or #career=SJC1…
+  async openShared(){
+    const m = /^#(song|career)=(.+)$/.exec(location.hash || ''); if (!m) return;
+    history.replaceState(null, '', location.href.split('#')[0]);
+    try {
+      const code = decodeURIComponent(m[2]);
+      if (m[1] === 'career') { const c = await careerFromCode(code); Story.openCareer(c.id); }
+      else { const song = songFromCode(code); this.saveMine(song); this.renderLists(); this.openSong(song); }
+    } catch (e) { alert(e.message || 'That shared link didn’t work.'); }
   },
   openImport(pre){
     this.open('m-import');
@@ -904,6 +919,9 @@ const UI = {
     $('mic-chip').style.cursor = 'pointer'; $('mic-chip').onclick = () => this.openMic();
     $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
     $('btn-paste').onclick = () => this.openCode('paste');
+    $('btn-code-link').onclick = () => this.codeAction(true);
+    $('btn-career-share').onclick = () => { if (Story.cur) this.openCode('career-show'); };
+    $('btn-career-import').onclick = () => this.openCode('career-paste');
     $('btn-import').onclick = () => this.openImport(null);
     $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('play'); };
     $('btn-song-code').onclick = () => this.openCode('show');

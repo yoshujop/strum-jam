@@ -667,6 +667,14 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 .bt-row .gr{font-family:var(--display);font-size:24px}
 .bt-row .sc{font-weight:800;font-variant-numeric:tabular-nums}
 .res-story .btn{margin-top:6px}
+/* ---------- ready-made careers ---------- */
+.curated{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cur-card{display:grid;gap:4px;padding:8px;border:3px solid var(--ink);border-radius:16px;background:var(--paper);color:var(--ink);text-align:left;font:inherit;cursor:pointer;box-shadow:0 4px 0 #000;transition:transform .2s cubic-bezier(.3,1.8,.5,1)}
+.cur-card:hover{transform:translateY(-3px) rotate(-.5deg)}
+.cur-card img{width:100%;aspect-ratio:2;object-fit:cover;border-radius:10px;border:2px solid var(--ink);display:block}
+.cur-card b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1}
+.cur-card small{font-weight:700;font-size:12px;opacity:.75;line-height:1.25}
+.story-share{margin-top:16px}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
@@ -1012,6 +1020,9 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       </form>
       <div class="status" id="story-status" aria-live="polite"></div>
       <div class="custom" id="story-custom" hidden></div>
+      <h2 class="sec-h">Ready-made careers <small>Built and checked in advance. No API key needed.</small></h2>
+      <div class="curated" id="story-curated"></div>
+      <div class="row story-share"><button class="btn btn-sm" type="button" id="btn-career-import">Paste a career code</button></div>
       <div id="story-notice"></div>
       <h2 class="sec-h" id="story-saved-h">Your careers</h2>
       <div class="careers" id="story-saved"></div>
@@ -1023,7 +1034,7 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       </header>
       <p class="notice career-note" id="career-note" hidden></p>
       <div id="story-levels"></div>
-      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
+      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><button class="btn btn-sm" id="btn-career-share" type="button">Share this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
     </div>
   </div>
 </section>
@@ -1130,7 +1141,7 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
     <div class="hd"><h2 id="m-code-h">Song code</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Close</button></div>
     <p class="small" id="code-help"></p>
     <textarea id="code-text" spellcheck="false" aria-label="Song code"></textarea>
-    <div class="row"><button class="btn btn-go" id="btn-code-act" type="button">Copy</button><span class="small" id="code-msg"></span></div>
+    <div class="row"><button class="btn btn-go" id="btn-code-act" type="button">Copy</button><button class="btn" id="btn-code-link" type="button" hidden>Copy link</button><span class="small" id="code-msg"></span></div>
   </div>
 </div>
 
