@@ -642,6 +642,31 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .ch-song .n{display:grid;place-items:center;width:36px;height:36px;border:3px solid var(--ink);border-radius:10px;background:var(--sun);font-family:var(--display);font-size:20px}
 .ch-song.ok .n{background:var(--mint)}
 .ch-song .t{display:grid;min-width:0}.ch-song b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ch-song small{font-weight:700;opacity:.7}
+/* ---------- battle ---------- */
+.battle{background-color:#2A2150}
+.battle .page-h span{color:var(--grape)}
+#battle-body{display:grid;gap:14px}
+.bt-card{display:grid;gap:10px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
+.bt-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.bt-names{display:grid;gap:8px}
+.bt-names label{display:flex;gap:8px;align-items:center}
+.bt-names input{flex:1;font:inherit;font-weight:800;font-size:18px;padding:6px 10px;border:3px solid var(--ink);border-radius:12px}
+.pn{display:inline-grid;place-items:center;flex:none;width:34px;height:34px;border:3px solid var(--ink);border-radius:50%;font-family:var(--display);font-size:18px;color:#fff}
+.p0{background:var(--coral)}.p1{background:var(--teal)}.p2{background:var(--amber)}.p3{background:var(--grape)}
+b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
+#bt-song{font:inherit;font-weight:700;padding:8px 10px;border:3px solid var(--ink);border-radius:12px}
+.bt-go{display:flex;flex-wrap:wrap;gap:12px;align-items:center;color:var(--paper)}
+.bt-go .muted{color:rgba(255,247,230,.75)!important}
+.bt-turn{display:grid;justify-items:center;gap:14px;padding:26px 16px;text-align:center;color:var(--paper)}
+.bt-turn small{font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.bt-turn h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(30px,5vw,48px);line-height:1}
+.bt-turn h2 b{font-size:clamp(44px,9vw,90px);font-weight:400;text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),6px 7px 0 #000}
+.bt-row{display:grid;grid-template-columns:34px 34px 1fr auto auto;gap:10px;align-items:center;padding:6px 10px;border:3px solid var(--ink);border-radius:14px;background:#fff}
+.bt-row.win{background:var(--sun)}
+.bt-row .rk{font-family:var(--display);font-size:22px;text-align:center}
+.bt-row .gr{font-family:var(--display);font-size:24px}
+.bt-row .sc{font-weight:800;font-variant-numeric:tabular-nums}
+.res-story .btn{margin-top:6px}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
@@ -835,6 +860,15 @@ input[type=range]{width:100%;accent-color:var(--coral)}
       <button class="mcard m-battle" id="btn-battle" type="button"><span class="mi" aria-hidden="true">⚔️</span><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></button>
     </nav>
     <div class="careers" id="careers-title" hidden></div>
+  </div>
+</section>
+
+<!-- ============ BATTLE ============ -->
+<section id="scr-battle" class="screen dots battle" hidden>
+  <div class="wrap">
+    <div class="topbar"><button class="btn btn-sm" id="btn-battle-home" type="button" data-sfx="back">← Home</button></div>
+    <h1 class="page-h">Battle <span>mode</span></h1>
+    <div id="battle-body"></div>
   </div>
 </section>
 

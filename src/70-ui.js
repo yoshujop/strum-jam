@@ -40,7 +40,7 @@ const UI = {
   show(name, instant){
     const swap = () => {
       this.screen = name;
-      for (const s of ['title', 'play', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
+      for (const s of ['title', 'play', 'battle', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
       if (name === 'title') Story.renderChips();
       if (name === 'game') requestAnimationFrame(() => Stage.resize());
       if (name === 'title') TitleArt.resize();
@@ -504,6 +504,7 @@ const UI = {
     Stage.scene = t && L ? L.scene : null;
     const ok = G.start(this.chart, mode, t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
       : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
+      : mode === 'stage' && this.battleOpts ? this.battleOpts
       : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
     if (!ok) { this.show('song'); }
   },
@@ -593,13 +594,14 @@ const UI = {
     // story mode: record the run, say what it means for the career
     const so = this.storyCtx ? Story.record(r) : null, rs = $('res-story');
     this.resStory = so;
-    const cr = !this.storyCtx ? Challenge.record(r) : null;
-    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : cr;
+    const br = Battle.record(r), cr = !this.storyCtx && !br ? Challenge.record(r) : null;
+    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : br || cr;
     rs.hidden = !sr; rs.className = 'res-story' + (sr && sr.big ? ' big' : ''); rs.innerHTML = sr ? sr.html : '';
+    rs.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => Battle.after());
     $('btn-res-home').hidden = !!this.storyCtx; $('btn-res-career').hidden = !this.storyCtx;
     Music.fanfareNext();
     this.show('results').then(() => {
-      if ((so && (so.levelClear || so.mastered)) || (cr && cr.won)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
+      if ((so && (so.levelClear || so.mastered)) || (cr && cr.won) || (br && br.won)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
       setTimeout(() => { Sfx.stamp(); }, 380);
       const good = r.mode === 'practice' || ['S', 'A', 'B'].includes(r.grade);
       if (good) setTimeout(() => Fx.confetti(r.grade === 'S' ? 260 : 150), 420);
@@ -921,7 +923,7 @@ const UI = {
     $('btn-pause').onclick = () => { G.pause(); this.open('m-pause'); };
     $('btn-resume').onclick = () => this.closeModal();
     $('btn-restart').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.startGame(G.mode, true); };
-    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.show('song'); this.renderSong(); };
+    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); if (Battle.active()) { Battle.st.playing = false; this.battleOpts = null; Battle.renderTurn(); return; } this.show('song'); this.renderSong(); };
     $('btn-hear').onclick = () => { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev && ev.notes) { const how = AudioEngine.playChord(ev.notes, 'now:' + ev.label + '|' + ev.v.frets.join(',')); const b = $('btn-hear'); b.dataset.next = how === 'strum' ? 'arpeggio' : 'strum'; b.querySelector('small') && (b.querySelector('small').textContent = how === 'strum' ? 'tap again: arpeggio' : 'tap again: strum'); } };
     $('btn-skip').onclick = () => G.skip();
     // redraw the fretboard when the layout switches between phone and wide (e.g. rotating the phone)
@@ -937,6 +939,7 @@ const UI = {
     $('btn-res-home').onclick = () => this.show('play');
     $('btn-play').onclick = () => { Sfx.open(); this.show('play').then(() => $('search-input').focus()); };
     $('btn-play-home').onclick = () => this.show('title');
+    $('btn-battle-home').onclick = () => { Battle.st = null; this.show('title'); };
     $('btn-tune-play').onclick = () => $('btn-tune-title').click();
     $('btn-mic-play').onclick = () => $('btn-mic-setup').click();
     $('btn-battle').onclick = () => { Sfx.open(); Battle.open(); };
@@ -1006,7 +1009,7 @@ const UI = {
   loop(){
     this.frameN++;
     try {
-      Music.update(!Splash.on && ['title', 'play', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
+      Music.update(!Splash.on && ['title', 'play', 'battle', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
