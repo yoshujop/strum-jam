@@ -15,7 +15,8 @@ test harness, and the TODO list in priority order.
 - `src/`: game source, concatenated by `build.py` in a fixed order (`01-head.html` + numbered JS files).
   `src/drummer.svg` is no longer used.
 - `vendor/`: TF.js + Spotify Basic Pitch model, plus the chord data read by `25-lookup.js`/`26-chart.js`
-  (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`), all embedded into the build.
+  (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`) and the fonts (`fonts/`: Bagel Fat One +
+  Baloo 2, SIL OFL), all embedded into the build.
 - `test/`, `ref/`: Playwright/Node test and render scripts (see HANDOFF.md "Test harness bits").
 - `.github/workflows/pages.yml` builds `src/` on every push to `main` and publishes `dist/strum-jam.html` as the
   site (https://yoshujop.github.io/strum-jam/). The root `index.html` is the old hand-uploaded build, kept for reference.
@@ -35,6 +36,8 @@ test harness, and the TODO list in priority order.
 
 - `node test/suggestshot.js`, `node test/battleshot.js`, `node test/curatedshot.js` (needs /tmp/career.json):
   song suggestions, a two-player battle end to end, ready-made careers + career share links.
+
+- `node test/menushot.js <outdir>`: menu backdrop close-up, each mode button's hover effect, a click burst.
 
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`

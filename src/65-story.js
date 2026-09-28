@@ -324,7 +324,7 @@ const Story = {
 
   /* ---------- screens ---------- */
   init(){
-    $('btn-story').onclick = () => { Sfx.open(); this.openPick(); };
+    $('btn-story').onclick = () => UI.modeBurst($('btn-story'), 'story', () => this.openPick());
     $('btn-story-home').onclick = () => { this.stopBuild(); UI.show('title'); UI.renderLists(); };
     $('btn-story-new').onclick = () => { this.stopBuild(); this.openPick(); };
     $('story-form').addEventListener('submit', e => { e.preventDefault(); this.build($('story-input').value); });

@@ -1,0 +1,3 @@
+Bagel Fat One (c) The Bagel Fat One Project Authors; Baloo 2 (c) Ek Type.
+Both are licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+Embedded into the Strum Jam build by build.py so the game's type works offline.

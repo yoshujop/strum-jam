@@ -1,7 +1,5 @@
 <title>Strum Jam</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<!--FONTS-->
 <style>
 :root{
   --ink:#1E1B2E; --ink2:#3A3552; --paper:#FFF7E6; --paper2:#F3E6C8;
@@ -675,6 +673,52 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 .cur-card b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1}
 .cur-card small{font-weight:700;font-size:12px;opacity:.75;line-height:1.25}
 .story-share{margin-top:16px}
+/* ---------- menu backdrop (MenuBG: festival waves + pairs of music doodles) ---------- */
+#scr-title,#scr-play{background:var(--menu-bg,none) 0 0/720px 560px,#FFF4E6;animation:bgdrift 90s linear infinite}
+@keyframes bgdrift{to{background-position:720px 560px,0 0}}
+#scr-title .beam{opacity:.28}
+/* ---------- mode buttons: hover and click effects ---------- */
+.mcard{isolation:isolate}
+.mcard .fx{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;border-radius:inherit}
+.mcard>b,.mcard>.md,.mcard>.mi,.mcard>.sp-art{position:relative;z-index:1}
+.mcard>.mi{position:absolute}
+.mcard>.sp-art{position:absolute}
+/* Play: notes float up out of the card, sound rings pulse from the guitar */
+.m-play .fx i{position:absolute;bottom:-30px;font-style:normal;font-size:26px;color:#fff;text-shadow:2px 2px 0 var(--ink);opacity:0}
+.m-play:hover .fx i,.m-play:focus-visible .fx i{animation:noteup 1.6s ease-out infinite}
+.m-play .fx i:nth-child(1){left:12%}.m-play .fx i:nth-child(2){left:34%;animation-delay:.4s!important}.m-play .fx i:nth-child(3){left:58%;animation-delay:.8s!important}.m-play .fx i:nth-child(4){left:80%;animation-delay:1.2s!important}
+@keyframes noteup{0%{transform:translateY(0) rotate(-10deg);opacity:0}15%{opacity:1}100%{transform:translateY(-150px) rotate(18deg);opacity:0}}
+.m-play:hover .mi{animation:strumrock .45s ease-in-out infinite alternate}
+@keyframes strumrock{from{transform:rotate(-6deg) scale(1.05)}to{transform:rotate(16deg) scale(1.12)}}
+.m-play .fx::after{content:'';position:absolute;right:30px;top:30px;width:20px;height:20px;border:4px solid #fff;border-radius:50%;opacity:0}
+.m-play:hover .fx::after{animation:ring 1s ease-out infinite}
+@keyframes ring{from{transform:scale(.4);opacity:.9}to{transform:scale(6);opacity:0}}
+/* Story: the three eras fan out, a spotlight sweeps and gold stars twinkle */
+.m-story .sp-art{transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.m-story:hover .sp-art{transform:rotate(-4deg) scale(1.08)}
+.m-story:hover .sp-art img:nth-child(1){transform:rotate(-8deg) translateY(4px)}.m-story:hover .sp-art img:nth-child(3){transform:rotate(8deg) translateY(4px)}
+.m-story .sp-art img{transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.m-story .fx::before{content:'';position:absolute;top:-40%;left:-60%;width:40%;height:180%;background:linear-gradient(90deg,rgba(255,206,58,0),rgba(255,206,58,.35),rgba(255,206,58,0));transform:rotate(18deg);opacity:0}
+.m-story:hover .fx::before{animation:sweep 1.4s ease-in-out infinite}
+@keyframes sweep{0%{left:-60%;opacity:0}20%{opacity:1}100%{left:130%;opacity:0}}
+.m-story .fx i{position:absolute;font-style:normal;color:var(--sun);font-size:18px;opacity:0}
+.m-story:hover .fx i{animation:twinkle 1.2s ease-in-out infinite}
+.m-story .fx i:nth-child(1){left:8%;top:18%}.m-story .fx i:nth-child(2){left:40%;top:10%;animation-delay:.3s!important}.m-story .fx i:nth-child(3){left:70%;top:62%;animation-delay:.6s!important}.m-story .fx i:nth-child(4){left:22%;top:66%;animation-delay:.9s!important}
+@keyframes twinkle{0%,100%{transform:scale(.3) rotate(0);opacity:0}50%{transform:scale(1.3) rotate(90deg);opacity:1}}
+/* Battle: the card catches fire, the swords clash */
+.m-battle .fx .flame{position:absolute;bottom:-40px;width:46px;height:70px;border-radius:50% 50% 45% 45%/60% 60% 40% 40%;background:radial-gradient(ellipse at 50% 80%,#FFF1A8 0 18%,#FFB020 36%,#FF5E3A 62%,rgba(255,60,40,0) 72%);opacity:0;filter:blur(.3px)}
+.m-battle:hover .fx .flame,.m-battle:focus-visible .fx .flame{animation:flame .7s ease-in-out infinite alternate}
+.m-battle .fx .flame:nth-child(1){left:-4%}.m-battle .fx .flame:nth-child(2){left:16%;animation-delay:.15s!important;height:90px}.m-battle .fx .flame:nth-child(3){left:36%;animation-delay:.3s!important}.m-battle .fx .flame:nth-child(4){left:56%;animation-delay:.1s!important;height:95px}.m-battle .fx .flame:nth-child(5){left:76%;animation-delay:.25s!important}.m-battle .fx .flame:nth-child(6){left:92%;animation-delay:.05s!important;height:80px}
+@keyframes flame{from{transform:translateY(8px) scaleY(.85) scaleX(1.05);opacity:.85}to{transform:translateY(-22px) scaleY(1.25) scaleX(.9);opacity:1}}
+.m-battle:hover{box-shadow:0 11px 0 var(--ink),0 0 26px 4px rgba(255,120,40,.65)}
+.m-battle:hover .mi{animation:clash .3s ease-in-out infinite alternate}
+@keyframes clash{from{transform:rotate(-4deg) scale(1.05)}to{transform:rotate(14deg) scale(1.18)}}
+/* click bursts (spawned by UI.modeBurst) */
+.mburst{position:fixed;z-index:60;pointer-events:none;font-style:normal;font-weight:800;animation:burst .7s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes burst{from{transform:translate(0,0) scale(.6) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(var(--r));opacity:0}}
+.mcard.pressed{animation:press .32s cubic-bezier(.3,1.8,.5,1)}
+@keyframes press{0%{transform:scale(1)}40%{transform:scale(.93) rotate(-1deg)}100%{transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){#scr-title,#scr-play{animation:none}.mcard .fx *,.mcard .fx::before,.mcard .fx::after,.mcard:hover .mi{animation:none!important}.mburst{display:none}}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
@@ -863,9 +907,9 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <div class="title-art"><canvas id="title-canvas" aria-hidden="true"></canvas></div>
     </header>
     <nav class="modes3" aria-label="Game modes">
-      <button class="mcard m-play" id="btn-play" type="button"><span class="mi" aria-hidden="true">🎸</span><b>Play &amp; Learn</b><span class="md">Search any song, or pick from your songs and the Strum Jam library</span></button>
-      <button class="mcard m-story" id="btn-story" type="button"><span class="sp-art" aria-hidden="true"><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span><b>Story</b><span class="md">Live an artist's career, era by era</span></button>
-      <button class="mcard m-battle" id="btn-battle" type="button"><span class="mi" aria-hidden="true">⚔️</span><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></button>
+      <button class="mcard m-play" id="btn-play" type="button"><span class="fx" aria-hidden="true"><i>♪</i><i>♫</i><i>♪</i><i>♬</i></span><span class="mi" aria-hidden="true">🎸</span><b>Play &amp; Learn</b><span class="md">Search any song, or pick from your songs and the Strum Jam library</span></button>
+      <button class="mcard m-story" id="btn-story" type="button"><span class="fx" aria-hidden="true"><i>★</i><i>★</i><i>★</i><i>★</i></span><span class="sp-art" aria-hidden="true"><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span><b>Story</b><span class="md">Live an artist's career, era by era</span></button>
+      <button class="mcard m-battle" id="btn-battle" type="button"><span class="fx" aria-hidden="true"><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span></span><span class="mi" aria-hidden="true">⚔️</span><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></button>
     </nav>
     <div class="careers" id="careers-title" hidden></div>
   </div>
