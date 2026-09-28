@@ -28,6 +28,11 @@ test harness, and the TODO list in priority order.
 - `OUT=/tmp/career.json node test/storytest.js && python3 build.py && node test/storyshot.js <outdir>`: career
   screen and swap sheet screenshots at desktop and phone size (Playwright; `NODE_PATH=$(npm root -g)`).
 
+- `node test/customshot.js <outdir>`: Build it yourself + the song picker, services stubbed (needs /tmp/career.json).
+- `node test/failshot.js <outdir>`: a Stage run going wrong, up to BOOED OFF.
+- `node test/drumsheet.js out.png <level>`: drummer frames of the real in-game groove; `node test/drumgame.js`
+  checks his clock is smooth in a real run.
+
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`
 (full standalone page). `dist/` is gitignored.

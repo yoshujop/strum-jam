@@ -11,6 +11,8 @@ const Scenes = (() => {
     'disco-ball', 'chandelier', 'pennants', 'string-lights', 'lasers', 'pyro'];
   const WEATHER = ['none', 'rain', 'snow', 'confetti', 'embers', 'haze', 'stars'];
   const TIMES = ['day', 'dusk', 'night'];
+  // a big faint emblem painted on the back wall: the era's motif (shapes only, never a logo or album art)
+  const MOTIFS = ['none', 'star', 'crown', 'bolt', 'heart', 'flame', 'moon', 'note', 'diamond', 'wave', 'eye', 'rose', 'dove', 'sun'];
   const DEF = {
     street:      { time: 'night', pal: ['#4B3F7A', '#FF5E7E', '#FFCE3A'], props: ['cd-table', 'boombox'], sign: 'THE BLOCK' },
     campus:      { time: 'day',   pal: ['#9A4A36', '#FFCE3A', '#2EC4B6'], props: ['books', 'pennants'], sign: 'STATE U' },
@@ -44,11 +46,16 @@ const Scenes = (() => {
     const pin = Array.isArray(o.palette) ? o.palette : [];
     const pal = [0, 1, 2].map(i => hexOk(pin[i]) ? pin[i].trim().toUpperCase() : d.pal[i]);
     let props = (Array.isArray(o.props) ? o.props : []).filter(p => PROPS.includes(p));
-    props = [...new Set(props)].slice(0, 3);
+    props = [...new Set(props)].slice(0, 5);
     if (!props.length) props = d.props.slice();
-    const sign = String(o.sign == null ? d.sign : o.sign).replace(/[\u0000-\u001f<>&"]/g, '').trim().slice(0, 16).toUpperCase();
-    const sc = { setting, time, weather, palette: pal, props, sign };
-    sc.key = [setting, time, weather, pal.join(''), props.join(','), sign].join('|');
+    const clean = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f<>&"]/g, '').trim().slice(0, n).toUpperCase();
+    const sign = clean(o.sign == null ? d.sign : o.sign, 16);
+    // flyers pasted on the wall: venue names, tour stops, the year (never lyrics or brands)
+    const posters = (Array.isArray(o.posters) ? o.posters : []).map(x => clean(x, 14)).filter(Boolean).slice(0, 3);
+    const motif = MOTIFS.includes(o.motif) ? o.motif : 'none';
+    const stage = String(o.stage == null ? '' : o.stage).replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 120);
+    const sc = { setting, time, weather, palette: pal, props, sign, posters, motif, stage };
+    sc.key = [setting, time, weather, pal.join(''), props.join(','), sign, posters.join(','), motif].join('|');
     return sc;
   }
 
@@ -750,15 +757,58 @@ const Scenes = (() => {
     return s;
   }
 
+  /* ---------- the era's motif and flyers ---------- */
+  function motifPath(m, x, y, r){
+    const pts = (n, R0, R1, rot) => { let d = ''; for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, q = i % 2 ? R1 : R0; d += (i ? 'L' : 'M') + f(x + q * Math.cos(a)) + ' ' + f(y + q * Math.sin(a)); } return d + 'Z'; };
+    switch (m) {
+      case 'star': return pts(5, r, r * 0.45, -Math.PI / 2);
+      case 'sun': return pts(12, r, r * 0.72, 0);
+      case 'diamond': return `M${f(x)} ${f(y - r)}L${f(x + r * 0.7)} ${f(y)}L${f(x)} ${f(y + r)}L${f(x - r * 0.7)} ${f(y)}Z`;
+      case 'bolt': return `M${f(x + r * 0.15)} ${f(y - r)}L${f(x - r * 0.55)} ${f(y + r * 0.1)}L${f(x - r * 0.02)} ${f(y + r * 0.1)}L${f(x - r * 0.2)} ${f(y + r)}L${f(x + r * 0.6)} ${f(y - r * 0.2)}L${f(x + r * 0.05)} ${f(y - r * 0.2)}Z`;
+      case 'heart': return `M${f(x)} ${f(y + r * 0.8)}C${f(x - r * 1.3)} ${f(y - r * 0.1)} ${f(x - r * 0.7)} ${f(y - r * 1.1)} ${f(x)} ${f(y - r * 0.4)}C${f(x + r * 0.7)} ${f(y - r * 1.1)} ${f(x + r * 1.3)} ${f(y - r * 0.1)} ${f(x)} ${f(y + r * 0.8)}Z`;
+      case 'crown': return `M${f(x - r)} ${f(y + r * 0.5)}L${f(x - r)} ${f(y - r * 0.5)}L${f(x - r * 0.5)} ${f(y)}L${f(x)} ${f(y - r * 0.8)}L${f(x + r * 0.5)} ${f(y)}L${f(x + r)} ${f(y - r * 0.5)}L${f(x + r)} ${f(y + r * 0.5)}Z`;
+      case 'flame': return `M${f(x)} ${f(y + r)}C${f(x - r * 0.9)} ${f(y + r)} ${f(x - r * 0.8)} ${f(y - r * 0.1)} ${f(x - r * 0.2)} ${f(y - r)}C${f(x - r * 0.1)} ${f(y - r * 0.4)} ${f(x + r * 0.3)} ${f(y - r * 0.3)} ${f(x + r * 0.35)} ${f(y - r * 0.7)}C${f(x + r * 0.9)} ${f(y - r * 0.1)} ${f(x + r * 0.8)} ${f(y + r)} ${f(x)} ${f(y + r)}Z`;
+      case 'moon': return `M${f(x + r * 0.3)} ${f(y - r)}A${f(r)} ${f(r)} 0 1 0 ${f(x + r * 0.3)} ${f(y + r)}A${f(r * 0.75)} ${f(r * 0.75)} 0 1 1 ${f(x + r * 0.3)} ${f(y - r)}Z`;
+      case 'note': return `M${f(x - r * 0.1)} ${f(y + r * 0.55)}A${f(r * 0.35)} ${f(r * 0.28)} 0 1 1 ${f(x - r * 0.1)} ${f(y + r * 0.54)}ZM${f(x + r * 0.2)} ${f(y + r * 0.5)}L${f(x + r * 0.2)} ${f(y - r)}Q${f(x + r * 0.9)} ${f(y - r * 0.7)} ${f(x + r * 0.7)} ${f(y - r * 0.1)}Q${f(x + r * 0.6)} ${f(y - r * 0.55)} ${f(x + r * 0.32)} ${f(y - r * 0.55)}L${f(x + r * 0.32)} ${f(y + r * 0.5)}Z`;
+      case 'wave': return `M${f(x - r)} ${f(y + r * 0.6)}C${f(x - r)} ${f(y - r * 0.4)} ${f(x - r * 0.1)} ${f(y - r)} ${f(x + r * 0.5)} ${f(y - r * 0.5)}C${f(x)} ${f(y - r * 0.5)} ${f(x - r * 0.2)} ${f(y + r * 0.1)} ${f(x + r * 0.3)} ${f(y + r * 0.2)}C${f(x + r * 0.7)} ${f(y + r * 0.25)} ${f(x + r)} ${f(y + r * 0.1)} ${f(x + r)} ${f(y + r * 0.6)}Z`;
+      case 'eye': return `M${f(x - r)} ${f(y)}Q${f(x)} ${f(y - r * 0.9)} ${f(x + r)} ${f(y)}Q${f(x)} ${f(y + r * 0.9)} ${f(x - r)} ${f(y)}ZM${f(x + r * 0.32)} ${f(y)}A${f(r * 0.32)} ${f(r * 0.32)} 0 1 0 ${f(x + r * 0.31)} ${f(y)}Z`;
+      case 'rose': return pts(6, r, r * 0.6, 0.3) + pts(5, r * 0.55, r * 0.3, 0.9);
+      case 'dove': return `M${f(x - r)} ${f(y)}Q${f(x - r * 0.2)} ${f(y - r * 0.2)} ${f(x)} ${f(y - r)}Q${f(x + r * 0.1)} ${f(y - r * 0.2)} ${f(x + r * 0.5)} ${f(y - r * 0.1)}L${f(x + r)} ${f(y - r * 0.3)}L${f(x + r * 0.7)} ${f(y + r * 0.1)}Q${f(x)} ${f(y + r * 0.5)} ${f(x - r)} ${f(y)}Z`;
+    }
+    return '';
+  }
+  function motifArt(ctx, m){
+    if (!m || m === 'none') return '';
+    const { W, T: top, bh, pal } = ctx, r = Math.min(bh * 0.28, W * 0.12), d = motifPath(m, W / 2, top + bh * 0.38, r);
+    return d ? `<g opacity=".22">${P(d, pal[1], ink(Math.max(2, r * 0.05), INK2) + ' fill-rule="evenodd"')}</g>` : '';
+  }
+  function posterArt(ctx, list){
+    if (!list.length) return '';
+    // small flyers high on the wall, clear of the band in the middle
+    const { W, T: top, bh, pal, u } = ctx, xs = [[0.24], [0.24, 0.76], [0.24, 0.76, 0.35]][list.length - 1];
+    let s = '';
+    list.forEach((txt, i) => {
+      const h = Math.max(46, Math.min(110, bh * 0.34)), w = h / 1.3, x = W * xs[i], y = top + bh * 0.06, rot = [-5, 3, -2][i];
+      const words = txt.split(/\s+/), lines = []; let cur = '';
+      for (const wd of words) { if ((cur + ' ' + wd).trim().length > 7 && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); } if (cur) lines.push(cur);
+      const fs = Math.min(w * 0.2, (w * 1.6) / Math.max(4, ...lines.map(l => l.length)));
+      s += `<g transform="rotate(${rot} ${f(x)} ${f(y + h / 2)})">` + R(x - w / 2, y, w, h, '#FFF4DA', ink(2.5)) + R(x - w / 2, y, w, h * 0.32, [pal[1], pal[2], '#FF5E7E'][i % 3], ink(2.5))
+        + C(x, y + h * 0.16, h * 0.08, '#FFF4DA', ink(2)) + lines.slice(0, 3).map((l, k) => T(x, y + h * 0.5 + k * fs * 1.1, fs, INK, l)).join('')
+        + R(x - w * 0.18, y - 5, w * 0.36, 10, 'rgba(255,255,255,.55)', `transform="rotate(${-rot * 1.5} ${f(x)} ${f(y)})"`) + '</g>';
+    });
+    return s;
+  }
+
   /* ---------- build the whole backdrop ---------- */
   function svg(scene, W, H, lay){
     lay = lay || {};
     const railY = lay.railY || 0, railH = lay.railH || 0, F = lay.floorY || H * 0.8, top = railY + railH, bh = F - top;
     const ctx = { W, H, T: top, F, bh, pal: scene.palette, time: scene.time, sign: scene.sign, rnd: rng(hashStr(scene.key) + W), defs: '', front: '', u: Math.max(0.42, Math.min(1.25, bh / 250, W / 820)) };
     let body = (DRAW[scene.setting] || DRAW.street)(ctx);
+    body += motifArt(ctx, scene.motif) + posterArt(ctx, scene.posters || []);
     // props: floor ones stand at the edges, overhead ones hang from the top
     const floorProps = scene.props.filter(p => !OVERHEAD.includes(p) && PROP[p]);
-    const slots = [0.09, 0.91, 0.2, 0.8];
+    const slots = [0.09, 0.91, 0.2, 0.8, 0.31];
     floorProps.forEach((p, i) => { body += PROP[p](W * slots[i % slots.length], F + 2, ctx.u * (i >= 2 ? 0.85 : 1), scene.palette); });
     scene.props.filter(p => OVERHEAD.includes(p)).forEach(p => { body += overhead(ctx, p); });
     body += ctx.front;
@@ -818,5 +868,5 @@ const Scenes = (() => {
     c.restore();
   }
 
-  return { SETTINGS, PROPS, WEATHER, TIMES, validate, svg, dataUrl, drawLive };
+  return { SETTINGS, PROPS, WEATHER, TIMES, MOTIFS, validate, svg, dataUrl, drawLive };
 })();
