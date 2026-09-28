@@ -25,6 +25,7 @@ const UI = {
     this.letters = [...document.querySelectorAll('#logo .lt')];
     this.bind();
     Story.init();
+    Suggest.init();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -1194,6 +1195,71 @@ const TitleArt = {
       c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = on ? '#FFE37A' : '#6B4E8F'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
     }
     c.restore();
+  },
+};
+
+/* ---------- suggestions while typing (songs on the search box, artists on the Story box) ---------- */
+const Suggest = {
+  attach(input, o){
+    const box = document.createElement('div'); box.className = 'sugg-list'; box.id = input.id + '-sugg'; box.setAttribute('role', 'listbox'); box.hidden = true;
+    input.parentNode.style.position = 'relative'; input.parentNode.appendChild(box);
+    input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', box.id); input.setAttribute('aria-expanded', 'false');
+    const st = { items: [], hi: -1, t: 0, ctl: null, q: '' };
+    const close = () => { box.hidden = true; input.setAttribute('aria-expanded', 'false'); st.hi = -1; };
+    const paint = () => {
+      box.innerHTML = st.items.map((it, i) => `<div class="sg${i === st.hi ? ' hi' : ''}" role="option" id="${box.id}-${i}" aria-selected="${i === st.hi}" data-i="${i}">${o.render(it)}</div>`).join('');
+      box.hidden = !st.items.length; input.setAttribute('aria-expanded', String(!box.hidden));
+      if (st.hi >= 0) input.setAttribute('aria-activedescendant', box.id + '-' + st.hi); else input.removeAttribute('aria-activedescendant');
+    };
+    const pick = i => { const it = st.items[i]; if (!it) return; close(); st.items = []; o.pick(it); };
+    input.addEventListener('input', () => {
+      clearTimeout(st.t); const q = input.value.trim();
+      if (q.length < 2) { st.items = []; close(); return; }
+      st.t = setTimeout(async () => {
+        if (st.ctl) st.ctl.abort(); const ctl = st.ctl = new AbortController(); st.q = q;
+        try { const items = await o.fetch(q, ctl.signal); if (ctl.signal.aborted || input.value.trim() !== q || document.activeElement !== input) return; st.items = items.slice(0, 8); st.hi = -1; paint(); }
+        catch (e) { /* suggestions are a nicety: the full search still works */ }
+      }, 260);
+    });
+    input.addEventListener('keydown', e => {
+      if (box.hidden) return;
+      if (e.key === 'ArrowDown') { st.hi = (st.hi + 1) % st.items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { st.hi = (st.hi - 1 + st.items.length) % st.items.length; paint(); e.preventDefault(); }
+      else if (e.key === 'Enter' && st.hi >= 0) { e.preventDefault(); e.stopPropagation(); pick(st.hi); }
+      else if (e.key === 'Escape') { close(); e.stopPropagation(); }
+    });
+    input.addEventListener('blur', () => setTimeout(close, 150));
+    input.form && input.form.addEventListener('submit', () => { clearTimeout(st.t); if (st.ctl) st.ctl.abort(); close(); });
+    box.addEventListener('pointerdown', e => { const d = e.target.closest('[data-i]'); if (d) { e.preventDefault(); pick(+d.dataset.i); } });
+  },
+  // a recording that's in the chord dataset (a quick local check on the embedded index)
+  inData(r){ const tv = Lookup.normTitle(r.title), av = Lookup.artistVariants(r.artist); return tv.some(t => av.some(a => Lookup.findKey(t + '|' + a).length)); },
+  init(){
+    Suggest.attach($('search-input'), {
+      fetch: async (q, signal) => {
+        const words = q.toLowerCase().split(/\s+/);
+        const local = [...UI.mine(), ...LIBRARY.map(s => validateSong(s, 'library'))].filter(s => words.every(w => (s.title + ' ' + s.artist).toLowerCase().includes(w))).slice(0, 3).map(song => ({ song }));
+        let recs = [];
+        try { recs = await Lookup.itunes(q, { signal, limit: 12 }); } catch (e) { if (e.name === 'AbortError') throw e; }
+        // originals first (no live cuts, covers or karaoke), the ones with chord data ahead of the rest
+        const seen = new Set(), out = [];
+        for (const r of recs) { const k = Lookup.normTitle(r.title)[0] + '|' + Lookup.normArtist(r.artist); if (seen.has(k) || (Lookup.isVersion(r) && !Lookup.VER.test(q))) continue; seen.add(k); out.push({ rec: r, data: Suggest.inData(r) }); }
+        out.sort((a, b) => b.data - a.data);
+        return [...local, ...out.slice(0, 8 - local.length)];
+      },
+      render: it => it.song ? `<span class="noart lib">♪</span><span class="st"><b>${esc(it.song.title)}</b><small>${esc(it.song.artist || '')} · ${it.song.source === 'library' ? 'Strum Jam library' : 'your songs'}</small></span>`
+        : `${it.rec.art ? `<img alt="" src="${esc(it.rec.art)}">` : '<span class="noart"></span>'}<span class="st"><b>${esc(it.rec.title)}</b><small>${esc(it.rec.artist)}${it.rec.year ? ' · ' + it.rec.year : ''}</small></span>${it.data ? '<em>in chord data</em>' : ''}`,
+      pick: it => { if (it.song) { $('search-input').value = ''; UI.openSong(it.song); } else { $('search-input').value = it.rec.title + ' ' + it.rec.artist; UI.pickRecording(it.rec); } },
+    });
+    Suggest.attach($('story-input'), {
+      fetch: async (q, signal) => {
+        const j = await Lookup.getJson(Lookup.ITUNES + '?media=music&entity=musicArtist&limit=8&country=US&term=' + encodeURIComponent(q), { signal });
+        const seen = new Set();
+        return (j.results || []).filter(r => r.artistName && !seen.has(r.artistName.toLowerCase()) && seen.add(r.artistName.toLowerCase())).map(r => ({ name: r.artistName, genre: r.primaryGenreName || '' }));
+      },
+      render: it => `<span class="noart lib">★</span><span class="st"><b>${esc(it.name)}</b><small>${esc(it.genre)}</small></span>`,
+      pick: it => { $('story-input').value = it.name; $('story-input').focus(); },
+    });
   },
 };
 
