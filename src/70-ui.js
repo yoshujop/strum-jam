@@ -26,6 +26,7 @@ const UI = {
     this.bind();
     Story.init();
     Suggest.init();
+    MenuBG.apply();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -412,6 +413,24 @@ const UI = {
     throw Object.assign(new Error('The web search took too long.'), { code: 'web_nf' });
   },
 
+  // a mode button's click: the card squashes and throws its own particles (notes, stars, flames), then the screen changes
+  modeBurst(card, kind, go){
+    Sfx.open();
+    if (reduceMotion) { go(); return; }
+    card.classList.remove('pressed'); void card.offsetWidth; card.classList.add('pressed');
+    const r = card.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const set = kind === 'play' ? ['♪', '♫', '♬', '♩'] : kind === 'story' ? ['★', '✦', '★', '✧'] : ['🔥', '💥', '🔥', '⚡'];
+    const cols = kind === 'play' ? ['#FF5E7E', '#FFFFFF', '#FFCE3A'] : kind === 'story' ? ['#FFCE3A', '#FFF7E6', '#FF8FC7'] : ['#FF7A2E', '#FFCE3A', '#FF3B3B'];
+    for (let i = 0; i < 16; i++) {
+      const e = document.createElement('i'); e.className = 'mburst'; e.textContent = set[i % set.length];
+      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.3, d = 90 + Math.random() * 110;
+      e.style.left = cx + 'px'; e.style.top = cy + 'px'; e.style.color = cols[i % cols.length]; e.style.fontSize = (20 + Math.random() * 18) + 'px';
+      e.style.textShadow = '2px 2px 0 #1E1B2E';
+      e.style.setProperty('--dx', Math.cos(a) * d + 'px'); e.style.setProperty('--dy', (Math.sin(a) * d - (kind === 'battle' ? 60 : 20)) + 'px'); e.style.setProperty('--r', (Math.random() * 120 - 60) + 'deg');
+      document.body.appendChild(e); setTimeout(() => e.remove(), 800);
+    }
+    setTimeout(go, 260);
+  },
   /* ---------- song menu ---------- */
   openSong(song, storyCtx){
     this.song = song;
@@ -955,12 +974,12 @@ const UI = {
     $('btn-again').onclick = () => this.startGame(G.mode, true);
     $('btn-res-song').onclick = () => { this.show('song'); this.renderSong(); };
     $('btn-res-home').onclick = () => this.show('play');
-    $('btn-play').onclick = () => { Sfx.open(); this.show('play').then(() => $('search-input').focus()); };
+    $('btn-play').onclick = () => this.modeBurst($('btn-play'), 'play', () => this.show('play').then(() => $('search-input').focus()));
     $('btn-play-home').onclick = () => this.show('title');
     $('btn-battle-home').onclick = () => { Battle.st = null; this.show('title'); };
     $('btn-tune-play').onclick = () => $('btn-tune-title').click();
     $('btn-mic-play').onclick = () => $('btn-mic-setup').click();
-    $('btn-battle').onclick = () => { Sfx.open(); Battle.open(); };
+    $('btn-battle').onclick = () => this.modeBurst($('btn-battle'), 'battle', () => Battle.open());
     $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li + 1 < ((Story.get(x.careerId) || {}).levels || []).length ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
