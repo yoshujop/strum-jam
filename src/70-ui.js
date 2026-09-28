@@ -930,7 +930,7 @@ const UI = {
     $('btn-again').onclick = () => this.startGame(G.mode, true);
     $('btn-res-song').onclick = () => { this.show('song'); this.renderSong(); };
     $('btn-res-home').onclick = () => this.show('title');
-    $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li < 2 ? x.li + 1 : -1); };
+    $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li + 1 < ((Story.get(x.careerId) || {}).levels || []).length ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
     // modals

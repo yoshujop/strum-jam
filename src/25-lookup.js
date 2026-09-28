@@ -56,11 +56,14 @@ const Lookup = {
       if (r.kind !== 'song' || !r.trackId) continue;
       const k = (r.trackName + '|' + r.artistName + '|' + r.collectionName).toLowerCase();
       if (seen.has(k)) continue; seen.add(k);
-      out.push({ trackId: r.trackId, title: r.trackName, artist: r.artistName, artistId: r.artistId || 0, album: r.collectionName || '', year: r.releaseDate ? +String(r.releaseDate).slice(0, 4) : 0,
-        durationMs: r.trackTimeMillis || 0, previewUrl: r.previewUrl || '', genre: r.primaryGenreName || '',
-        art: (r.artworkUrl100 || r.artworkUrl60 || '').replace(/\/\d+x\d+bb\./, '/200x200bb.'), url: r.trackViewUrl || '' });
+      out.push(this.trackOf(r));
     }
     return out;
+  },
+  trackOf(r){
+    return { trackId: r.trackId, title: r.trackName, artist: r.artistName, artistId: r.artistId || 0, album: r.collectionName || '', year: r.releaseDate ? +String(r.releaseDate).slice(0, 4) : 0,
+      durationMs: r.trackTimeMillis || 0, previewUrl: r.previewUrl || '', genre: r.primaryGenreName || '',
+      art: (r.artworkUrl100 || r.artworkUrl60 || '').replace(/\/\d+x\d+bb\./, '/200x200bb.'), url: r.trackViewUrl || '' };
   },
   // versions that aren't the original studio recording (unless the title asks for one)
   VER: /\blive\b|acoustic|unplugged|\bdemo\b|remix|\bmix\b|karaoke|instrumental|cover|tribute|re-?record|taylor.s version|rehearsal|\bsession\b|orchestral|symphonic|a cappella|lullaby|8-bit/i,
@@ -93,6 +96,105 @@ const Lookup = {
     }
     const b = ranked[0];
     return b && b.s >= 2.5 ? b.r : null;
+  },
+
+  /* ---------- Story mode: the artist's studio albums, with release dates and tracklists ---------- */
+  // MusicBrainz says which releases are studio albums and when each first came out (Apple often dates a reissue);
+  // Apple has the tracklists and the recordings the game plays. Without MusicBrainz, Apple's own album list is filtered.
+  MB: 'https://musicbrainz.org/ws/2/',
+  // edition tags that don't make a different album
+  EDITION: /\s*[(\[][^)\]]*\b(deluxe|expanded|edition|remaster(ed)?|anniversary|version|explicit|clean|bonus|reissue|mono|stereo)\b[^)\]]*[)\]]/gi,
+  NOT_STUDIO: /\b(live|greatest hits|best of|the best|hits|collection|anthology|essentials?|karaoke|instrumentals?|remix(es|ed)?|commentary|interview|tribute|b-sides|rarities|playlist|unplugged|in concert|soundtrack|christmas collection)\b/i,
+  isEdition(t){ return String(t).replace(this.EDITION, '') !== String(t); },
+  albumKey(t){ return this.core(this.base(String(t || '').replace(this.EDITION, '').replace(/\s+-\s+(single|ep)$/i, ''))); },
+  async itunesArtist(name, opts){
+    opts = opts || {};
+    const u = this.ITUNES + '?media=music&entity=musicArtist&limit=10&country=US&term=' + encodeURIComponent(name);
+    const j = await this.getJson(u, { signal: opts.signal });
+    const want = this.normArtist(name), res = (j.results || []).filter(r => r.artistId && r.artistName);
+    const hit = res.find(r => this.normArtist(r.artistName) === want) || res.find(r => this.artistVariants(r.artistName).includes(want));
+    if (hit) return { artistId: hit.artistId, name: hit.artistName };
+    // spelled differently (or not listed as an artist): the artist of the best-matching song
+    const songs = await this.itunes(name, { signal: opts.signal, limit: 10 });
+    const s = songs.find(x => x.artistId && this.artistVariants(x.artist).includes(want));
+    return s ? { artistId: s.artistId, name: s.artist.replace(/\s*(&|,|\bfeat\.?|\bwith\b).*$/i, '') } : (res[0] ? { artistId: res[0].artistId, name: res[0].artistName, loose: true } : null);
+  },
+  async itunesAlbums(artistId, opts){
+    const j = await this.getJson(this.ITUNES.replace('/search', '/lookup') + '?id=' + artistId + '&entity=album&limit=200&country=US', { signal: opts && opts.signal });
+    return (j.results || []).filter(r => r.wrapperType === 'collection' && r.collectionId).map(r => ({
+      collectionId: r.collectionId, title: r.collectionName || '', artist: r.artistName || '', artistId: r.artistId || 0,
+      date: String(r.releaseDate || '').slice(0, 10), year: r.releaseDate ? +String(r.releaseDate).slice(0, 4) : 0,
+      trackCount: r.trackCount || 0, explicit: r.collectionExplicitness === 'explicit' }));
+  },
+  // tracklists for several albums (a few per request; Apple limits how often it can be asked)
+  async itunesTracks(ids, opts){
+    const out = new Map(), L = this.ITUNES.replace('/search', '/lookup');
+    const load = async group => {
+      const j = await this.getJson(L + '?id=' + group.join(',') + '&entity=song&limit=200&country=US', { signal: opts && opts.signal });
+      for (const r of (j.results || [])) {
+        if (r.wrapperType !== 'track' || r.kind !== 'song' || !r.trackId) continue;
+        const list = out.get(r.collectionId) || out.set(r.collectionId, []).get(r.collectionId);
+        if (!list.some(x => x.trackId === r.trackId)) list.push({ ...this.trackOf(r), disc: r.discNumber || 1, no: r.trackNumber || 0 });
+      }
+    };
+    for (let i = 0; i < ids.length; i += 6) await load(ids.slice(i, i + 6));
+    // a group that came back short: ask for the missing albums one at a time
+    for (const id of ids) if (!out.has(id)) { try { await load([id]); } catch (e) { if (e.name === 'AbortError') throw e; } }
+    for (const list of out.values()) list.sort((a, b) => a.disc - b.disc || a.no - b.no);
+    return out;
+  },
+  // studio albums (and mixtapes) with their first release dates, or null when MusicBrainz can't be reached
+  async mbAlbums(name, opts){
+    const get = u => this.getJson(this.MB + u + (u.includes('?') ? '&' : '?') + 'fmt=json', { signal: opts && opts.signal, timeout: 15000 });
+    const wait = () => new Promise(z => setTimeout(z, 1100));   // MusicBrainz asks for one request a second
+    try {
+      const a = await get('artist?limit=5&query=' + encodeURIComponent('artist:"' + String(name).replace(/"/g, '') + '"'));
+      const want = this.normArtist(name), list = (a && a.artists) || [];
+      const hit = list.find(x => this.normArtist(x.name) === want && x.score >= 80) || list.find(x => x.score >= 95);
+      if (!hit) return null;
+      const out = [];
+      for (let offset = 0; offset < 300; offset += 100) {
+        await wait();
+        const r = await get('release-group?artist=' + hit.id + '&type=album&limit=100&offset=' + offset);
+        const rg = (r && r['release-groups']) || [];
+        for (const g of rg) {
+          const sec = g['secondary-types'] || [];
+          if (g['primary-type'] !== 'Album' || sec.some(t => t !== 'Mixtape/Street') || !g['first-release-date']) continue;
+          out.push({ title: g.title, date: g['first-release-date'], year: +g['first-release-date'].slice(0, 4), mixtape: sec.length > 0 });
+        }
+        if (offset + 100 >= ((r && r['release-group-count']) || 0)) break;
+      }
+      return out.length ? out : null;
+    } catch (e) { if (e.name === 'AbortError') throw e; return null; }
+  },
+  // {artist, artistId, source, albums: [{id, title, year, date, collectionId, tracks}]} oldest first
+  async discography(name, opts){
+    opts = opts || {};
+    const art = await this.itunesArtist(name, opts);
+    if (!art) return null;
+    const [coll, mb] = await Promise.all([this.itunesAlbums(art.artistId, opts), this.mbAlbums(art.name, opts)]);
+    const own = coll.filter(c => c.artistId === art.artistId || this.artistVariants(c.artist).includes(this.normArtist(art.name)));
+    const single = c => /\s+-\s+(single|ep)$/i.test(c.title) || c.trackCount < 7;
+    // several Apple editions of one album: the standard one (explicit if there's a choice), then the fullest
+    const pick = list => list.slice().sort((a, b) => (this.isEdition(a.title) - this.isEdition(b.title)) || (b.explicit - a.explicit) || (b.trackCount - a.trackCount) || String(a.date).localeCompare(String(b.date)))[0];
+    let albums = [];
+    if (mb) {
+      for (const m of mb) {
+        const k = this.albumKey(m.title), cands = own.filter(c => this.albumKey(c.title) === k && !/\s+-\s+(single|ep)$/i.test(c.title));
+        albums.push({ title: m.title, year: m.year, date: m.date, mixtape: m.mixtape, coll: cands.length ? pick(cands) : null });
+      }
+    } else {
+      const groups = new Map();
+      for (const c of own) { if (single(c) || this.NOT_STUDIO.test(c.title)) continue; const k = this.albumKey(c.title); (groups.get(k) || groups.set(k, []).get(k)).push(c); }
+      for (const list of groups.values()) { const c = pick(list), first = list.reduce((a, b) => (a.date && a.date < b.date ? a : b)); albums.push({ title: c.title.replace(this.EDITION, '').trim(), year: first.year, date: first.date, coll: c }); }
+    }
+    // the same album twice (MusicBrainz lists some twice): keep the earliest
+    const seen = new Set();
+    albums = albums.sort((a, b) => String(a.date).localeCompare(String(b.date))).filter(a => { const k = this.albumKey(a.title); if (seen.has(k)) return false; seen.add(k); return true; });
+    const tracks = await this.itunesTracks(albums.filter(a => a.coll).map(a => a.coll.collectionId), opts);
+    albums = albums.map((a, i) => ({ id: 'A' + (i + 1), title: a.title, year: a.year, date: a.date, mixtape: !!a.mixtape, collectionId: a.coll ? a.coll.collectionId : 0,
+      tracks: a.coll ? (tracks.get(a.coll.collectionId) || []) : [] }));
+    return { artist: art.name, artistId: art.artistId, source: mb ? 'musicbrainz' : 'itunes', albums };
   },
 
   /* ---------- names, spelled the way the index was built ---------- */
@@ -237,7 +339,15 @@ const Lookup = {
   },
 
   // every dataset row for this recording, checked against Spotify's own title
+  rowsMemo: new Map(),
   async findRows(track, opts){
+    const k = track && track.trackId, m = k && this.rowsMemo.get(k);
+    if (m) return m;
+    const r = await this.findRowsFresh(track, opts);
+    if (k && r.rows.length) { this.rowsMemo.set(k, r); if (this.rowsMemo.size > 60) this.rowsMemo.delete(this.rowsMemo.keys().next().value); }
+    return r;
+  },
+  async findRowsFresh(track, opts){
     opts = opts || {};
     const signal = opts.signal, ix = this.loadIndex();
     if (!ix.ok) return { rows: [], note: 'no-index' };

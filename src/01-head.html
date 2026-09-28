@@ -401,6 +401,22 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .stile .t{font-weight:800;line-height:1.15}
 .stile .a{font-size:12px;font-weight:700;opacity:.7}
 .stile .st{font-size:13px;font-weight:800}
+.stile .why{font-size:13px;font-weight:600;font-style:italic;line-height:1.25;margin-block:2px}
+.stile-w{position:relative;display:grid}
+.stile-w.can-swap .stile .t{padding-right:70px}
+.stile-w .swap{position:absolute;top:8px;right:8px;padding:2px 9px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--ink);font:inherit;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 2px 0 var(--ink)}
+.stile-w .swap:hover{background:var(--sun)}
+.stile-w .swap:active{transform:translateY(2px);box-shadow:none}
+.stile-w .swap:disabled{opacity:.45;cursor:progress}
+.lvl .few{margin:0;font-size:14px;font-weight:700;color:var(--bad)}
+.career-note{margin:10px 0 0}
+.sw-list{display:grid;gap:10px}
+.sw-opt{display:grid;gap:2px;text-align:left;padding:10px 14px;border:3px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink);font:inherit;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.sw-opt:hover{background:var(--paper2)}
+.sw-opt:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.sw-opt .t{font-weight:800}
+.sw-opt .a{font-size:12px;font-weight:700;opacity:.7}
+.sw-opt .why{font-size:13px;font-weight:600;font-style:italic}
 .stile .stars{letter-spacing:2px;color:#D69A00}
 .stile .stars i{font-style:normal;color:#CFC6B4}
 .stile.passed{background:#E9FBEF}
@@ -754,7 +770,7 @@ input[type=range]{width:100%;accent-color:var(--coral)}
     <div id="story-pick">
       <header class="story-hero">
         <h1>Story <span>mode</span></h1>
-        <p>Choose an artist. Claude maps their career into three eras, picks three songs from each, and builds a stage for every chapter of their story. Clear an era to unlock the next one.</p>
+        <p>Choose an artist. Their real albums become up to three eras, each with three guitar-friendly songs checked against real chord charts, and a stage for every chapter of their story. Clear an era to unlock the next one.</p>
       </header>
       <form id="story-form" class="search" autocomplete="off">
         <input id="story-input" type="search" placeholder="Which artist?" aria-label="Artist name">
@@ -770,8 +786,9 @@ input[type=range]{width:100%;accent-color:var(--coral)}
         <div class="ch-name"><small>Story mode</small><h1 id="career-artist"></h1><p id="career-tag"></p></div>
         <div class="career-meter"><b id="career-stars"></b><div class="cm-bar"><i id="career-fill"></i></div><span id="career-state"></span></div>
       </header>
+      <p class="notice career-note" id="career-note" hidden></p>
       <div id="story-levels"></div>
-      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><span class="small" id="story-foot-msg">Eras, songs and stages are picked by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
+      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
     </div>
   </div>
 </section>
@@ -854,6 +871,14 @@ input[type=range]{width:100%;accent-color:var(--coral)}
     <p class="small" id="cf-intro" style="margin:0"></p>
     <div id="cf-qs" style="display:grid;gap:10px"></div>
     <div class="row"><button class="btn btn-go" id="btn-cf-ok" type="button">Use this chart</button><button class="btn btn-sm" id="btn-cf-paste" type="button">Paste a chord sheet instead</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-swap" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-sw-h">
+    <div class="hd"><h2 id="m-sw-h">Swap song</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Cancel</button></div>
+    <p class="small" id="sw-intro" style="margin:0"></p>
+    <div class="sw-list" id="sw-list"></div>
   </div>
 </div>
 

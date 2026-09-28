@@ -18,9 +18,14 @@ test harness, and the TODO list in priority order.
   (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`), all embedded into the build.
 - `test/`, `ref/`: Playwright/Node test and render scripts (see HANDOFF.md "Test harness bits").
 - `index.html` at the root is what GitHub Pages serves (https://yoshujop.github.io/strum-jam/).
-  `src/` was recovered from it (Story mode, the chart pipeline) and rebuilds it byte-for-byte with
-  `python3 build.py "https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39"`. The source zip was older than
-  the live build; HANDOFF.md predates Story mode and the chart pipeline.
+  `src/` was recovered from it (Story mode, the chart pipeline); at that commit it rebuilt it byte-for-byte
+  with `python3 build.py "https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39"`. The source zip was older
+  than the live build; HANDOFF.md predates Story mode and the chart pipeline.
+
+## Tests
+- `node test/storytest.js`: Story mode's discography lookup and era/song checks, with mocked services.
+- `OUT=/tmp/career.json node test/storytest.js && python3 build.py && node test/storyshot.js <outdir>`: career
+  screen and swap sheet screenshots at desktop and phone size (Playwright; `NODE_PATH=$(npm root -g)`).
 
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`

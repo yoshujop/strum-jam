@@ -254,7 +254,16 @@ const Chart = {
   },
 
   /* ---------- web fallback (only when the song isn't in the dataset) ---------- */
+  // Story mode's song check reads the web chart before the song is opened (opts.keep); opening it then uses that one
+  webMemo: new Map(),
   async webChart(track, opts){
+    const k = track && track.trackId;
+    if (k && this.webMemo.has(k)) { const w = this.webMemo.get(k); this.webMemo.delete(k); return w; }
+    const w = await this.webChartFresh(track, opts);
+    if (k && opts && opts.keep) this.webMemo.set(k, w);
+    return w;
+  },
+  async webChartFresh(track, opts){
     const d = await opts.askClaude(webChartPrompt(track), opts.signal, { webSearch: true, kind: 'web', body: { trackId: track.trackId } });
     if (!d || d.found === false || !Array.isArray(d.sections)) throw Object.assign(new Error('Claude couldn’t find chord sources for this recording.'), { code: 'web_nf' });
     const secs = [];
