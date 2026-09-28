@@ -1,0 +1,736 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -110 500 650" width="100%" height="100%" preserveAspectRatio="xMidYMax meet">
+<style>
+#drummer .fd-armL { animation: fd-armL 4s infinite ; transform-box: view-box; transform-origin: 198px 278px; }
+#drummer .fd-foreL { animation: fd-foreL 4s infinite ; transform-box: view-box; transform-origin: 165px 318px; }
+#drummer .fd-armR { animation: fd-armR 4s infinite ; transform-box: view-box; transform-origin: 302px 278px; }
+#drummer .fd-foreR { animation: fd-foreR 4s infinite ; transform-box: view-box; transform-origin: 336px 318px; }
+#drummer .fd-snare { animation: fd-snare 4s infinite ; transform-box: view-box; transform-origin: 150px 390px; }
+#drummer .fd-tom { animation: fd-tom 4s infinite ; transform-box: view-box; transform-origin: 362px 430px; }
+#drummer .fd-kick { animation: fd-kick 4s infinite ; transform-box: view-box; transform-origin: 250px 430px; }
+#drummer .fd-hat { animation: fd-hat 4s infinite ; transform-box: view-box; transform-origin: 78px 306px; }
+#drummer .fd-footR { animation: fd-footR 4s infinite ; transform-box: view-box; transform-origin: 292px 518px; }
+#drummer .fd-footL { animation: fd-footL 4s infinite ; transform-box: view-box; transform-origin: 208px 518px; }
+#drummer .fd-crash { animation: fd-crash 4s infinite ; transform-box: view-box; transform-origin: 405px 240px; }
+#drummer .fd-fxSnare { animation: fd-fxSnare 4s infinite step-end; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-fxTom { animation: fd-fxTom 4s infinite step-end; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-fxCrash { animation: fd-fxCrash 4s infinite ; transform-box: view-box; transform-origin: 420px 215px; }
+#drummer .fd-rig { animation: fd-rig 4s infinite ; transform-box: view-box; transform-origin: 250px 350px; }
+#drummer .fd-head { animation: fd-head 4s infinite ; transform-box: view-box; transform-origin: 250px 258px; }
+#drummer .fd-afro { animation: fd-afro 4s infinite ; transform-box: view-box; transform-origin: 250px 200px; }
+#drummer .fd-shades { animation: fd-shades 4s infinite ; transform-box: view-box; transform-origin: 250px 180px; }
+#drummer .fd-browL { animation: fd-browL 4s infinite ; transform-box: view-box; transform-origin: 222px 150px; }
+#drummer .fd-browR { animation: fd-browR 4s infinite ; transform-box: view-box; transform-origin: 278px 150px; }
+#drummer .fd-grin { animation: fd-grin 4s infinite step-end; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-yell { animation: fd-yell 4s infinite step-end; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-sweat1 { animation: fd-sweat1 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-sweat2 { animation: fd-sweat2 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-sweat3 { animation: fd-sweat3 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-note1 { animation: fd-note1 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-note2 { animation: fd-note2 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-note3 { animation: fd-note3 4s infinite ; transform-box: view-box; transform-origin: 0 0; }
+#drummer .fd-swing { animation: fd-swing 4s infinite ; transform-box: view-box; transform-origin: 250px 282px; }
+#drummer .fd-twinkle { animation: fd-twinkle .25s infinite steps(2); }
+#drummer .fd-twinkle.fd-b { animation-delay: .125s; }
+#drummer .fd-stickR { animation: fd-toss 4s infinite ; transform-box: view-box; transform-origin: 361px 357px; }
+#drummer .fd-eyes { animation: fd-eyes 4s infinite ; transform-box: view-box; transform-origin: 250px 180px; }
+@keyframes fd-armL {
+  0.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  3.125% { transform: rotate(16deg); animation-timing-function:ease-in; }
+  6.250% { transform: rotate(16deg); animation-timing-function:ease-in-out; }
+  9.375% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  12.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  15.625% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.875% { transform: rotate(16deg); animation-timing-function:ease-in; }
+  25.000% { transform: rotate(16deg); animation-timing-function:ease-in-out; }
+  28.125% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.375% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  37.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  40.625% { transform: rotate(16deg); animation-timing-function:ease-in; }
+  43.750% { transform: rotate(16deg); animation-timing-function:ease-in-out; }
+  46.875% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  50.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  53.125% { transform: rotate(16deg); animation-timing-function:ease-in; }
+  56.250% { transform: rotate(16deg); animation-timing-function:ease-in-out; }
+  59.375% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  62.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  65.625% { transform: rotate(16deg); animation-timing-function:ease-in; }
+  68.750% { transform: rotate(16deg); animation-timing-function:ease-in-out; }
+  71.875% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  75.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  78.125% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  81.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  84.375% { transform: rotate(55deg); animation-timing-function:ease-in; }
+  87.500% { transform: rotate(55deg); animation-timing-function:ease-in-out; }
+  90.625% { transform: rotate(80deg); animation-timing-function:ease-in; }
+  93.750% { transform: rotate(80deg); animation-timing-function:ease-in-out; }
+  96.875% { transform: rotate(42deg); animation-timing-function:ease-in; }
+  100.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-foreL {
+  0.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  3.125% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  6.250% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  9.375% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  12.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  15.625% { transform: rotate(10deg); animation-timing-function:ease-in; }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.875% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  25.000% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  28.125% { transform: rotate(10deg); animation-timing-function:ease-in; }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.375% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  37.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  40.625% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  43.750% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  46.875% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  50.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  53.125% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  56.250% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  59.375% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  62.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  65.625% { transform: rotate(12deg); animation-timing-function:ease-in; }
+  68.750% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  71.875% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  75.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  78.125% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  81.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  84.375% { transform: rotate(40deg); animation-timing-function:ease-in; }
+  87.500% { transform: rotate(40deg); animation-timing-function:ease-in-out; }
+  90.625% { transform: rotate(55deg); animation-timing-function:ease-in; }
+  93.750% { transform: rotate(55deg); animation-timing-function:ease-in-out; }
+  96.875% { transform: rotate(35deg); animation-timing-function:ease-in; }
+  100.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-armR {
+  0.000% { transform: rotate(-80deg); animation-timing-function:ease-out; }
+  3.125% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  6.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  9.375% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  12.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  15.625% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.875% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  25.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  28.125% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.375% { transform: rotate(-60deg); animation-timing-function:ease-in; }
+  37.500% { transform: rotate(-60deg); animation-timing-function:ease-in-out; }
+  40.625% { transform: rotate(-60deg); animation-timing-function:ease-in; }
+  43.750% { transform: rotate(-60deg); animation-timing-function:ease-in-out; }
+  46.875% { transform: rotate(-60deg); animation-timing-function:ease-in; }
+  50.000% { transform: rotate(-60deg); animation-timing-function:ease-in-out; }
+  53.125% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  56.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  59.375% { transform: rotate(-20deg); animation-timing-function:ease-in; }
+  62.500% { transform: rotate(-20deg); animation-timing-function:ease-in-out; }
+  65.625% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  68.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  71.875% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  75.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  78.125% { transform: rotate(-30deg); animation-timing-function:ease-in; }
+  81.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  84.375% { transform: rotate(-70deg); animation-timing-function:ease-in; }
+  87.500% { transform: rotate(-70deg); animation-timing-function:ease-in-out; }
+  90.625% { transform: rotate(-112deg); animation-timing-function:ease-in; }
+  93.750% { transform: rotate(-112deg); animation-timing-function:ease-in-out; }
+  96.875% { transform: rotate(-105deg); animation-timing-function:ease-in; }
+  100.000% { transform: rotate(-80deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-foreR {
+  0.000% { transform: rotate(-15deg); animation-timing-function:ease-out; }
+  3.125% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  6.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  9.375% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  12.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  15.625% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.875% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  25.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  28.125% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.375% { transform: rotate(-50deg); animation-timing-function:ease-in; }
+  37.500% { transform: rotate(-50deg); animation-timing-function:ease-in-out; }
+  40.625% { transform: rotate(-50deg); animation-timing-function:ease-in; }
+  43.750% { transform: rotate(-50deg); animation-timing-function:ease-in-out; }
+  46.875% { transform: rotate(-50deg); animation-timing-function:ease-in; }
+  50.000% { transform: rotate(-50deg); animation-timing-function:ease-in-out; }
+  53.125% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  56.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  59.375% { transform: rotate(-15deg); animation-timing-function:ease-in; }
+  62.500% { transform: rotate(-15deg); animation-timing-function:ease-in-out; }
+  65.625% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  68.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  71.875% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  75.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  78.125% { transform: rotate(-28deg); animation-timing-function:ease-in; }
+  81.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  84.375% { transform: rotate(-35deg); animation-timing-function:ease-in; }
+  87.500% { transform: rotate(-35deg); animation-timing-function:ease-in-out; }
+  90.625% { transform: rotate(-55deg); animation-timing-function:ease-in; }
+  93.750% { transform: rotate(-55deg); animation-timing-function:ease-in-out; }
+  96.875% { transform: rotate(-50deg); animation-timing-function:ease-in; }
+  100.000% { transform: rotate(-15deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-snare {
+  0.000% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  2.200% { transform: scale(1,1); }
+  12.500% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  14.700% { transform: scale(1,1); }
+  18.750% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  20.950% { transform: scale(1,1); }
+  31.250% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  33.450% { transform: scale(1,1); }
+  37.500% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  39.700% { transform: scale(1,1); }
+  50.000% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  52.200% { transform: scale(1,1); }
+  62.500% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  64.700% { transform: scale(1,1); }
+  75.000% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  77.200% { transform: scale(1,1); }
+  81.250% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+  83.450% { transform: scale(1,1); }
+  100.000% { transform: scale(1.06,.86); animation-timing-function:ease-out; }
+}
+@keyframes fd-tom {
+  0.000% { transform: scale(1,1); }
+  6.250% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  8.450% { transform: scale(1,1); }
+  12.500% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  14.700% { transform: scale(1,1); }
+  18.750% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  20.950% { transform: scale(1,1); }
+  25.000% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  27.200% { transform: scale(1,1); }
+  31.250% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  33.450% { transform: scale(1,1); }
+  56.250% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  58.450% { transform: scale(1,1); }
+  68.750% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  70.950% { transform: scale(1,1); }
+  75.000% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  77.200% { transform: scale(1,1); }
+  81.250% { transform: scale(1.05,.9); animation-timing-function:ease-out; }
+  83.450% { transform: scale(1,1); }
+  100.000% { transform: scale(1,1); }
+}
+@keyframes fd-kick {
+  0.000% { transform: scale(1.09); animation-timing-function:ease-out; }
+  3.000% { transform: scale(1); }
+  12.500% { transform: scale(1.09); animation-timing-function:ease-out; }
+  15.500% { transform: scale(1); }
+  18.750% { transform: scale(1.09); animation-timing-function:ease-out; }
+  21.750% { transform: scale(1); }
+  31.250% { transform: scale(1.09); animation-timing-function:ease-out; }
+  34.250% { transform: scale(1); }
+  50.000% { transform: scale(1.09); animation-timing-function:ease-out; }
+  53.000% { transform: scale(1); }
+  56.250% { transform: scale(1.09); animation-timing-function:ease-out; }
+  59.250% { transform: scale(1); }
+  75.000% { transform: scale(1.09); animation-timing-function:ease-out; }
+  78.000% { transform: scale(1); }
+  81.250% { transform: scale(1.09); animation-timing-function:ease-out; }
+  84.250% { transform: scale(1); }
+  87.500% { transform: scale(1.09); animation-timing-function:ease-out; }
+  90.500% { transform: scale(1); }
+  100.000% { transform: scale(1.09); animation-timing-function:ease-out; }
+}
+@keyframes fd-footR {
+  0.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  3.000% { transform: rotate(-18deg); }
+  12.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  15.500% { transform: rotate(-18deg); }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.750% { transform: rotate(-18deg); }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.250% { transform: rotate(-18deg); }
+  50.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  53.000% { transform: rotate(-18deg); }
+  56.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  59.250% { transform: rotate(-18deg); }
+  75.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  78.000% { transform: rotate(-18deg); }
+  81.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  84.250% { transform: rotate(-18deg); }
+  87.500% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  90.500% { transform: rotate(-18deg); }
+  100.000% { transform: rotate(0deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-footL {
+  0.000% { transform: rotate(16deg); }
+  6.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  9.250% { transform: rotate(16deg); }
+  18.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  21.750% { transform: rotate(16deg); }
+  31.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  34.250% { transform: rotate(16deg); }
+  43.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  46.750% { transform: rotate(16deg); }
+  56.250% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  59.250% { transform: rotate(16deg); }
+  68.750% { transform: rotate(0deg); animation-timing-function:ease-out; }
+  71.750% { transform: rotate(16deg); }
+  100.000% { transform: rotate(16deg); }
+}
+@keyframes fd-hat {
+  0.000% { transform: translateY(0); }
+  6.250% { transform: translateY(9px); animation-timing-function:ease-out; }
+  9.250% { transform: translateY(0); }
+  18.750% { transform: translateY(9px); animation-timing-function:ease-out; }
+  21.750% { transform: translateY(0); }
+  31.250% { transform: translateY(9px); animation-timing-function:ease-out; }
+  34.250% { transform: translateY(0); }
+  43.750% { transform: translateY(9px); animation-timing-function:ease-out; }
+  46.750% { transform: translateY(0); }
+  56.250% { transform: translateY(9px); animation-timing-function:ease-out; }
+  59.250% { transform: translateY(0); }
+  68.750% { transform: translateY(9px); animation-timing-function:ease-out; }
+  71.750% { transform: translateY(0); }
+  100.000% { transform: translateY(0); }
+}
+@keyframes fd-crash {
+  0.000% { transform: rotate(-16deg); animation-timing-function:ease-out; }
+  4.000% { transform: rotate(10deg); animation-timing-function:ease-in-out; }
+  9.000% { transform: rotate(-6deg); animation-timing-function:ease-in-out; }
+  15.000% { transform: rotate(3deg); animation-timing-function:ease-in-out; }
+  22.000% { transform: rotate(0deg); }
+  99.000% { transform: rotate(0deg); }
+  100.000% { transform: rotate(-16deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-fxSnare {
+  0.000% { opacity:1; }
+  2.500% { opacity:0; }
+  12.500% { opacity:1; }
+  15.000% { opacity:0; }
+  18.750% { opacity:1; }
+  21.250% { opacity:0; }
+  31.250% { opacity:1; }
+  33.750% { opacity:0; }
+  37.500% { opacity:1; }
+  40.000% { opacity:0; }
+  50.000% { opacity:1; }
+  52.500% { opacity:0; }
+  62.500% { opacity:1; }
+  65.000% { opacity:0; }
+  75.000% { opacity:1; }
+  77.500% { opacity:0; }
+  81.250% { opacity:1; }
+  83.750% { opacity:0; }
+  100.000% { opacity:1; }
+}
+@keyframes fd-fxTom {
+  0.000% { opacity:0; }
+  6.250% { opacity:1; }
+  8.750% { opacity:0; }
+  12.500% { opacity:1; }
+  15.000% { opacity:0; }
+  18.750% { opacity:1; }
+  21.250% { opacity:0; }
+  25.000% { opacity:1; }
+  27.500% { opacity:0; }
+  31.250% { opacity:1; }
+  33.750% { opacity:0; }
+  56.250% { opacity:1; }
+  58.750% { opacity:0; }
+  68.750% { opacity:1; }
+  71.250% { opacity:0; }
+  75.000% { opacity:1; }
+  77.500% { opacity:0; }
+  81.250% { opacity:1; }
+  83.750% { opacity:0; }
+  100.000% { opacity:0; }
+}
+@keyframes fd-fxCrash {
+  0.000% { transform: scale(.3); opacity:1; animation-timing-function:ease-out; }
+  3.000% { transform: scale(1.25); opacity:1; }
+  8.000% { transform: scale(1.4); opacity:0; }
+  99.000% { transform: scale(.3); opacity:0; }
+  100.000% { transform: scale(.3); opacity:1; }
+}
+@keyframes fd-rig {
+  0.000% { transform: translateY(-14px) scale(.95,1.08); animation-timing-function:ease-out; }
+  6.250% { transform: translateX(7px) rotate(3deg) translateY(0px); animation-timing-function:ease-in-out; }
+  12.500% { transform: translateX(-7px) rotate(-3deg) translateY(3px); animation-timing-function:ease-in-out; }
+  18.750% { transform: translateX(7px) rotate(3deg) translateY(0px); animation-timing-function:ease-in-out; }
+  25.000% { transform: translateX(-7px) rotate(-3deg) translateY(3px); animation-timing-function:ease-in-out; }
+  31.250% { transform: translateX(7px) rotate(3deg) translateY(0px); animation-timing-function:ease-in-out; }
+  37.500% { transform: translateX(-7px) rotate(-3deg) translateY(3px); animation-timing-function:ease-in-out; }
+  43.750% { transform: translateX(7px) rotate(3deg) translateY(0px); animation-timing-function:ease-in-out; }
+  50.000% { transform: rotate(4deg) translateY(9px) scale(1.04,0.94); animation-timing-function:ease-out; }
+  56.250% { transform: rotate(4deg) translateY(0px) scale(1,1); animation-timing-function:ease-out; }
+  62.500% { transform: rotate(4deg) translateY(9px) scale(1.04,0.94); animation-timing-function:ease-out; }
+  68.750% { transform: rotate(4deg) translateY(0px) scale(1,1); animation-timing-function:ease-out; }
+  75.000% { transform: rotate(4deg) translateY(9px) scale(1.04,0.94); animation-timing-function:ease-out; }
+  81.250% { transform: rotate(4deg) translateY(0px) scale(1,1); animation-timing-function:ease-out; }
+  87.500% { transform: rotate(4deg) translateY(9px) scale(1.04,0.94); animation-timing-function:ease-out; }
+  93.750% { transform: rotate(4deg) translateY(0px) scale(1,1); animation-timing-function:ease-out; }
+  100.000% { transform: translateY(-14px) scale(.95,1.08); animation-timing-function:ease-out; }
+}
+@keyframes fd-head {
+  0.000% { transform: rotate(-14deg) translateY(-10px); animation-timing-function:ease-out; }
+  6.250% { transform: rotate(8deg) translateX(6px); animation-timing-function:ease-in-out; }
+  12.500% { transform: rotate(-8deg) translateX(-6px); animation-timing-function:ease-in-out; }
+  18.750% { transform: rotate(8deg) translateX(6px); animation-timing-function:ease-in-out; }
+  25.000% { transform: rotate(-6deg) translateY(4px); animation-timing-function:ease-in-out; }
+  31.250% { transform: rotate(-6deg) translateY(4px); animation-timing-function:ease-in-out; }
+  37.500% { transform: rotate(-6deg) translateY(4px); animation-timing-function:ease-in-out; }
+  43.750% { transform: rotate(-6deg) translateY(4px); animation-timing-function:ease-in-out; }
+  50.000% { transform: rotate(-2deg) translateY(8px); animation-timing-function:ease-in-out; }
+  56.250% { transform: rotate(14deg) translateY(-2px); animation-timing-function:ease-in-out; }
+  62.500% { transform: rotate(-2deg) translateY(8px); animation-timing-function:ease-in-out; }
+  68.750% { transform: rotate(14deg) translateY(-2px); animation-timing-function:ease-in-out; }
+  75.000% { transform: rotate(-2deg) translateY(8px); animation-timing-function:ease-in-out; }
+  81.250% { transform: rotate(14deg) translateY(-2px); animation-timing-function:ease-in-out; }
+  87.500% { transform: rotate(-2deg) translateY(8px); animation-timing-function:ease-in-out; }
+  93.750% { transform: rotate(14deg) translateY(-2px); animation-timing-function:ease-in-out; }
+  100.000% { transform: rotate(-14deg) translateY(-10px); animation-timing-function:ease-out; }
+}
+@keyframes fd-afro {
+  0.000% { transform: scale(.94,1.12); animation-timing-function:ease-out; }
+  3.125% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  9.375% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  15.625% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  21.875% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  28.125% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  34.375% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  40.625% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  46.875% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  53.125% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  59.375% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  65.625% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  71.875% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  78.125% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  84.375% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  90.625% { transform: scale(1.06,.92); animation-timing-function:ease-in-out; }
+  96.875% { transform: scale(.97,1.05); animation-timing-function:ease-in-out; }
+  100.000% { transform: scale(.94,1.12); animation-timing-function:ease-out; }
+}
+@keyframes fd-shades {
+  0.000% { transform: translateY(-22px) rotate(-6deg); animation-timing-function:ease-in; }
+  3.000% { transform: translateY(-26px) rotate(4deg); animation-timing-function:ease-in; }
+  7.000% { transform: translateY(3px); animation-timing-function:ease-out; }
+  10.000% { transform: translateY(0); }
+  24.000% { transform: translateY(0); animation-timing-function:ease-in-out; }
+  28.000% { transform: translateY(24px) rotate(3deg); }
+  46.000% { transform: translateY(24px) rotate(3deg); animation-timing-function:ease-in; }
+  50.000% { transform: translateY(-4px); animation-timing-function:ease-out; }
+  53.000% { transform: translateY(0); }
+  99.000% { transform: translateY(0); }
+  100.000% { transform: translateY(-22px) rotate(-6deg); animation-timing-function:ease-in; }
+}
+@keyframes fd-browL {
+  0.000% { transform: translateY(-16px) rotate(0deg); animation-timing-function:ease-out; }
+  8.000% { transform: translateY(0) rotate(0deg); }
+  25.000% { transform: translateY(0) rotate(0deg); animation-timing-function:ease-out; }
+  28.000% { transform: translateY(-13px) rotate(-8deg); animation-timing-function:ease-in-out; }
+  33.000% { transform: translateY(-13px) rotate(8deg); animation-timing-function:ease-in-out; }
+  38.000% { transform: translateY(-13px) rotate(-8deg); animation-timing-function:ease-in-out; }
+  43.000% { transform: translateY(-13px) rotate(8deg); animation-timing-function:ease-in-out; }
+  48.000% { transform: translateY(0) rotate(0deg); }
+  75.000% { transform: translateY(0) rotate(0deg); animation-timing-function:ease-out; }
+  79.000% { transform: translateY(8px) rotate(-14deg); }
+  97.000% { transform: translateY(8px) rotate(-14deg); }
+  100.000% { transform: translateY(-16px) rotate(0deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-browR {
+  0.000% { transform: translateY(-16px) rotate(0deg); animation-timing-function:ease-out; }
+  8.000% { transform: translateY(0) rotate(0deg); }
+  25.000% { transform: translateY(0) rotate(0deg); animation-timing-function:ease-out; }
+  28.000% { transform: translateY(-13px) rotate(8deg); animation-timing-function:ease-in-out; }
+  33.000% { transform: translateY(-13px) rotate(-8deg); animation-timing-function:ease-in-out; }
+  38.000% { transform: translateY(-13px) rotate(8deg); animation-timing-function:ease-in-out; }
+  43.000% { transform: translateY(-13px) rotate(-8deg); animation-timing-function:ease-in-out; }
+  48.000% { transform: translateY(0) rotate(0deg); }
+  75.000% { transform: translateY(0) rotate(0deg); animation-timing-function:ease-out; }
+  79.000% { transform: translateY(8px) rotate(14deg); }
+  97.000% { transform: translateY(8px) rotate(14deg); }
+  100.000% { transform: translateY(-16px) rotate(0deg); animation-timing-function:ease-out; }
+}
+@keyframes fd-grin {
+  0.000% { opacity:0; }
+  12.500% { opacity:1; }
+  75.000% { opacity:0; }
+  100.000% { opacity:0; }
+}
+@keyframes fd-yell {
+  0.000% { opacity:1; }
+  12.500% { opacity:0; }
+  75.000% { opacity:1; }
+  100.000% { opacity:1; }
+}
+@keyframes fd-sweat1 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  76.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  90.000% { opacity:0; transform: translate(-55px,-35px); }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-sweat2 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  80.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  94.000% { opacity:0; transform: translate(60px,-40px); }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-sweat3 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  86.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-note1 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  6.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  20.000% { opacity:0; transform: translate(30px,-70px); }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-note2 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  20.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  34.000% { opacity:0; transform: translate(-30px,-75px); }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-note3 {
+  0.000% { opacity:0; transform: translate(0,0); }
+  33.000% { opacity:1; transform: translate(0,0); animation-timing-function:ease-out; }
+  47.000% { opacity:0; transform: translate(25px,-65px); }
+  100.000% { opacity:0; transform: translate(0,0); }
+}
+@keyframes fd-swing {
+  0.000% { transform: rotate(-22deg); animation-timing-function:ease-in-out; }
+  12.500% { transform: rotate(14deg); animation-timing-function:ease-in-out; }
+  25.000% { transform: rotate(-10deg); animation-timing-function:ease-in-out; }
+  37.500% { transform: rotate(8deg); animation-timing-function:ease-in-out; }
+  50.000% { transform: rotate(-12deg); animation-timing-function:ease-in-out; }
+  62.500% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  75.000% { transform: rotate(-12deg); animation-timing-function:ease-in-out; }
+  87.500% { transform: rotate(12deg); animation-timing-function:ease-in-out; }
+  100.000% { transform: rotate(-22deg); animation-timing-function:ease-in-out; }
+}
+@keyframes fd-twinkle {
+  0.000% { opacity:.3; }
+  50.000% { opacity:1; }
+  100.000% { opacity:.3; }
+}
+@keyframes fd-toss {
+  0.000% { transform: translate(0,0) rotate(0deg); }
+  37.500% { transform: translate(0,0) rotate(0deg); animation-timing-function:ease-out; }
+  43.750% { transform: translate(283px,55px) rotate(-540deg); animation-timing-function:ease-in; }
+  50.000% { transform: translate(0,0) rotate(-1080deg); }
+  52.000% { transform: translate(0,4px) rotate(-1080deg); }
+  54.000% { transform: translate(0,0) rotate(-1080deg); }
+  100.000% { transform: translate(0,0) rotate(-1080deg); }
+}
+@keyframes fd-eyes {
+  0.000% { transform: translateX(0); }
+  30.000% { transform: translateX(0); animation-timing-function:ease-in-out; }
+  34.000% { transform: translateX(-4px); animation-timing-function:ease-in-out; }
+  40.000% { transform: translateX(4px); }
+  46.000% { transform: translateX(0); }
+  100.000% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) { #drummer * { animation: none !important } #drummer .fd-grin { opacity: 1 } #drummer .fd-yell, #drummer .fd-fxSnare, #drummer .fd-fxTom, #drummer .fd-fxCrash { opacity: 0 } }
+</style>
+<ellipse cx="250" cy="522" rx="220" ry="14" fill="#000" opacity=".16"/>
+
+<!-- music notes (groove bar) -->
+<g class="fd-note1" opacity="0"><path d="M430 170 v-26 l16 -5 v24" fill="none" stroke="#2b1a12" stroke-width="4"/><ellipse cx="425" cy="171" rx="7" ry="5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="3"/><ellipse cx="441" cy="164" rx="7" ry="5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="3"/></g>
+<g class="fd-note2" opacity="0"><path d="M72 190 v-28" stroke="#2b1a12" stroke-width="4"/><path d="M72 162 q12 4 10 16" fill="none" stroke="#2b1a12" stroke-width="4"/><ellipse cx="66" cy="191" rx="8" ry="6" fill="#19c3b0" stroke="#2b1a12" stroke-width="3"/></g>
+<g class="fd-note3" opacity="0"><path d="M455 120 v-26" stroke="#2b1a12" stroke-width="4"/><ellipse cx="449" cy="121" rx="8" ry="6" fill="#ffd23f" stroke="#2b1a12" stroke-width="3"/></g>
+
+<!-- bell-bottoms + platform boots -->
+<path d="M205 345 L236 352 L214 462 L226 502 L150 502 L170 462 Z" fill="#d6dcea" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M295 345 L264 352 L286 462 L274 502 L350 502 L330 462 Z" fill="#d6dcea" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+<path d="M200 380 L188 470 M300 380 L312 470" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+<path d="M212 372 L204 440 M288 372 L296 440" stroke="#aab3c8" stroke-width="4" stroke-linecap="round"/>
+<polygon points="178.0,481.0 179.9,485.5 184.7,485.8 181.0,489.0 182.1,493.7 178.0,491.1 173.9,493.7 175.0,489.0 171.3,485.8 176.1,485.5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="2.5" stroke-linejoin="round"/><polygon points="206.0,481.0 207.9,485.5 212.7,485.8 209.0,489.0 210.1,493.7 206.0,491.1 201.9,493.7 203.0,489.0 199.3,485.8 204.1,485.5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="2.5" stroke-linejoin="round"/><polygon points="294.0,481.0 295.9,485.5 300.7,485.8 297.0,489.0 298.1,493.7 294.0,491.1 289.9,493.7 291.0,489.0 287.3,485.8 292.1,485.5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="2.5" stroke-linejoin="round"/><polygon points="322.0,481.0 323.9,485.5 328.7,485.8 325.0,489.0 326.1,493.7 322.0,491.1 317.9,493.7 319.0,489.0 315.3,485.8 320.1,485.5" fill="#ff4fa0" stroke="#2b1a12" stroke-width="2.5" stroke-linejoin="round"/>
+<g class="fd-footL"><path d="M140 500 Q140 486 160 486 L214 486 L214 522 L140 522 Z" fill="#ffd23f" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" /><rect x="140" y="510" width="74" height="12" fill="#ff4fa0" stroke="#2b1a12" stroke-width="4"/><path d="M150 492 H200" stroke="#fff6c2" stroke-width="3" stroke-linecap="round"/><circle cx="160" cy="516" r="2.5" fill="#fff"/><circle cx="177" cy="516" r="2.5" fill="#fff"/><circle cx="194" cy="516" r="2.5" fill="#fff"/></g>
+<g class="fd-footR"><path d="M360 500 Q360 486 340 486 L286 486 L286 522 L360 522 Z" fill="#ffd23f" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" /><rect x="286" y="510" width="74" height="12" fill="#ff4fa0" stroke="#2b1a12" stroke-width="4"/><path d="M300 492 H350" stroke="#fff6c2" stroke-width="3" stroke-linecap="round"/><circle cx="306" cy="516" r="2.5" fill="#fff"/><circle cx="323" cy="516" r="2.5" fill="#fff"/><circle cx="340" cy="516" r="2.5" fill="#fff"/></g>
+
+<!-- torso + head -->
+<g class="fd-rig">
+  <path d="M176 356 C160 296 192 252 250 252 C308 252 340 296 324 356 Z" fill="#1f1630" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+  <g class="fd-twinkle" fill="#fff"><circle cx="236" cy="290" r="2.6"/><circle cx="262" cy="300" r="2.6"/><circle cx="244" cy="318" r="2.6"/><circle cx="258" cy="338" r="2.6"/><circle cx="238" cy="346" r="2.6"/><circle cx="266" cy="322" r="2.6"/></g>
+  <g class="fd-twinkle fd-b" fill="#8ff0ff"><circle cx="250" cy="296" r="2.2"/><circle cx="240" cy="330" r="2.2"/><circle cx="262" cy="312" r="2.2"/><circle cx="252" cy="350" r="2.2"/></g>
+  <path d="M176 356 C160 296 190 256 234 254 L228 300 L220 356 Z" fill="#6a1fc8" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+  <path d="M324 356 C340 296 310 256 266 254 L272 300 L280 356 Z" fill="#6a1fc8" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+  <path d="M233 258 L227 300 L220 352 M267 258 L273 300 L280 352" fill="none" stroke="#ffd23f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M182 350 C170 300 196 262 226 258" fill="none" stroke="#8a4be8" stroke-width="5" stroke-linecap="round"/>
+  <polygon points="196.0,294.0 197.6,297.8 201.7,298.1 198.6,300.8 199.5,304.9 196.0,302.7 192.5,304.9 193.4,300.8 190.3,298.1 194.4,297.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/><polygon points="206.0,324.0 207.6,327.8 211.7,328.1 208.6,330.8 209.5,334.9 206.0,332.7 202.5,334.9 203.4,330.8 200.3,328.1 204.4,327.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/><polygon points="190.0,332.0 191.6,335.8 195.7,336.1 192.6,338.8 193.5,342.9 190.0,340.7 186.5,342.9 187.4,338.8 184.3,336.1 188.4,335.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/><polygon points="304.0,294.0 305.6,297.8 309.7,298.1 306.6,300.8 307.5,304.9 304.0,302.7 300.5,304.9 301.4,300.8 298.3,298.1 302.4,297.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/><polygon points="294.0,324.0 295.6,327.8 299.7,328.1 296.6,330.8 297.5,334.9 294.0,332.7 290.5,334.9 291.4,330.8 288.3,328.1 292.4,327.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/><polygon points="310.0,332.0 311.6,335.8 315.7,336.1 312.6,338.8 313.5,342.9 310.0,340.7 306.5,342.9 307.4,338.8 304.3,336.1 308.4,335.8" fill="#ffd23f" stroke="#2b1a12" stroke-width="2" stroke-linejoin="round"/>
+  <!-- layered gold chains -->
+  <path d="M226 262 Q250 290 274 262" fill="none" stroke="#2b1a12" stroke-width="8" stroke-linecap="round"/>
+  <path d="M226 262 Q250 290 274 262" fill="none" stroke="#ffd23f" stroke-width="4" stroke-dasharray="3 2" stroke-linecap="round"/>
+  <path d="M220 264 Q250 312 280 264" fill="none" stroke="#2b1a12" stroke-width="9" stroke-linecap="round"/>
+  <path d="M220 264 Q250 312 280 264" fill="none" stroke="#ffd23f" stroke-width="5" stroke-dasharray="4 2" stroke-linecap="round"/>
+  <g class="fd-swing">
+    <path d="M214 266 Q250 336 286 266" fill="none" stroke="#2b1a12" stroke-width="10" stroke-linecap="round"/>
+    <path d="M214 266 Q250 336 286 266" fill="none" stroke="#ffd23f" stroke-width="6" stroke-dasharray="5 2" stroke-linecap="round"/>
+    <polygon points="250.0,298.0 256.3,313.3 272.8,314.6 260.3,325.3 264.1,341.4 250.0,332.8 235.9,341.4 239.7,325.3 227.2,314.6 243.7,313.3" fill="#ffd23f" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round"/>
+    <polygon points="250,310 259,320 250,334 241,320" fill="#8ff0ff" stroke="#2b1a12" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M246 316 L250 312" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <!-- faux-fur shawl collar -->
+  <circle cx="202" cy="280" r="16" fill="#2b1a12"/><circle cx="214" cy="270" r="16" fill="#2b1a12"/><circle cx="226" cy="262" r="16" fill="#2b1a12"/><circle cx="238" cy="258" r="16" fill="#2b1a12"/><circle cx="250" cy="256" r="16" fill="#2b1a12"/><circle cx="262" cy="258" r="16" fill="#2b1a12"/><circle cx="274" cy="262" r="16" fill="#2b1a12"/><circle cx="286" cy="270" r="16" fill="#2b1a12"/><circle cx="298" cy="280" r="16" fill="#2b1a12"/>
+  <circle cx="202" cy="280" r="12.5" fill="#ff5fb0"/><circle cx="214" cy="270" r="12.5" fill="#ff5fb0"/><circle cx="226" cy="262" r="12.5" fill="#ff5fb0"/><circle cx="238" cy="258" r="12.5" fill="#ff5fb0"/><circle cx="250" cy="256" r="12.5" fill="#ff5fb0"/><circle cx="262" cy="258" r="12.5" fill="#ff5fb0"/><circle cx="274" cy="262" r="12.5" fill="#ff5fb0"/><circle cx="286" cy="270" r="12.5" fill="#ff5fb0"/><circle cx="298" cy="280" r="12.5" fill="#ff5fb0"/>
+  <path d="M202 272 q6 -7 12 0" fill="none" stroke="#ffc2e2" stroke-width="3" stroke-linecap="round"/><path d="M223 258 q6 -7 12 0" fill="none" stroke="#ffc2e2" stroke-width="3" stroke-linecap="round"/><path d="M244 253 q6 -7 12 0" fill="none" stroke="#ffc2e2" stroke-width="3" stroke-linecap="round"/><path d="M265 258 q6 -7 12 0" fill="none" stroke="#ffc2e2" stroke-width="3" stroke-linecap="round"/><path d="M286 272 q6 -7 12 0" fill="none" stroke="#ffc2e2" stroke-width="3" stroke-linecap="round"/>
+
+  <g class="fd-head">
+    <g class="fd-afro"><circle cx="346.0" cy="116.0" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="338.7" cy="144.3" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="317.9" cy="168.3" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="286.7" cy="184.4" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="250.0" cy="190.0" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="213.3" cy="184.4" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="182.1" cy="168.3" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="161.3" cy="144.3" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="154.0" cy="116.0" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="161.3" cy="87.7" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="182.1" cy="63.7" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="213.3" cy="47.6" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="250.0" cy="42.0" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="286.7" cy="47.6" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="317.9" cy="63.7" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><circle cx="338.7" cy="87.7" r="40" fill="#2b1a12" stroke="#2b1a12" stroke-width="12"/><ellipse cx="250" cy="116" rx="100" ry="80" fill="#2b1a12"/><circle cx="346.0" cy="116.0" r="40" fill="#2a1712"/><circle cx="338.7" cy="144.3" r="40" fill="#2a1712"/><circle cx="317.9" cy="168.3" r="40" fill="#2a1712"/><circle cx="286.7" cy="184.4" r="40" fill="#2a1712"/><circle cx="250.0" cy="190.0" r="40" fill="#2a1712"/><circle cx="213.3" cy="184.4" r="40" fill="#2a1712"/><circle cx="182.1" cy="168.3" r="40" fill="#2a1712"/><circle cx="161.3" cy="144.3" r="40" fill="#2a1712"/><circle cx="154.0" cy="116.0" r="40" fill="#2a1712"/><circle cx="161.3" cy="87.7" r="40" fill="#2a1712"/><circle cx="182.1" cy="63.7" r="40" fill="#2a1712"/><circle cx="213.3" cy="47.6" r="40" fill="#2a1712"/><circle cx="250.0" cy="42.0" r="40" fill="#2a1712"/><circle cx="286.7" cy="47.6" r="40" fill="#2a1712"/><circle cx="317.9" cy="63.7" r="40" fill="#2a1712"/><circle cx="338.7" cy="87.7" r="40" fill="#2a1712"/><ellipse cx="250" cy="116" rx="98" ry="78" fill="#2a1712"/><path d="M328 110 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M136 110 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M143 82 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M164 58 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M195 42 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M232 36 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M269 42 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M300 58 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/><path d="M321 82 q18 -16 34 -2" fill="none" stroke="#5a3424" stroke-width="6" stroke-linecap="round"/></g>
+    <path d="M150 146 Q250 96 350 146" fill="none" stroke="#2b1a12" stroke-width="26" stroke-linecap="round"/>
+    <path d="M150 146 Q250 96 350 146" fill="none" stroke="#ffd23f" stroke-width="16" stroke-linecap="round"/>
+    <path d="M160 140 Q250 100 340 140" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>
+    <polygon points="250.0,108.0 253.4,116.3 262.4,117.0 255.6,122.8 257.6,131.5 250.0,126.8 242.4,131.5 244.4,122.8 237.6,117.0 246.6,116.3" fill="#ff4fa0" stroke="#2b1a12" stroke-width="3.5" stroke-linejoin="round"/>
+    <!-- ears -->
+    <ellipse cx="190" cy="200" rx="13" ry="17" fill="#a8683f" stroke="#2b1a12" stroke-width="5"/>
+    <ellipse cx="310" cy="200" rx="13" ry="17" fill="#a8683f" stroke="#2b1a12" stroke-width="5"/>
+    <circle cx="188" cy="222" r="10" fill="none" stroke="#2b1a12" stroke-width="7"/><circle cx="188" cy="222" r="10" fill="none" stroke="#ffd23f" stroke-width="3.5"/>
+    <circle cx="312" cy="222" r="10" fill="none" stroke="#2b1a12" stroke-width="7"/><circle cx="312" cy="222" r="10" fill="none" stroke="#ffd23f" stroke-width="3.5"/>
+    <!-- face with jutting chin -->
+    <path d="M192 178 C192 140 308 140 308 178 C312 220 300 246 274 258 C262 266 238 266 226 258 C200 246 188 220 192 178 Z" fill="#a8683f" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+    <path d="M205 232 C214 250 232 258 250 258" fill="none" stroke="#8a5230" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="206" cy="222" r="8" fill="#e27a6a" opacity=".55"/><circle cx="294" cy="222" r="8" fill="#e27a6a" opacity=".55"/>
+    <!-- brows -->
+    <g class="fd-browL"><path d="M200 153 Q222 136 244 150" fill="none" stroke="#2b1a12" stroke-width="10" stroke-linecap="round"/></g>
+    <g class="fd-browR"><path d="M256 150 Q278 136 300 153" fill="none" stroke="#2b1a12" stroke-width="10" stroke-linecap="round"/></g>
+    <!-- mouths -->
+    <defs>
+      <clipPath id="fd-mGrin"><path d="M212 232 Q250 270 288 232 Q250 242 212 232 Z"/></clipPath>
+      <clipPath id="fd-mYell"><path d="M224 230 Q250 222 276 230 Q282 260 250 266 Q218 260 224 230 Z"/></clipPath>
+    </defs>
+    <g class="fd-grin">
+      <g clip-path="url(#fd-mGrin)">
+        <rect x="200" y="220" width="100" height="60" fill="#5a0f1e"/>
+        <ellipse cx="250" cy="262" rx="20" ry="9" fill="#ff6f8e"/>
+        <rect x="200" y="220" width="100" height="29" fill="#ffd23f"/>
+        <path d="M222 238 V249 M236 240 V249 M264 240 V249 M278 238 V249" stroke="#c9961a" stroke-width="2.5"/>
+        <path d="M200 249 H300" stroke="#2b1a12" stroke-width="3"/>
+        <polygon points="250,238 255,243 250,248 245,243" fill="#8ff0ff" stroke="#2b1a12" stroke-width="1.5"/>
+      </g>
+      <path d="M212 232 Q250 270 288 232 Q250 242 212 232 Z" fill="none" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round"/>
+    </g>
+    <g class="fd-yell" opacity="0">
+      <g clip-path="url(#fd-mYell)">
+        <rect x="210" y="215" width="80" height="60" fill="#5a0f1e"/>
+        <ellipse cx="250" cy="264" rx="17" ry="10" fill="#ff6f8e"/>
+        <path d="M250 256 V266" stroke="#d94a6c" stroke-width="2" stroke-linecap="round"/>
+        <rect x="210" y="215" width="80" height="26" fill="#ffd23f"/>
+        <path d="M236 232 V241 M250 232 V241 M264 232 V241" stroke="#c9961a" stroke-width="2.5"/>
+        <path d="M210 241 H290" stroke="#2b1a12" stroke-width="3"/>
+      </g>
+      <path d="M224 230 Q250 222 276 230 Q282 260 250 266 Q218 260 224 230 Z" fill="none" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round"/>
+    </g>
+    <!-- handlebar mustache + soul patch -->
+    <path d="M249 226 Q224 214 206 230 Q198 238 192 228" fill="none" stroke="#2b1a12" stroke-width="12" stroke-linecap="round"/>
+    <path d="M251 226 Q276 214 294 230 Q302 238 308 228" fill="none" stroke="#2b1a12" stroke-width="12" stroke-linecap="round"/>
+    <path d="M249 226 Q224 214 206 230 Q198 238 192 228" fill="none" stroke="#2a1712" stroke-width="6" stroke-linecap="round"/>
+    <path d="M251 226 Q276 214 294 230 Q302 238 308 228" fill="none" stroke="#2a1712" stroke-width="6" stroke-linecap="round"/>
+    <g class="fd-eyes">
+      <ellipse cx="222" cy="184" rx="13" ry="15" fill="#fff" stroke="#2b1a12" stroke-width="4"/>
+      <ellipse cx="278" cy="184" rx="13" ry="15" fill="#fff" stroke="#2b1a12" stroke-width="4"/>
+      <circle cx="226" cy="186" r="6" fill="#2b1a12"/><circle cx="274" cy="186" r="6" fill="#2b1a12"/>
+      <circle cx="228" cy="183" r="2" fill="#fff"/><circle cx="276" cy="183" r="2" fill="#fff"/>
+    </g>
+    <!-- giant rhinestone shades -->
+    <g class="fd-shades">
+      <line x1="196" y1="176" x2="178" y2="170" stroke="#2b1a12" stroke-width="6" stroke-linecap="round"/>
+      <line x1="304" y1="176" x2="322" y2="170" stroke="#2b1a12" stroke-width="6" stroke-linecap="round"/>
+      <ellipse cx="222" cy="182" rx="30" ry="24" fill="#ff4fa0" stroke="#2b1a12" stroke-width="11"/><ellipse cx="222" cy="182" rx="30" ry="24" fill="none" stroke="#ffd23f" stroke-width="4.5"/>
+      <ellipse cx="278" cy="182" rx="30" ry="24" fill="#ff4fa0" stroke="#2b1a12" stroke-width="11"/><ellipse cx="278" cy="182" rx="30" ry="24" fill="none" stroke="#ffd23f" stroke-width="4.5"/>
+      <path d="M204 176 L216 164 M262 176 L274 164" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+      <path d="M212 190 L232 170 M268 190 L288 170" stroke="#ff9cc9" stroke-width="4" stroke-linecap="round"/>
+      <g class="fd-twinkle" fill="#fff"><circle cx="198" cy="172" r="2.6"/><circle cx="206" cy="160" r="2.6"/><circle cx="222" cy="156" r="2.6"/><circle cx="302" cy="172" r="2.6"/><circle cx="294" cy="160" r="2.6"/><circle cx="278" cy="156" r="2.6"/></g>
+    </g>
+    <!-- big bulb nose -->
+    <ellipse cx="250" cy="210" rx="21" ry="16" fill="#96582f" stroke="#2b1a12" stroke-width="5"/>
+    <ellipse cx="243" cy="204" rx="6" ry="4" fill="#c98a5c"/>
+    <!-- sweat -->
+    <path class="fd-sweat1" opacity="0" d="M186 160 q-8 12 0 16 q8 -4 0 -16 Z" fill="#8fe3ff" stroke="#2b1a12" stroke-width="3"/>
+    <path class="fd-sweat2" opacity="0" d="M316 150 q-8 12 0 16 q8 -4 0 -16 Z" fill="#8fe3ff" stroke="#2b1a12" stroke-width="3"/>
+    <path class="fd-sweat3" opacity="0" d="M200 130 q-7 10 0 14 q7 -4 0 -14 Z" fill="#8fe3ff" stroke="#2b1a12" stroke-width="3"/>
+  </g>
+</g>
+
+<!-- ===== KIT ===== -->
+<line x1="78" y1="306" x2="78" y2="524" stroke="#2b1a12" stroke-width="6"/>
+<line x1="78" y1="524" x2="54" y2="524" stroke="#2b1a12" stroke-width="6" stroke-linecap="round"/>
+<ellipse cx="78" cy="318" rx="44" ry="9" fill="#ffc93c" stroke="#2b1a12" stroke-width="5"/>
+<g class="fd-hat"><ellipse cx="78" cy="304" rx="44" ry="9" fill="#ffdc70" stroke="#2b1a12" stroke-width="5"/><circle cx="78" cy="301" r="4" fill="#2b1a12"/></g>
+
+<line x1="405" y1="240" x2="430" y2="524" stroke="#2b1a12" stroke-width="6"/>
+<g class="fd-crash">
+  <ellipse cx="405" cy="240" rx="62" ry="13" fill="#ffc93c" stroke="#2b1a12" stroke-width="5" transform="rotate(-10 405 240)"/>
+  <ellipse cx="405" cy="240" rx="36" ry="6" fill="none" stroke="#fff3b0" stroke-width="3" transform="rotate(-10 405 240)"/>
+  <circle cx="405" cy="238" r="5" fill="#2b1a12"/>
+</g>
+
+<line x1="150" y1="400" x2="136" y2="524" stroke="#2b1a12" stroke-width="5"/>
+<line x1="150" y1="400" x2="166" y2="524" stroke="#2b1a12" stroke-width="5"/>
+<g class="fd-snare">
+  <rect x="106" y="372" width="88" height="32" fill="#d9dde6" stroke="#2b1a12" stroke-width="5"/>
+  <path d="M106 384 H194 M106 394 H194" stroke="#e8344e" stroke-width="5"/>
+  <ellipse cx="150" cy="404" rx="44" ry="10" fill="#b7bcc8" stroke="#2b1a12" stroke-width="5"/>
+  <ellipse cx="150" cy="372" rx="44" ry="11" fill="#fffaf0" stroke="#2b1a12" stroke-width="5"/>
+</g>
+
+<line x1="330" y1="440" x2="324" y2="524" stroke="#2b1a12" stroke-width="5"/>
+<line x1="394" y1="440" x2="400" y2="524" stroke="#2b1a12" stroke-width="5"/>
+<g class="fd-tom">
+  <rect x="316" y="385" width="92" height="56" fill="#e8344e" stroke="#2b1a12" stroke-width="5"/>
+  <path d="M316 396 H408" stroke="#ffd23f" stroke-width="4"/>
+  <ellipse cx="362" cy="441" rx="46" ry="10" fill="#b8243b" stroke="#2b1a12" stroke-width="5"/>
+  <ellipse cx="362" cy="385" rx="46" ry="11" fill="#fffaf0" stroke="#2b1a12" stroke-width="5"/>
+</g>
+
+<g class="fd-kick">
+  <circle cx="250" cy="430" r="80" fill="#e8344e" stroke="#2b1a12" stroke-width="7"/>
+  <rect x="313" y="453" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="273" y="493" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="217" y="493" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="177" y="453" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="177" y="397" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="217" y="357" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="273" y="357" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/><rect x="313" y="397" width="10" height="10" rx="2" fill="#d9dde6" stroke="#2b1a12" stroke-width="3"/>
+  <circle cx="250" cy="430" r="60" fill="#fff4d6" stroke="#2b1a12" stroke-width="5"/>
+  <polygon points="250.0,384.0 261.8,407.8 288.0,411.6 269.0,430.2 273.5,456.4 250.0,444.0 226.5,456.4 231.0,430.2 212.0,411.6 238.2,407.8" fill="#7b2fe0" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="250.0,408.0 254.7,417.5 265.2,419.1 257.6,426.5 259.4,436.9 250.0,432.0 240.6,436.9 242.4,426.5 234.8,419.1 245.3,417.5" fill="#ffd23f" stroke="#2b1a12" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M212 470 Q250 484 288 470" fill="none" stroke="#ff4fa0" stroke-width="6" stroke-linecap="round"/>
+</g>
+
+<!-- arms over the kit -->
+<g class="fd-rig"><g class="fd-armL">
+  <path d="M198 278 L165 318" stroke="#2b1a12" stroke-width="34" stroke-linecap="round" fill="none"/>
+  <path d="M198 278 L165 318" stroke="#6a1fc8" stroke-width="24" stroke-linecap="round" fill="none"/>
+  <path d="M198 278 L165 318" stroke="#ffd23f" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <g class="fd-foreL">
+    <path d="M165 318 L150 350" stroke="#2b1a12" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <path d="M165 318 L150 350" stroke="#6a1fc8" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <circle cx="149" cy="335" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/><circle cx="163" cy="341" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/><circle cx="154" cy="340" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/>
+    <g class="fd-stickL"><line x1="166" y1="334" x2="118" y2="378" stroke="#2b1a12" stroke-width="11" stroke-linecap="round"/>
+    <line x1="166" y1="334" x2="118" y2="378" stroke="#f6dca8" stroke-width="5" stroke-linecap="round"/></g>
+    <circle cx="150" cy="350" r="19" fill="#a8683f" stroke="#2b1a12" stroke-width="5"/>
+    <path d="M141 348 q9 -8 18 0" fill="none" stroke="#2b1a12" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M142 356 q8 -5 16 0" fill="none" stroke="#2b1a12" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M140 349 q5 -5 10 -5" fill="none" stroke="#2b1a12" stroke-width="8" stroke-linecap="round"/>
+    <path d="M140 349 q5 -5 10 -5" fill="none" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="145" cy="345" r="3" fill="#8ff0ff" stroke="#2b1a12" stroke-width="1.5"/>
+  </g></g></g>
+<g class="fd-rig"><g class="fd-armR">
+  <path d="M302 278 L336 318" stroke="#2b1a12" stroke-width="34" stroke-linecap="round" fill="none"/>
+  <path d="M302 278 L336 318" stroke="#6a1fc8" stroke-width="24" stroke-linecap="round" fill="none"/>
+  <path d="M302 278 L336 318" stroke="#ffd23f" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <g class="fd-foreR">
+    <path d="M336 318 L352 350" stroke="#2b1a12" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <path d="M336 318 L352 350" stroke="#6a1fc8" stroke-width="15" stroke-linecap="round" fill="none"/>
+    <circle cx="339" cy="335" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/><circle cx="353" cy="341" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/><circle cx="347" cy="340" r="10" fill="#ff5fb0" stroke="#2b1a12" stroke-width="4"/>
+    <g class="fd-stickR"><line x1="336" y1="334" x2="386" y2="380" stroke="#2b1a12" stroke-width="11" stroke-linecap="round"/>
+    <line x1="336" y1="334" x2="386" y2="380" stroke="#f6dca8" stroke-width="5" stroke-linecap="round"/></g>
+    <circle cx="352" cy="350" r="19" fill="#a8683f" stroke="#2b1a12" stroke-width="5"/>
+    <path d="M343 348 q9 -8 18 0" fill="none" stroke="#2b1a12" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M344 356 q8 -5 16 0" fill="none" stroke="#2b1a12" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M342 349 q5 -5 10 -5" fill="none" stroke="#2b1a12" stroke-width="8" stroke-linecap="round"/>
+    <path d="M342 349 q5 -5 10 -5" fill="none" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="347" cy="345" r="3" fill="#8ff0ff" stroke="#2b1a12" stroke-width="1.5"/>
+  </g></g></g>
+
+<!-- hit FX -->
+<g class="fd-fxSnare" opacity="0" stroke="#2b1a12" stroke-width="5" stroke-linecap="round">
+  <line x1="104" y1="356" x2="88" y2="340"/><line x1="122" y1="350" x2="120" y2="330"/><line x1="96" y1="372" x2="74" y2="370"/>
+</g>
+<g class="fd-fxTom" opacity="0" stroke="#2b1a12" stroke-width="5" stroke-linecap="round">
+  <line x1="396" y1="370" x2="412" y2="354"/><line x1="380" y1="364" x2="384" y2="344"/><line x1="408" y1="386" x2="430" y2="384"/>
+</g>
+<g class="fd-fxCrash"><polygon points="420.0,173.0 433.6,196.3 459.9,202.0 442.0,222.1 444.7,249.0 420.0,238.1 395.3,249.0 398.0,222.1 380.1,202.0 406.4,196.3" fill="#fff" stroke="#2b1a12" stroke-width="5" stroke-linejoin="round"/><polygon points="420.0,193.0 427.1,205.2 440.9,208.2 431.5,218.7 432.9,232.8 420.0,227.1 407.1,232.8 408.5,218.7 399.1,208.2 412.9,205.2" fill="#ffd23f" stroke="#2b1a12" stroke-width="3" stroke-linejoin="round"/></g>
+</svg>

@@ -1,0 +1,942 @@
+<title>Strum Jam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1E1B2E; --ink2:#3A3552; --paper:#FFF7E6; --paper2:#F3E6C8;
+  --sun:#FFCE3A; --coral:#FF5E7E; --teal:#2EC4B6; --grape:#7B5CF0; --amber:#FFB020; --mint:#8FE3A0;
+  --wood:#5A3825; --wood2:#7A4E33; --fret:#D9D4C7; --good:#2BB673; --bad:#E5484D;
+  --f1:#2EC4B6; --f2:#FFB020; --f3:#FF5E7E; --f4:#7B5CF0; --ft:#1E1B2E;
+  --display:"Bagel Fat One","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  --ui:"Baloo 2","Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--sun);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.4;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance}
+.screen{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden}
+.screen[hidden]{display:none!important}
+.dots{background:radial-gradient(circle at 12px 12px,rgba(30,27,46,.09) 3.2px,transparent 3.8px) 0 0/30px 30px,var(--sun)}
+
+/* ---------- buttons & controls ---------- */
+.btn{--lift:0px;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:6px 18px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 var(--ink);font-weight:800;cursor:pointer;transition:transform .22s cubic-bezier(.3,1.8,.5,1),box-shadow .12s,background .15s;user-select:none;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{background:#fff;transform:translateY(-2px);box-shadow:0 6px 0 var(--ink)}
+.btn:active{transform:translateY(3px) scale(.97);box-shadow:0 1px 0 var(--ink);transition-duration:.05s}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.card:focus-visible{outline:3px dashed var(--grape);outline-offset:3px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn-go{background:var(--coral);color:#fff}
+.btn-go:hover{background:#ff7390}
+.btn-teal{background:var(--teal);color:var(--ink)}
+.btn-teal:hover{background:#4fd3c7}
+.btn-sm{min-height:36px;padding:3px 12px;font-size:14px;border-radius:11px;box-shadow:0 3px 0 var(--ink)}
+.btn-icon{width:44px;padding:0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);font-weight:700;font-size:13px;white-space:nowrap}
+.chip.on{background:var(--mint)}
+.chip.warn{background:#FFD9DF}
+.dot{width:10px;height:10px;border-radius:50%;background:#bbb;border:2px solid var(--ink);flex:none}
+.dot.live{background:var(--good)}
+.dot.off{background:var(--bad)}
+label.field{display:grid;gap:4px;font-weight:700;font-size:14px}
+input[type=text],input[type=password],input[type=search],select,textarea{border:3px solid var(--ink);border-radius:12px;background:#fff;padding:8px 12px;min-height:44px;width:100%}
+textarea{min-height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--coral)}
+.seg{display:flex;width:100%;border:3px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--paper)}
+.seg button{flex:1 1 0;min-width:0;border:0;background:transparent;padding:6px 4px;font-weight:800;font-size:14px;line-height:1.15;cursor:pointer;min-height:40px}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}
+.toggle input{width:22px;height:22px;accent-color:var(--coral)}
+.muted{color:var(--ink2);opacity:.85}
+.small{font-size:13px}
+
+/* ---------- title screen ---------- */
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px;padding-block:18px 60px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.topbar .grp{display:flex;gap:8px;flex-wrap:wrap}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:center;gap:10px;margin-block:8px 18px}
+.logo{font-family:var(--display);font-weight:400;font-size:clamp(64px,11vw,128px);line-height:.86;letter-spacing:.01em;color:var(--paper);-webkit-text-stroke:0;text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),3px 3px 0 var(--ink),-3px 3px 0 var(--ink),3px -3px 0 var(--ink),-3px -3px 0 var(--ink),6px 9px 0 var(--ink)}
+.logo .w1,.logo .w2{display:inline-block;white-space:nowrap}
+.logo .lt{display:inline-block;will-change:transform;transition:color .12s}
+.logo .l2{color:var(--coral)}
+.logo.flash .w1 .lt:nth-child(odd){color:var(--sun)}
+.logo.flash .w2 .lt{color:var(--teal)}
+.tag{font-size:19px;font-weight:700;max-width:34ch;margin:14px 0 0}
+#title-canvas{width:100%;aspect-ratio:1.35;max-width:100%;display:block}
+.title-art{position:relative;min-width:0}
+.search{display:flex;gap:10px;padding:12px;border:3px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
+.search input{border-width:0;background:transparent;font-size:20px;font-weight:700;min-width:0}
+.search input:focus-visible{outline:none}
+.search:focus-within{box-shadow:0 6px 0 var(--ink),0 0 0 4px var(--grape)}
+.status{margin-block:12px;font-weight:700;min-height:1.4em}
+.status .thinking{display:inline-flex;align-items:center;gap:10px}
+.eq{display:inline-flex;gap:3px;align-items:flex-end;height:18px}
+.eq i{width:5px;background:var(--ink);border-radius:2px;animation:eq .7s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.15s}.eq i:nth-child(3){animation-delay:.3s}.eq i:nth-child(4){animation-delay:.45s}
+@keyframes eq{0%,100%{height:4px}50%{height:18px}}
+.sec-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-block:26px 12px;font-family:var(--display);font-weight:400;font-size:28px}
+.sec-h small{font-family:var(--ui);font-size:15px;font-weight:700;opacity:.75}
+.song-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{position:relative;display:grid;grid-template-columns:62px 1fr;border:3px solid var(--ink);border-radius:16px;background:var(--paper);box-shadow:0 5px 0 var(--ink);cursor:pointer;overflow:hidden;text-align:left;padding:0;transition:transform .08s}
+.card{transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.card:hover{transform:translateY(-4px) rotate(-.8deg);box-shadow:0 9px 0 var(--ink)}
+.card:hover .stub{animation:wiggle .45s ease}
+.card:active{transform:translateY(3px) scale(.98);box-shadow:0 2px 0 var(--ink)}
+@keyframes wiggle{25%{transform:rotate(-8deg) scale(1.08)}60%{transform:rotate(6deg)}100%{transform:none}}
+.card .stub{display:grid;place-items:center;align-content:center;gap:0;border-right:3px dashed var(--ink);font-family:var(--display);font-size:22px;line-height:1;color:var(--ink)}
+.card .stub small{font-family:var(--ui);font-size:11px;font-weight:800;letter-spacing:.06em}
+.card .body{padding:10px 12px;display:grid;gap:4px;min-width:0}
+.card .t{font-weight:800;font-size:17px;line-height:1.15}
+.card .a{font-size:13px;font-weight:600;opacity:.8}
+.card .cs{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.card .cs span{font-size:12px;font-weight:800;padding:0 7px;border:2px solid var(--ink);border-radius:8px;background:#fff}
+.card .del{position:absolute;top:6px;right:6px;border:0;background:transparent;font-weight:900;cursor:pointer;width:28px;height:28px;border-radius:8px}
+.card .del:hover{background:var(--paper2)}
+.empty{padding:14px 16px;border:3px dashed var(--ink);border-radius:16px;font-weight:700;opacity:.8}
+.foot{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.notice{margin-top:14px;padding:12px 14px;border:3px solid var(--ink);border-radius:14px;background:#fff;font-weight:600}
+.notice b{font-weight:800}
+
+.setup{margin-top:14px;padding:14px 16px;border:3px solid var(--ink);border-radius:16px;background:#fff;display:grid;gap:6px;box-shadow:0 4px 0 var(--ink)}
+.setup p{margin:0}
+.setup .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.links{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.links a{color:var(--ink);font-weight:800}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.sugg button{cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}}
+.mode em{font-style:normal;font-weight:800;font-size:14px}
+
+.strings{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.sbtn{display:grid;justify-items:center;gap:0;padding:8px 2px 6px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 3px 0 var(--ink);cursor:pointer;font-weight:800}
+.sbtn b{font-family:var(--display);font-weight:400;font-size:28px;line-height:1}
+.sbtn small{font-size:11px;opacity:.8}
+.sbtn.active{background:#fff;outline:3px solid var(--grape);outline-offset:2px}
+.sbtn.ok{background:var(--mint)}
+.sbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+#m-tune .n{font-size:64px}
+
+/* ---------- splash ---------- */
+.splash{position:fixed;inset:0;z-index:70;display:grid;place-items:center;background:#120F1D;overflow:hidden}
+.splash[hidden]{display:none!important}
+.curtain{position:absolute;top:0;bottom:0;width:51%;background:repeating-linear-gradient(90deg,#C8305A 0 22px,#A01F45 22px 34px,#D63A66 34px 48px,#A01F45 48px 58px);box-shadow:inset 0 -60px 80px rgba(0,0,0,.35);transition:transform 1.05s cubic-bezier(.75,0,.25,1)}
+.curtain.l{left:0;border-right:5px solid var(--ink);transform-origin:left}
+.curtain.r{right:0;border-left:5px solid var(--ink);transform-origin:right}
+.valance{position:absolute;top:0;left:0;right:0;height:64px;background:radial-gradient(circle at 30px -6px,#8E1B3D 30px,transparent 31px) 0 0/60px 64px,#8E1B3D;border-bottom:0;z-index:3;transition:transform .8s cubic-bezier(.75,0,.25,1)}
+.splash-in{position:relative;z-index:2;display:grid;justify-items:center;gap:26px;padding-inline:16px;text-align:center;color:var(--paper);transition:transform .7s cubic-bezier(.6,-.3,.4,1),opacity .5s}
+.sign{position:relative;padding:40px 54px 34px;background:var(--ink);border:7px solid var(--sun);border-radius:28px;box-shadow:0 12px 0 #000,0 0 80px rgba(255,206,58,.35);animation:signIn .9s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes signIn{from{transform:translateY(-120%) rotate(-8deg)}to{transform:none}}
+.sign-word{display:grid;font-family:var(--display);font-size:clamp(62px,13vw,140px);line-height:.86;color:var(--sun);text-shadow:0 0 22px rgba(255,206,58,.75),5px 5px 0 var(--coral)}
+.sign-word .j{color:var(--coral);text-shadow:0 0 22px rgba(255,94,126,.7),5px 5px 0 var(--sun)}
+.bulb{position:absolute;width:15px;height:15px;margin:-7.5px 0 0 -7.5px;border-radius:50%;background:#5F5230;border:2px solid #000;transition:background .08s,box-shadow .08s}
+.bulb.on{background:#FFF4B8;box-shadow:0 0 14px 5px rgba(255,214,110,.85)}
+.btn-big{font-family:var(--display);font-weight:400;font-size:32px;padding:10px 38px;min-height:68px;border-radius:22px;box-shadow:0 7px 0 #000;animation:throb 1.1s ease-in-out infinite}
+@keyframes throb{50%{transform:scale(1.07)}}
+.splash.opening{background:transparent;pointer-events:none}
+.splash.opening .curtain.l{transform:translateX(-104%)}
+.splash.opening .curtain.r{transform:translateX(104%)}
+.splash.opening .valance{transform:translateY(-110%)}
+.splash.opening .splash-in{transform:translateY(-60vh) scale(.9);opacity:0}
+
+/* ---------- title extras ---------- */
+.ticker{position:relative;z-index:2;overflow:hidden;white-space:nowrap;background:var(--ink);color:var(--sun);font-family:var(--display);font-size:17px;padding:7px 0 5px;letter-spacing:.04em}
+.tk{display:inline-flex;animation:tick 34s linear infinite}
+@keyframes tick{to{transform:translateX(-50%)}}
+#scr-title{isolation:isolate}
+#scr-title .wrap{position:relative;z-index:1}
+.beam{position:absolute;top:-40px;width:34vw;height:1100px;pointer-events:none;z-index:0;background:linear-gradient(to bottom,rgba(255,255,255,.55),rgba(255,255,255,0) 75%);clip-path:polygon(44% 0,56% 0,100% 100%,0 100%);transform-origin:50% 0;opacity:calc(.45 + var(--kick,0) * .35)}
+.beam.a{left:0;animation:swingA 7s ease-in-out infinite alternate}
+.beam.b{right:0;animation:swingB 8s ease-in-out infinite alternate}
+@keyframes swingA{from{transform:rotate(-24deg)}to{transform:rotate(8deg)}}
+@keyframes swingB{from{transform:rotate(22deg)}to{transform:rotate(-10deg)}}
+#btn-music[aria-pressed=true]{background:var(--sun)}
+
+/* ---------- transitions + motion ---------- */
+.wipe{position:fixed;inset:-10px -20vw;z-index:90;pointer-events:none;display:flex;transform:translateX(-120%)}
+.wipe i{flex:1;border-right:5px solid var(--ink);transform:skewX(-14deg)}
+.wipe i:nth-child(1){background:var(--sun)}.wipe i:nth-child(2){background:var(--coral)}.wipe i:nth-child(3){background:var(--teal)}.wipe i:nth-child(4){background:var(--grape)}.wipe i:nth-child(5){background:var(--mint)}
+.wipe b{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;display:grid;place-items:center;border-radius:50%;background:var(--paper);border:5px solid var(--ink);font-size:64px;color:var(--ink);box-shadow:0 8px 0 var(--ink)}
+.wipe.in{transform:translateX(0);transition:transform .34s cubic-bezier(.7,0,.3,1)}
+.wipe.in b{animation:spinIn .34s cubic-bezier(.3,1.6,.5,1)}
+.wipe.out{transform:translateX(120%);transition:transform .4s cubic-bezier(.7,0,.3,1)}
+@keyframes spinIn{from{transform:rotate(-180deg) scale(.3)}}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.95)}to{opacity:1;transform:none}}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:85}
+#fretboard .fdot{transform-box:fill-box;transform-origin:center;animation:dotPop .42s cubic-bezier(.3,1.8,.5,1) both}
+@keyframes dotPop{from{transform:scale(0) rotate(-40deg)}}
+#fretboard .flight{fill:#E4DCC8;transition:fill .12s}
+#fretboard .flight.heard{fill:var(--good);animation:lightPop .3s cubic-bezier(.3,1.8,.5,1)}
+#fretboard .fstring{transition:stroke .12s}
+#fretboard .fstring.heard{stroke:#9BF0B8}
+@keyframes lightPop{50%{transform:scale(1.35)}}
+#fretboard .flight{transform-box:fill-box;transform-origin:center}
+.now b{display:inline-block}
+.now b.pop{animation:namePop .45s cubic-bezier(.3,1.8,.5,1)}
+@keyframes namePop{from{transform:scale(.4) rotate(-10deg);opacity:.2}}
+.cbox{transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+.cbox:hover{transform:translateY(-4px) rotate(1deg)}
+.cbox:active{transform:scale(.95)}
+.stat b{display:inline-block}
+
+/* ---------- song screen ---------- */
+.song-head{display:grid;gap:8px;margin-block:10px 16px}
+.song-head h1{font-family:var(--display);font-weight:400;font-size:clamp(38px,6vw,64px);line-height:.95}
+.song-head .by{font-size:20px;font-weight:700}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-block:14px}
+.mode{display:grid;gap:4px;text-align:left;padding:16px 18px;border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 var(--ink);cursor:pointer;transition:transform .08s}
+.mode{transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.mode:hover{transform:translateY(-4px) rotate(-.5deg);box-shadow:0 10px 0 var(--ink)}
+.mode:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
+.mode b{font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
+.mode span{font-weight:600}
+.mode.practice{background:var(--teal)}
+.mode.stage{background:var(--coral);color:#fff}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:14px;border:3px solid var(--ink);border-radius:18px;background:var(--paper)}
+.opts .o{display:grid;gap:6px;align-content:start}
+.opts .o>b{font-size:14px}
+/* song settings as compact dropdowns */
+.opts.dd{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.opts.dd .o{gap:3px}
+.opts.dd .o>b{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+.opts.dd select{appearance:none;-webkit-appearance:none;width:100%;border:3px solid var(--ink);border-radius:12px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231E1B2E' stroke-width='2.5'/%3E%3C/svg%3E") no-repeat right 10px center;padding:7px 28px 7px 10px;font:800 15px/1.2 var(--ui);color:var(--ink);box-shadow:0 3px 0 var(--ink);min-height:42px}
+.opts.dd .small.muted{font-size:11px;line-height:1.2}
+.opts.dd #easy-note:empty,.opts.dd #tempo-bpm:empty{display:none}
+.opts.dd #strict-note,.opts.dd #view-note{display:none}
+.chord-list{display:flex;flex-wrap:wrap;gap:10px}
+.cbox{display:grid;justify-items:center;gap:2px;padding:8px 8px 4px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);width:112px}
+.cbox b{font-family:var(--display);font-weight:400;font-size:22px;line-height:1}
+.cbox small{font-size:11px;font-weight:700;opacity:.75;text-align:center;line-height:1.1}
+.cbox svg{width:96px;height:auto}
+.map{display:grid;gap:8px}
+.map .row{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:start}
+.map .row b{font-weight:800}
+.map .bars{display:flex;flex-wrap:wrap;gap:4px}
+.map .bar{min-width:44px;padding:1px 8px;border:2px solid var(--ink);border-radius:8px;background:#fff;font-weight:800;font-size:13px;text-align:center}
+.tip{padding:10px 14px;border-left:6px solid var(--ink);background:var(--paper);border-radius:0 12px 12px 0;font-weight:600}
+
+/* ---------- game screen ---------- */
+/* the board has a fixed height, so the stage never jumps when a chord's steps or hints change length */
+.game{--bh:min(45vh,540px);display:grid;grid-template-rows:auto minmax(200px,1fr) auto;grid-template-columns:minmax(0,1fr);background:var(--ink);overflow:hidden}
+.hud{display:flex;align-items:center;gap:10px;padding:8px 12px;min-width:0;background:var(--ink);color:var(--paper)}
+.hud .btn{box-shadow:0 3px 0 #000}
+.hud .ht{min-width:0;flex:1}
+.hud .ht b{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
+.hud .ht span{font-size:13px;opacity:.8;white-space:nowrap}
+/* score + hype: a wooden score plaque over a vertical bamboo tube that fills up as the crowd heats up */
+.gmeter{position:relative;z-index:2;display:grid;justify-items:center;align-content:center;gap:8px;grid-area:meter}
+.gmeter .sc{text-align:center;font-variant-numeric:tabular-nums;min-width:96px;padding:4px 12px 6px;border:3.5px solid var(--ink);border-radius:10px;box-shadow:4px 5px 0 var(--ink);color:#F4E7C8;
+  background:repeating-linear-gradient(3deg,rgba(255,255,255,.05) 0 3px,transparent 3px 12px),linear-gradient(180deg,#5A3A22,#3E2616);transform:rotate(2deg)}
+.gmeter .sc small{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.gmeter .sc b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1;color:var(--sun);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
+.gmeter .sc span{display:block;font-size:12px;font-weight:800;color:#F4E7C8;white-space:nowrap}
+.gmeter .hype{display:grid;justify-items:center;gap:6px;width:auto}
+.gmeter .hype-bar{position:relative;width:34px;height:var(--mh,150px);border:3.5px solid var(--ink);border-radius:18px;overflow:hidden;box-shadow:4px 5px 0 rgba(30,27,46,.85);
+  background:linear-gradient(90deg,#5E6E1C,#A9BD4C 30%,#D6E27F 45%,#9CB03E 70%,#5E6E1C)}
+.gmeter .hype-bar i{position:absolute;left:0;right:0;bottom:0;height:0;width:auto;background:linear-gradient(0deg,var(--teal),var(--sun) 55%,var(--coral));transition:height .25s ease-out;box-shadow:inset 6px 0 0 rgba(255,255,255,.3)}
+.gmeter .hype-bar em{position:absolute;left:-2px;right:-2px;height:4px;background:var(--ink);border-radius:2px}
+.gmeter .hype-bar em:nth-of-type(1){bottom:18%}.gmeter .hype-bar em:nth-of-type(2){bottom:40%}.gmeter .hype-bar em:nth-of-type(3){bottom:62%}.gmeter .hype-bar em:nth-of-type(4){bottom:85%}
+.gmeter .hype-bar::after{content:none}
+#hype-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#F4E7C8;background:#3E2616;border:2.5px solid var(--ink);border-radius:8px;padding:0 8px;white-space:nowrap}
+.gmeter .hype.l4 #hype-label{color:var(--sun);background:var(--coral);animation:throb .5s ease-in-out infinite}
+.gmeter .sc b.bump{animation:namePop .3s cubic-bezier(.3,1.8,.5,1)}
+
+.stage-wrap{position:relative;min-height:0}
+.stage-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation;cursor:pointer}
+/* ---- game sheet: a woven bamboo blind framed with bamboo poles, a hanging wooden sign and a rosewood neck ---- */
+.board.ww{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;justify-items:center;
+  padding:48px 52px 22px;min-height:0;max-height:var(--bh);overflow:hidden auto;overscroll-behavior:contain;border-top:5px solid var(--ink);
+  background:linear-gradient(90deg,rgba(40,20,0,.22),transparent 12%,transparent 88%,rgba(40,20,0,.22)),linear-gradient(180deg,rgba(40,20,0,.25),transparent 30%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%23D8B46C'/%3E%3Crect y='0' width='120' height='5' fill='%23DDBB74'/%3E%3Crect y='5' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='1' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='6' width='120' height='5' fill='%23D4AE66'/%3E%3Crect y='11' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='7' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='12' width='120' height='5' fill='%23E2C27E'/%3E%3Crect y='17' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='13' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='18' width='120' height='5' fill='%23D8B46C'/%3E%3Crect y='23' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='19' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='24' width='120' height='5' fill='%23CFA75E'/%3E%3Crect y='29' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='25' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='30' width='120' height='5' fill='%23E0BF78'/%3E%3Crect y='35' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='31' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='36' width='120' height='5' fill='%23D6B06A'/%3E%3Crect y='41' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='37' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='42' width='120' height='5' fill='%23DCBA72'/%3E%3Crect y='47' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='43' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='48' width='120' height='5' fill='%23D1AA62'/%3E%3Crect y='53' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='49' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='54' width='120' height='5' fill='%23E3C480'/%3E%3Crect y='59' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='55' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect x='58' width='3' height='60' fill='%235A3A1A' opacity='.75'/%3E%3Crect x='56' y='1.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='7.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='13.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='19.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='25.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='31.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='37.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='43.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='49.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='55.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3C/svg%3E") 0 0/120px 60px,#D8B46C}
+.board.ww::before{content:"";position:absolute;left:0;right:0;top:0;height:34px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='34'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%235E6E1C'/%3E%3Cstop offset='.22' stop-color='%23A9BD4C'/%3E%3Cstop offset='.4' stop-color='%23D6E27F'/%3E%3Cstop offset='.55' stop-color='%23B5C757'/%3E%3Cstop offset='1' stop-color='%235E6E1C'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='170' height='34' fill='url(%23g)'/%3E%3Crect x='10' y='9' width='136' height='3' rx='1.5' fill='%23F1F6C4' opacity='.45'/%3E%3Cpath d='M30 26 q30 1 60 0' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.5'/%3E%3Crect x='156' y='-1' width='8' height='36' rx='3' fill='%238FA235'/%3E%3Crect x='159' y='-1' width='2.5' height='36' fill='%234E5C15'/%3E%3Crect x='163' y='-1' width='1.5' height='36' fill='%23E4EEA0' opacity='.7'/%3E%3C/svg%3E") 0 0/170px 34px;border-bottom:4px solid var(--ink);box-shadow:0 5px 0 rgba(30,27,46,.25);z-index:2}
+.bpole{position:absolute;top:0;bottom:0;width:34px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='150'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%235E6E1C'/%3E%3Cstop offset='.22' stop-color='%23A9BD4C'/%3E%3Cstop offset='.4' stop-color='%23D6E27F'/%3E%3Cstop offset='.55' stop-color='%23B5C757'/%3E%3Cstop offset='1' stop-color='%235E6E1C'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='34' height='150' fill='url(%23g)'/%3E%3Crect x='9' y='10' width='3' height='118' rx='1.5' fill='%23F1F6C4' opacity='.45'/%3E%3Cpath d='M4 40 q1 20 0 44' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.5'/%3E%3Cpath d='M26 20 q-1 30 0 70' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.45'/%3E%3Crect x='-1' y='136' width='36' height='8' rx='3' fill='%238FA235'/%3E%3Crect x='-1' y='139' width='36' height='2.5' fill='%234E5C15'/%3E%3Crect x='-1' y='143' width='36' height='1.5' fill='%23E4EEA0' opacity='.7'/%3E%3C/svg%3E") 0 18px/34px 150px;border-left:4px solid var(--ink);border-right:4px solid var(--ink);z-index:1}
+.bpole.l{left:0}.bpole.r{right:0}
+.blash{position:absolute;top:-4px;width:44px;height:44px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cg stroke='%231E1B2E' stroke-width='2'%3E%3Cpath d='M4 8 L40 36 L36 40 L0 12Z' fill='%23C9A15E'/%3E%3Cpath d='M40 8 L4 36 L8 40 L44 12Z' fill='%23B38A48'/%3E%3Cpath d='M4 20 L40 20 L40 25 L4 25Z' fill='%23D9B26E'/%3E%3C/g%3E%3C/svg%3E") 0 0/44px 44px;z-index:3}
+.blash.l{left:-5px}.blash.r{right:-5px}
+.bleaf{position:absolute;top:22px;width:120px;height:80px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80' viewBox='0 0 120 80'%3E%3Cg stroke='%231E1B2E' stroke-width='2.5' stroke-linejoin='round'%3E%3Cpath d='M8 10 C40 4 70 8 104 26 C70 26 40 22 8 10Z' fill='%237FA83A'/%3E%3Cpath d='M14 16 C34 30 50 50 58 76 C40 58 24 40 14 16Z' fill='%236A9430'/%3E%3Cpath d='M20 12 C50 26 80 44 112 60 C76 58 44 40 20 12Z' fill='%2393BE48'/%3E%3C/g%3E%3Cg stroke='%234E7020' stroke-width='1.2' fill='none'%3E%3Cpath d='M12 11 C44 12 72 18 100 25'/%3E%3Cpath d='M16 18 C30 36 44 54 56 72'/%3E%3Cpath d='M24 15 C54 30 82 46 108 58'/%3E%3C/g%3E%3C/svg%3E") 0 0/120px 80px;z-index:3;pointer-events:none;transform-origin:10px 10px;animation:sway 4s ease-in-out infinite}
+.bleaf.l{left:18px}.bleaf.r{right:18px;transform:scaleX(-1);animation-name:swayR}
+@keyframes sway{0%,100%{rotate:0deg}50%{rotate:4deg}}@keyframes swayR{0%,100%{transform:scaleX(-1) rotate(0)}50%{transform:scaleX(-1) rotate(4deg)}}
+.cmd-row{position:relative;z-index:2;width:100%;max-width:1040px;display:flex;flex-wrap:wrap;gap:16px 22px;align-items:center;justify-content:center}
+/* the command, painted on a wooden sign hanging from two ropes */
+.cmd{position:relative;display:flex;align-items:baseline;gap:6px;transform:rotate(-3deg);transform-origin:50% -30px;padding:4px 22px 8px;border:4px solid var(--ink);border-radius:10px;box-shadow:5px 6px 0 var(--ink);
+  background:repeating-linear-gradient(3deg,rgba(255,255,255,.05) 0 3px,transparent 3px 12px),linear-gradient(180deg,#5A3A22,#3E2616);font-family:var(--display);line-height:1;white-space:nowrap;animation:signSwing 3s ease-in-out infinite}
+.cmd::before,.cmd::after{content:"";position:absolute;top:-30px;width:3px;height:30px;background:#7A5A2A;border-left:1px solid var(--ink)}
+.cmd::before{left:24px;transform:rotate(14deg)}.cmd::after{right:24px;transform:rotate(-14deg)}
+@keyframes signSwing{0%,100%{rotate:0deg}50%{rotate:1.6deg}}
+.cmd-verb{font-size:26px;color:#F4E7C8;text-transform:uppercase}
+.cmd b{font-weight:400;font-size:62px;color:var(--sun);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:3px 4px 0 var(--ink)}
+.cmd-bang{font-size:46px;color:#F4E7C8}
+.cmd-sub{position:relative;z-index:2;font-weight:800;font-size:13px;color:#F4E7C8;background:#3E2616;border:2px solid var(--ink);border-radius:8px;padding:0 10px}
+.cmd-sub:empty{display:none}
+/* hear it: a red name-seal stamp */
+.hear-btn{width:84px;height:84px;border-radius:50%;border:4px solid var(--ink);background:radial-gradient(circle at 38% 32%,#EE5A4A,#C92A22 70%);color:#FFF3E0;display:grid;place-items:center;align-content:center;gap:0;
+  font:400 18px/1 var(--display);box-shadow:4px 5px 0 var(--ink);transform:rotate(4deg);cursor:pointer;transition:transform .12s;position:relative;padding:0}
+.hear-btn::after{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid rgba(255,235,220,.6)}
+.hear-btn .hear-ico{display:none}
+.hear-btn small{display:block;font:800 9.5px/1.1 var(--ui);max-width:62px;margin-top:3px;opacity:.9}
+.hear-btn:hover{transform:rotate(-3deg) scale(1.05)}.hear-btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--ink)}
+.cmd-right{display:flex;gap:14px;align-items:center}
+/* next: a wooden shrine plaque */
+.cmd-right .next{position:relative;display:block;text-align:center;width:104px;padding:18px 8px 8px;border:0;background:#E8C98A;clip-path:polygon(50% 0,100% 24%,100% 100%,0 100%,0 24%);filter:drop-shadow(3px 4px 0 var(--ink));transform:rotate(-3deg)}
+.cmd-right .next::before{content:"";position:absolute;inset:0;clip-path:inherit;border:3.5px solid var(--ink);pointer-events:none}
+.cmd-right .next #next-svg{display:none}
+.cmd-right .next small{display:block;font-weight:800;font-size:12px;color:#5A3A22;letter-spacing:.08em}
+.cmd-right .next b{font-family:var(--display);font-weight:400;font-size:30px;color:var(--ink);line-height:1}
+.skip-btn{border:3px solid var(--ink);border-radius:10px;background:#F4E7C8;font:800 15px var(--ui);padding:5px 12px;box-shadow:3px 4px 0 var(--ink);cursor:pointer;color:#3E2616}
+.skip-btn[hidden]{display:none}
+.fb-card .skip-btn{position:absolute;right:22px;bottom:-17px;z-index:3;padding:2px 12px;font-size:14px;transform:rotate(-2deg)}
+/* the neck sits in a cream frame pegged to the blind */
+.fb-card{position:relative;z-index:2;width:100%;max-width:1040px;border:5px solid var(--ink);border-radius:16px;padding:18px 16px 6px;box-shadow:7px 9px 0 rgba(30,27,46,.85);
+  background:linear-gradient(180deg,#FBF1DC,#F1E1BF)}
+.screw{position:absolute;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#D9AE6B,#7A5A2A);border:3px solid var(--ink)}
+.screw::after{content:none}
+.screw.a{left:-12px;top:-12px}.screw.b{right:-12px;top:-12px}.screw.c{left:-12px;bottom:-12px}.screw.d{right:-12px;bottom:-12px}
+.fb-sticker{position:absolute;left:50%;top:-17px;translate:-50% 0;white-space:nowrap;z-index:3;border:3px solid var(--ink);border-radius:6px;padding:1px 14px;font:800 14px var(--ui);background:#FFF7E6;transform:rotate(2deg);box-shadow:2px 3px 0 var(--ink);animation:namePop .35s cubic-bezier(.3,1.8,.5,1)}
+.fb-sticker:empty{display:none}
+.fb-sticker.bad{background:#D8392B;color:#fff}.fb-sticker.good{background:var(--good);color:#fff}
+#fretboard{width:100%;height:auto;display:block;max-height:calc(var(--bh) - 170px);margin:0 auto}
+/* landscape screens: the sign, stamp and plaque stack in a column beside the neck, so the sheet stays short and the band gets the room */
+@media (orientation:landscape) and (min-width:761px){
+  /* three columns with equal outer ones, so the neck's frame sits in the middle of the page and the sign sits in the left one */
+  .board.ww{grid-template-columns:minmax(200px,1fr) minmax(0,max-content) minmax(200px,1fr);grid-template-areas:"cmd fb meter" "sub fb meter";align-items:center;column-gap:24px;padding:46px 56px 18px}
+  .board.ww .cmd-row{justify-self:center}
+  .board.ww .gmeter{--mh:calc(var(--bh) - 176px);justify-self:center}
+  .bleaf.r{display:none}
+  .board.ww .cmd-row{grid-area:cmd;flex-direction:column;flex-wrap:nowrap;gap:14px;align-self:center}
+  .board.ww .cmd-sub{grid-area:sub;align-self:start}
+  .board.ww .fb-card{grid-area:fb;justify-self:center}
+  .board.ww .cmd b{font-size:54px}.board.ww .cmd-verb{font-size:22px}.board.ww .cmd-bang{font-size:40px}
+  .board.ww .cmd-right{gap:12px}
+  .board.ww .hear-btn{width:76px;height:76px}
+  .board.ww .cmd-right .next{width:88px;padding:14px 6px 6px}
+  .board.ww .cmd-right{flex-wrap:nowrap;justify-content:center}
+  .board.ww .hear-btn{width:70px;height:70px;font-size:15px}.board.ww .hear-btn small{font-size:8.5px;max-width:52px}
+  .board.ww .cmd-right .next{width:80px}
+  #fretboard{height:calc(var(--bh) - 112px);max-height:none;width:auto;max-width:100%}
+  .board.ww .fb-card{width:auto;max-width:100%}
+  .bleaf{width:84px;height:56px;background-size:84px 56px}
+}
+.ww-spark{display:none}
+.legend{display:none}
+.now{display:grid;gap:0;padding:6px 12px;border:3px solid var(--ink);border-radius:14px;background:#fff}
+.now small{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;opacity:.7}
+.now b{font-family:var(--display);font-weight:400;font-size:44px;line-height:1}
+.now span{font-size:13px;font-weight:700}
+.next{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;padding:6px 10px;border:3px dashed var(--ink);border-radius:14px}
+.next svg{width:70px;height:auto}
+.next b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1}
+.next small{display:block;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;opacity:.7}
+.side-btns{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:14px;font-weight:700;line-height:1.3;overflow-wrap:break-word}
+
+
+/* ---------- story mode ---------- */
+.story-promo{position:relative;display:grid;grid-template-columns:minmax(120px,210px) 1fr auto;align-items:center;gap:16px;width:100%;margin-top:22px;padding:12px 16px 12px 12px;border:3px solid var(--ink);border-radius:20px;background:var(--ink);color:var(--paper);box-shadow:0 6px 0 #000;cursor:pointer;text-align:left;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.story-promo:hover{transform:translateY(-3px) rotate(-.4deg);box-shadow:0 9px 0 #000}
+.story-promo:active{transform:translateY(3px);box-shadow:0 2px 0 #000}
+.story-promo:focus-visible{outline:3px dashed var(--grape);outline-offset:3px}
+.sp-art{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:12px;overflow:hidden;border:3px solid var(--paper);aspect-ratio:2.4;background:#000}
+.sp-art img{width:100%;height:100%;object-fit:cover;display:block}
+.sp-txt{display:grid;gap:2px;min-width:0}
+.sp-txt em{font-style:normal;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sun)}
+.sp-txt b{font-family:var(--display);font-weight:400;font-size:clamp(24px,3.4vw,34px);line-height:1}
+.sp-txt span{font-weight:600;font-size:14px;opacity:.9}
+.sp-go{font-weight:800;padding:8px 14px;border:3px solid var(--paper);border-radius:14px;background:var(--coral);color:#fff;white-space:nowrap}
+@media (max-width:640px){.story-promo{grid-template-columns:1fr}.sp-go{justify-self:start}}
+.careers{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.careers:empty{display:none}
+.cchip{display:inline-flex;align-items:center;gap:8px;padding:6px 8px 6px 6px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 3px 0 var(--ink);font-weight:800;cursor:pointer}
+.cchip img{width:54px;height:30px;object-fit:cover;border-radius:8px;border:2px solid var(--ink)}
+.cchip small{font-weight:700;opacity:.75}
+.cchip .x{border:0;background:transparent;font-weight:900;cursor:pointer;width:26px;height:26px;border-radius:8px}
+.cchip .x:hover{background:var(--paper2)}
+.cchip:hover{transform:translateY(-2px)}
+.story{color:var(--paper);background:radial-gradient(circle at 12px 12px,rgba(255,247,230,.07) 3.2px,transparent 3.8px) 0 0/30px 30px,#221C3A}
+.story .sec-h{color:var(--paper)}
+.story .btn,.story .search,.story .notice{color:var(--ink)}
+.story .status{color:var(--paper)}
+.story .eq i{background:var(--sun)}
+.story-hero{margin-block:14px 18px;display:grid;gap:10px}
+.story-hero h1{font-family:var(--display);font-weight:400;font-size:clamp(52px,10vw,104px);line-height:.88;color:var(--sun);text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),6px 7px 0 #000}
+.story-hero h1 span{color:var(--coral)}
+.story-hero p{max-width:60ch;font-size:18px;font-weight:600;margin:0;opacity:.92}
+.story-load{display:grid;gap:10px;margin-top:6px}
+.story-load .sl-steps{display:flex;flex-wrap:wrap;gap:8px}
+.story-load .sl-steps span{padding:2px 10px;border:2px solid rgba(255,247,230,.35);border-radius:999px;font-size:13px;font-weight:700;opacity:.55;transition:all .3s}
+.story-load .sl-steps span.on{opacity:1;border-color:var(--sun);color:var(--sun)}
+.career-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:14px;margin-block:12px 6px}
+.ch-name small{font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sun)}
+.ch-name h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,7vw,76px);line-height:.95;color:var(--paper);text-shadow:4px 4px 0 #000}
+.ch-name p{margin:6px 0 0;font-weight:600;opacity:.9;max-width:56ch}
+.career-meter{display:grid;gap:6px;min-width:220px}
+.career-meter b{font-family:var(--display);font-weight:400;font-size:26px;color:var(--sun)}
+.cm-bar{height:16px;border:3px solid var(--paper);border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)}
+.cm-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--coral),var(--sun));transition:width .8s cubic-bezier(.2,1,.3,1)}
+.career-meter span{font-weight:700;font-size:14px}
+.lvl{position:relative;margin-block:26px;border:4px solid var(--ink);border-radius:24px;background:var(--paper);color:var(--ink);box-shadow:0 8px 0 #000;overflow:hidden}
+.lvl .art{position:relative;aspect-ratio:3.2;background:#120F1D;overflow:hidden;border-bottom:4px solid var(--ink)}
+.lvl .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.lvl .art .ov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:14px 16px;background:linear-gradient(0deg,rgba(18,15,29,.72),rgba(18,15,29,0) 58%)}
+.lvl .tagrow{display:flex;gap:8px;flex-wrap:wrap}
+.lvl .ltag{padding:3px 12px;border:3px solid var(--ink);border-radius:999px;background:var(--sun);font-weight:800;font-size:13px;letter-spacing:.06em;box-shadow:0 3px 0 var(--ink)}
+.lvl .ltag.t2{background:var(--amber)}.lvl .ltag.t3{background:var(--coral);color:#fff}
+.lvl .ltag.done{background:var(--mint)}
+.lvl .nm{font-family:var(--display);font-weight:400;font-size:clamp(28px,5vw,52px);line-height:.95;color:var(--paper);text-shadow:3px 0 0 var(--ink),-3px 0 0 var(--ink),0 3px 0 var(--ink),0 -3px 0 var(--ink),4px 5px 0 #000}
+.lvl .yrs{color:var(--paper);font-weight:800;font-size:15px;text-shadow:0 2px 0 #000}
+.lvl .info{display:grid;gap:8px;padding:14px 16px 4px}
+.lvl .albums{display:flex;flex-wrap:wrap;gap:6px}
+.lvl .blurb{margin:0;font-weight:600;max-width:75ch}
+.lvl .rules{font-size:13px;font-weight:700;opacity:.8}
+.lvl .songs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 16px 18px}
+@media (max-width:720px){.lvl .songs{grid-template-columns:1fr}.lvl .art{aspect-ratio:2.2}}
+.stile{position:relative;display:grid;grid-template-columns:40px 1fr;align-items:center;gap:10px;padding:10px 12px;border:3px solid var(--ink);border-radius:16px;background:#fff;box-shadow:0 4px 0 var(--ink);cursor:pointer;text-align:left;min-height:70px;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.stile:hover{transform:translateY(-3px) rotate(-.6deg);box-shadow:0 7px 0 var(--ink)}
+.stile:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.stile .n{display:grid;place-items:center;width:40px;height:40px;border:3px solid var(--ink);border-radius:12px;background:var(--sun);font-family:var(--display);font-size:22px}
+.stile .t{font-weight:800;line-height:1.15}
+.stile .a{font-size:12px;font-weight:700;opacity:.7}
+.stile .st{font-size:13px;font-weight:800}
+.stile .why{font-size:13px;font-weight:600;font-style:italic;line-height:1.25;margin-block:2px}
+.stile-w{position:relative;display:grid}
+.stile-w.can-swap .stile .t{padding-right:70px}
+.stile-w .swap{position:absolute;top:8px;right:8px;padding:2px 9px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--ink);font:inherit;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 2px 0 var(--ink)}
+.stile-w .swap:hover{background:var(--sun)}
+.stile-w .swap:active{transform:translateY(2px);box-shadow:none}
+.stile-w .swap:disabled{opacity:.45;cursor:progress}
+.lvl .few{margin:0;font-size:14px;font-weight:700;color:var(--bad)}
+.career-note{margin:10px 0 0}
+.sw-list{display:grid;gap:10px}
+.sw-opt{display:grid;gap:2px;text-align:left;padding:10px 14px;border:3px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink);font:inherit;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.sw-opt:hover{background:var(--paper2)}
+.sw-opt:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.sw-opt .t{font-weight:800}
+.sw-opt .a{font-size:12px;font-weight:700;opacity:.7}
+.sw-opt .why{font-size:13px;font-weight:600;font-style:italic}
+.stile .stars{letter-spacing:2px;color:#D69A00}
+.stile .stars i{font-style:normal;color:#CFC6B4}
+.stile.passed{background:#E9FBEF}
+.stile.passed .n{background:var(--mint)}
+.stile.busy{cursor:progress}
+.stile.err .st{color:var(--bad)}
+.lvl.locked .art img{filter:grayscale(.85) brightness(.55)}
+.lvl.locked .stile{cursor:not-allowed;opacity:.55;box-shadow:0 2px 0 var(--ink)}
+.lvl.locked .stile:hover{transform:none}
+.lvl .lock{position:absolute;right:16px;top:14px;display:flex;align-items:center;gap:8px;padding:6px 12px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);font-weight:800;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.lvl.fresh{animation:unlock 1s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes unlock{0%{transform:scale(.96);filter:brightness(1.8)}100%{transform:none;filter:none}}
+.lvl .master{position:absolute;right:16px;top:14px;padding:6px 14px;border:3px solid var(--ink);border-radius:14px;background:var(--mint);font-weight:800;box-shadow:0 3px 0 var(--ink);transform:rotate(3deg)}
+.story-strip{display:grid;grid-template-columns:minmax(110px,180px) 1fr;align-items:center;gap:14px;padding:10px;border:3px solid var(--ink);border-radius:18px;background:var(--ink);color:var(--paper);box-shadow:0 5px 0 #000;margin-bottom:12px}
+.story-strip img{width:100%;aspect-ratio:2.4;object-fit:cover;border-radius:10px;border:2px solid var(--paper);display:block}
+.story-strip b{font-family:var(--display);font-weight:400;font-size:22px;line-height:1;color:var(--sun)}
+.story-strip p{margin:4px 0 0;font-size:14px;font-weight:600}
+#scr-song.in-story .o.sf{display:none}
+@media (max-width:560px){.story-strip{grid-template-columns:1fr}.story-strip img{aspect-ratio:3.2}}
+.res-story{display:grid;justify-items:center;gap:6px;width:100%;max-width:560px;padding:12px 18px;border:3px solid var(--ink);border-radius:18px;background:var(--paper);box-shadow:0 5px 0 var(--ink)}
+.res-story b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1}
+.res-story .stars{font-size:28px;letter-spacing:4px;color:#D69A00}
+.res-story .stars i{font-style:normal;color:#CFC6B4}
+.res-story.big{background:var(--ink);color:var(--paper);transform:rotate(-1.5deg)}
+.res-story.big b{color:var(--sun)}
+.stile .eq{height:12px;vertical-align:-1px;margin-right:4px}.stile .eq i{width:3px}
+/* ---------- results ---------- */
+.res{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;gap:14px;padding-top:30px}
+.stamp{font-family:var(--display);font-weight:400;font-size:clamp(90px,18vw,170px);line-height:.9;color:var(--paper);text-shadow:5px 0 0 var(--ink),-5px 0 0 var(--ink),0 5px 0 var(--ink),0 -5px 0 var(--ink),4px 4px 0 var(--ink),-4px 4px 0 var(--ink),4px -4px 0 var(--ink),-4px -4px 0 var(--ink),8px 12px 0 var(--ink);transform:rotate(-6deg);animation:stamp .5s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes stamp{from{transform:scale(2.4) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(-6deg);opacity:1}}
+.res h2{font-family:var(--display);font-weight:400;font-size:clamp(32px,5vw,48px)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;width:100%;max-width:720px}
+.stat{padding:10px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);font-variant-numeric:tabular-nums}
+.stat b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.1}
+.stat span{font-size:13px;font-weight:700}
+.res .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.tough{max-width:720px;width:100%;text-align:left}
+
+/* ---------- modals ---------- */
+.modal{position:fixed;inset:0;background:rgba(30,27,46,.55);display:grid;place-items:center;padding:16px;z-index:50;overflow-y:auto}
+.modal[hidden]{display:none!important}
+.sheet{width:min(560px,100%);max-height:calc(100% - 8px);overflow-y:auto;background:var(--paper);border:4px solid var(--ink);border-radius:22px;box-shadow:0 8px 0 var(--ink);padding:18px;display:grid;gap:14px}
+.sheet h2{font-family:var(--display);font-weight:400;font-size:32px;line-height:1}
+.sheet .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sheet .hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.meter{height:18px;border:3px solid var(--ink);border-radius:10px;background:#fff;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber) 70%,var(--coral));transition:width .05s linear}
+.tuner{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;padding:10px 14px;border:3px solid var(--ink);border-radius:16px;background:#fff}
+.tuner .n{font-family:var(--display);font-weight:400;font-size:54px;line-height:1;min-width:1.6em;text-align:center}
+.needle{position:relative;height:34px;border-bottom:3px solid var(--ink)}
+.needle::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;background:var(--good)}
+.needle i{position:absolute;left:50%;bottom:0;width:6px;height:30px;margin-left:-3px;border-radius:3px;background:var(--coral);transition:left .08s}
+#heard{display:flex;flex-wrap:wrap;gap:6px;min-height:30px}
+#heard .chip{background:var(--mint)}
+.kbd{display:inline-block;padding:0 6px;border:2px solid var(--ink);border-radius:6px;background:#fff;font-weight:800;font-size:12px}
+
+/* ---------- chord steps (how to play this chord, in words) ---------- */
+.steps{list-style:none;margin:0;padding:6px 8px;display:grid;gap:3px;border:3px solid var(--ink);border-radius:14px;background:#fff;font-size:13px;line-height:1.25}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:center;padding:2px 4px;border-radius:8px;animation:rise .35s cubic-bezier(.2,1.3,.4,1) both;transition:background .15s}
+.steps li i{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);font-style:normal;font-weight:900;font-size:11px;color:var(--ink)}
+.steps li b{font-weight:800}
+.steps li.strum{display:block;font-weight:700;border-top:2px dashed var(--ink2);border-radius:0;margin-top:2px;padding-top:4px;opacity:.9}
+.steps li.ok{background:#D6F5E0}
+.steps li.ok span::after{content:" ✓";color:var(--good);font-weight:900}
+.steps li.bad{background:#FFE0E1}
+/* ---------- fretboard feedback: green = heard, red = missing, red ✕ = wrong note ---------- */
+#fretboard .fring{fill:none;stroke:transparent;stroke-width:5;transform-box:fill-box;transform-origin:center}
+#fretboard .fring.heard{stroke:var(--good)}
+#fretboard .fring.miss{stroke:var(--bad);stroke-dasharray:7 5;animation:missSpin 1.2s linear infinite}
+@keyframes missSpin{to{stroke-dashoffset:-24}}
+#fretboard .flight.miss{fill:var(--bad);animation:lightPop .3s cubic-bezier(.3,1.8,.5,1)}
+#fretboard .flt.heard,#fretboard .flt.miss{fill:#fff}
+#fretboard .fstring.miss{stroke:#FF9AA0}
+#fretboard .fwrong{transform-box:fill-box;transform-origin:center;animation:dotPop .32s cubic-bezier(.3,1.8,.5,1) both}
+.fb-key{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;font-weight:800}
+.fb-key span{display:inline-flex;align-items:center;gap:4px}
+.fb-key i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+/* ---------- mic check extras ---------- */
+.warnbox{padding:10px 12px;border:3px solid var(--ink);border-radius:14px;background:#FFE0E1;font-weight:700;font-size:14px}
+.okbox{padding:10px 12px;border:3px solid var(--ink);border-radius:14px;background:#D6F5E0;font-weight:700;font-size:14px}
+.testrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.testrow select{width:auto;min-width:90px}
+#test-res{font-weight:800}
+.stat b.txt{font-size:22px}
+@media (max-width:760px){
+  .hero{grid-template-columns:1fr}
+  .title-art{max-width:420px;justify-self:center;width:100%}
+  .modes{grid-template-columns:1fr 1fr;gap:10px}
+  .mode{padding:10px 12px!important}
+  .mode b{font-size:26px!important}
+  .mode span{font-size:12px!important;line-height:1.2!important}
+
+  .map .row{grid-template-columns:1fr}
+  .hud .ht span{display:none}
+}
+/* phones and portrait tablets: fretboard full width, then the chord cards, buttons, hint and steps; the board scrolls */
+@media (max-width:760px),(orientation:portrait) and (max-width:1100px){
+  .game{--bh:min(60vh,620px)}
+  #fretboard{max-height:calc(var(--bh) - 125px)}
+  .board.ww{padding:40px 28px 16px;gap:8px;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cmd cmd" "sub sub" "fb meter";column-gap:10px}
+  .board.ww .cmd-row{grid-area:cmd;justify-self:center}.board.ww .cmd-sub{grid-area:sub;justify-self:center}.board.ww .fb-card{grid-area:fb}
+  .gmeter{gap:6px}.gmeter .sc{min-width:0;padding:2px 6px 4px}.gmeter .sc b{font-size:20px}.gmeter .sc small{font-size:8px}.gmeter .sc span{font-size:9px}
+  .gmeter .hype-bar{width:24px;--mh:110px}#hype-label{font-size:8px;padding:0 4px;max-width:64px;white-space:normal;text-align:center;line-height:1.1}
+  .bleaf{display:none}
+  .board.ww .cmd-row{flex-wrap:nowrap;gap:10px}
+  .board.ww .cmd{padding:2px 12px 5px}
+  .board.ww .cmd::before,.board.ww .cmd::after{top:-22px;height:22px}
+  .bpole{width:26px;background-size:26px 115px}
+  .bleaf{width:84px;height:56px;background-size:84px 56px;top:24px}
+  .cmd-row{gap:12px 14px}
+  .cmd b{font-size:34px;-webkit-text-stroke-width:2.5px}.cmd-verb{font-size:15px}.cmd-bang{font-size:26px}
+  .hear-btn{width:54px;height:54px;font-size:12px;border-width:3px}.hear-btn small{font-size:7px;max-width:42px}.hear-btn::after{inset:4px}
+  .cmd-right{gap:8px}
+  .cmd-right .next{width:60px;padding:11px 4px 4px}.cmd-right .next b{font-size:19px}.cmd-right .next small{font-size:9px}
+  .fb-card{padding:14px 4px 2px;border-radius:14px;border-width:4px}
+  .legend,.fb-key{font-size:12px;gap:4px 6px}
+  .hud .ht span{display:none}
+}
+@media (max-width:520px){
+  .topbar{flex-wrap:nowrap;align-items:flex-start;gap:6px}
+  .topbar .grp{gap:5px;justify-content:flex-end}
+  .topbar .btn-sm,.topbar .chip{font-size:12px;padding:5px 9px}
+  .search{padding:8px;gap:6px}
+  .search input{font-size:16px}
+  .hud{gap:6px;padding:6px 8px}
+  #hud-mic-text{display:none}
+  .now b{font-size:30px}
+}
+/* short landscape (phones on their side): stage on the left, the sheet on the right */
+@media (max-height:520px) and (min-width:640px){
+  .game{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:auto minmax(0,1fr)}
+  .game .hud{grid-column:1/-1}
+  .game .board.ww{border-top:0;border-left:5px solid var(--ink);max-height:none;height:100%;padding:40px 30px 12px;
+    grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cmd cmd" "sub sub" "fb meter";column-gap:10px;row-gap:8px;align-items:start}
+  .game .board.ww .cmd-row{flex-direction:row;justify-self:center}
+  .game .board.ww .cmd b{font-size:34px}.game .board.ww .cmd-verb{font-size:15px}.game .board.ww .cmd-bang{font-size:26px}
+  .game .board.ww .hear-btn{width:54px;height:54px;font-size:12px}.game .board.ww .hear-btn small{font-size:7px;max-width:42px}
+  .game .board.ww .cmd-right .next{width:60px;padding:11px 4px 4px}.game .board.ww .cmd-right .next b{font-size:19px}
+  .game .board.ww .fb-card{width:100%}
+  .game #fretboard{width:100%;height:auto;max-height:none}
+  .game .board.ww .gmeter{--mh:90px}.gmeter .sc b{font-size:20px}.bleaf{display:none}
+  #fretboard{max-height:none}
+  .cmd b{font-size:44px}.cmd-verb{font-size:22px}.cmd-bang{font-size:36px}
+}
+@media (prefers-reduced-motion:reduce){
+  .eq i,.stamp,.tk,.beam,.btn-big,.sign,#fretboard .fdot,.ww-spark,.bleaf,.cmd,#fretboard .flight.heard,#fretboard .flight.miss,#fretboard .fring.miss,#fretboard .fwrong,.card:hover .stub,.now b.pop,.steps li{animation:none!important}
+  .card,.mode,.btn,.curtain,.splash-in,.valance,.cbox{transition:none!important}
+}
+
+/* ---------- recordings (iTunes) + lookup progress + confirm ---------- */
+.recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:6px}
+.recs:empty{display:none}
+.rec{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 12px 8px 8px;border:3px solid var(--ink);border-radius:16px;background:var(--paper);box-shadow:0 4px 0 var(--ink);cursor:pointer;text-align:left;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
+.rec:hover{transform:translateY(-3px) rotate(-.5deg);box-shadow:0 7px 0 var(--ink)}
+.rec:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.rec img,.rec .noart{width:64px;height:64px;border-radius:10px;border:2px solid var(--ink);object-fit:cover;background:var(--paper2);display:block}
+.rec .rt{display:grid;gap:1px;min-width:0}
+.rec .rt b{font-weight:800;font-size:16px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rec .rt span{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec .rt small{font-size:12px;font-weight:600;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec .rgo{font-weight:800;font-size:13px;padding:2px 10px;border:2px solid var(--ink);border-radius:999px;background:var(--sun);white-space:nowrap}
+.rec .rgo.ready{background:var(--mint)}
+.lk{display:grid;gap:10px;padding:12px 14px;border:3px solid var(--ink);border-radius:18px;background:var(--paper);box-shadow:0 5px 0 var(--ink);margin-top:10px}
+.lk-head{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center}
+.lk-head img{width:56px;height:56px;border-radius:10px;border:2px solid var(--ink);object-fit:cover;background:var(--paper2)}
+.lk-head b{display:block;font-weight:800;line-height:1.15}
+.lk-head small{font-weight:600;opacity:.8}
+.lk-steps{display:flex;flex-wrap:wrap;gap:6px}
+.lk-steps span{padding:2px 10px;border:2px solid var(--ink);border-radius:999px;font-size:13px;font-weight:700;opacity:.4;background:#fff;transition:all .25s}
+.lk-steps span.on{opacity:1;background:var(--sun)}
+.lk-steps span.done{opacity:1;background:var(--mint)}
+.lk-steps span.skip{opacity:.6;text-decoration:line-through}
+.lk-msg{font-weight:700;font-size:14px}
+.cf-rec{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:center}
+.cf-rec img{width:52px;height:52px;border-radius:10px;border:2px solid var(--ink);object-fit:cover}
+.cf-q{border:3px solid var(--ink);border-radius:14px;padding:10px 12px;background:#fff;display:grid;gap:6px;margin:0}
+.cf-q legend{font-weight:800;padding:0 6px}
+.cf-q p{margin:0;font-size:14px;font-weight:600}
+.cf-q label{display:flex;gap:8px;align-items:flex-start;font-weight:700;font-size:14px;cursor:pointer;padding:4px 6px;border-radius:8px}
+.cf-q label:hover{background:var(--paper)}
+.cf-q input{width:18px;height:18px;accent-color:var(--coral);flex:none;margin-top:2px}
+.cf-q em{font-style:normal;font-weight:800;font-size:11px;padding:0 6px;border:2px solid var(--ink);border-radius:999px;background:var(--mint);margin-left:4px;white-space:nowrap}
+.src-line{font-size:13px;font-weight:600}
+.src-line a{color:var(--ink);font-weight:800}
+.chip.src-data{background:var(--mint)}.chip.src-web{background:#CFE8FF}.chip.src-confirm{background:#FFD9DF}
+.map .row b small{display:block;font-size:11px;font-weight:800;color:var(--bad)}
+.credit{font-size:12px;font-weight:600;opacity:.8}
+.credit a{color:var(--ink)}
+</style>
+
+<!-- ============ SPLASH ============ -->
+<section id="scr-splash" class="splash">
+  <div class="curtain l"></div><div class="curtain r"></div>
+  <div class="valance"></div>
+  <div class="splash-in">
+    <div class="sign" id="sign"><div id="bulbs"></div><div class="sign-word"><span>STRUM</span><span class="j">JAM</span></div></div>
+    <button class="btn btn-go btn-big" id="btn-start" type="button" data-sfx="none">Tap to jam</button>
+    <p class="small">Grab your guitar. Headphones sound best.</p>
+  </div>
+</section>
+
+<!-- ============ TITLE ============ -->
+<section id="scr-title" class="screen dots">
+  <div class="ticker" aria-hidden="true"><div class="tk"><span>★ SEARCH ANY SONG ★ SEE WHERE EVERY FINGER GOES ★ PRACTICE AT YOUR OWN PACE ★ HIT THE STAGE ★ CHASE THE S RANK ★ TUNE UP FIRST ★&nbsp;</span><span>★ SEARCH ANY SONG ★ SEE WHERE EVERY FINGER GOES ★ PRACTICE AT YOUR OWN PACE ★ HIT THE STAGE ★ CHASE THE S RANK ★ TUNE UP FIRST ★&nbsp;</span></div></div>
+  <div class="beam a" aria-hidden="true"></div><div class="beam b" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="topbar">
+      <span class="chip" id="mic-chip" role="button" tabindex="0"><span class="dot" id="mic-dot"></span><span id="mic-chip-text">Mic off</span></span>
+      <div class="grp">
+        <button class="btn btn-sm" id="btn-music" type="button" aria-pressed="true">♪ Music on</button>
+        <button class="btn btn-sm" id="btn-tune-title" type="button">Tune up</button>
+        <button class="btn btn-sm" id="btn-mic-setup" type="button">Mic check</button>
+        <button class="btn btn-sm" id="btn-settings" type="button">Settings</button>
+      </div>
+    </div>
+    <header class="hero">
+      <div>
+        <h1 class="logo" id="logo" aria-label="Strum Jam"><span class="w1" aria-hidden="true"><span class="lt">S</span><span class="lt">t</span><span class="lt">r</span><span class="lt">u</span><span class="lt">m</span></span><br><span class="w2 l2" aria-hidden="true"><span class="lt">J</span><span class="lt">a</span><span class="lt">m</span></span></h1>
+        <p class="tag">Pick up your guitar and play real songs, one chord at a time. The game listens and grooves along with you.</p>
+      </div>
+      <div class="title-art"><canvas id="title-canvas" aria-hidden="true"></canvas></div>
+    </header>
+
+    <form id="search-form" class="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search any song: title and artist" aria-label="Search for a song">
+      <button class="btn btn-go" type="submit">Find it</button>
+    </form>
+    <div class="setup" id="setup-card" hidden>
+      <b>Turn on automatic song search</b>
+      <p class="small">This game file talks to Claude to chart any song you search for. Paste your Anthropic API key once (create one at console.anthropic.com under API keys). It stays in this browser only.</p>
+      <form class="row" id="setup-form" autocomplete="off">
+        <input type="password" id="setup-key" placeholder="sk-ant-..." aria-label="Anthropic API key" style="flex:1;min-width:200px">
+        <button class="btn btn-go" type="submit">Save key</button>
+      </form>
+      <div class="small" id="setup-msg"></div>
+    </div>
+    <div class="setup" id="hosted-card" hidden>
+      <b>Playing with a real guitar?</b>
+      <p class="small">This preview on claude.ai can't use your microphone or reach the music databases, so song lookup and the mic work in the game on your phone or computer (yoshujop.github.io/strum-jam). The song library and song codes work here.</p>
+      <div class="row"><button class="btn btn-sm" id="btn-download" type="button" hidden>Download the game file</button><span class="small" id="dl-msg"></span></div>
+    </div>
+    <div class="status" id="search-status" aria-live="polite"></div>
+    <div id="lookup" class="lk" hidden></div>
+    <div id="rec-results" class="recs"></div>
+    <div id="search-results" class="song-grid"></div>
+    <div id="search-notice"></div>
+
+    <button class="story-promo" id="btn-story" type="button">
+      <span class="sp-art" aria-hidden="true"><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span>
+      <span class="sp-txt"><em>Story mode</em><b>Live an artist's career</b><span>Pick any artist. Play through their eras from the first gigs to the biggest stages: 3 levels, 3 songs each, easy to hard.</span></span>
+      <span class="sp-go">Start a career →</span>
+    </button>
+    <div class="careers" id="careers-title"></div>
+
+    <h2 class="sec-h">My songs <small>Songs you've searched or pasted</small></h2>
+    <div id="my-songs" class="song-grid"></div>
+
+    <h2 class="sec-h">Song library <small>Public-domain classics and chord drills, always ready</small></h2>
+    <div id="library" class="song-grid"></div>
+
+    <div class="foot">
+      <button class="btn" id="btn-import" type="button">Paste a chord sheet</button>
+      <button class="btn" id="btn-paste" type="button">Paste a song code</button>
+      <span class="muted small">Chord charts only, no lyrics. Every chart shows where its chords came from.</span>
+    </div>
+    <p class="credit" id="credits">Song search: Apple iTunes Search API. Chord data: <a href="https://huggingface.co/datasets/ailsntua/Chordonomicon" target="_blank" rel="noopener">Chordonomicon</a> (Kantarelis et al., 2024), CC BY-NC 4.0, looked up through ListenBrainz, Spotify and Hugging Face, and <a href="https://github.com/chrisdonahue/sheetsage" target="_blank" rel="noopener">Hooktheory TheoryTab</a> data (Donahue, Thickstun &amp; Liang, 2022), CC BY-NC-SA 3.0; the adapted chord data in this page is shared under the same license. Note recognition: Basic Pitch (Spotify, Apache-2.0).</p>
+  </div>
+</section>
+
+<!-- ============ SONG ============ -->
+<section id="scr-song" class="screen dots" hidden>
+  <div class="wrap">
+    <div class="topbar">
+      <button class="btn btn-sm" id="btn-song-back" type="button" data-sfx="back">← Songs</button>
+      <div class="grp">
+        <button class="btn btn-sm" id="btn-song-code" type="button">Song code</button>
+        <button class="btn btn-sm" id="btn-tune-song" type="button">Tune up</button>
+        <button class="btn btn-sm" id="btn-mic-setup2" type="button">Mic</button>
+      </div>
+    </div>
+    <div class="song-head">
+      <h1 id="song-title">Song</h1>
+      <div class="by" id="song-artist"></div>
+      <div class="pills" id="song-pills"></div>
+      <div class="links small" id="song-links"></div>
+      <div class="src-line" id="song-src"></div>
+    </div>
+    <div class="story-strip" id="song-story" hidden></div>
+    <div class="tip" id="song-note" hidden></div>
+    <div class="modes">
+      <button class="mode practice" id="btn-practice" type="button"><b>Practice</b><span>Waits for you on every chord.</span></button>
+      <button class="mode stage" id="btn-stage" type="button"><b>Stage</b><span>In time with the band, scored.</span><em id="best-score"></em></button>
+    </div>
+    <div class="opts dd">
+      <label class="o sf"><b>Chord shapes</b><select id="seg-easy"><option value="easy">Easy</option><option value="standard">Standard</option><option value="neck">Whole neck</option></select><span class="small muted" id="easy-note"></span></label>
+      <label class="o sf"><b>Tempo <span id="tempo-val" hidden>100%</span></b><select id="tempo" aria-label="Tempo percent"><option value="100">100%</option><option value="95">95%</option><option value="90">90%</option><option value="85">85%</option><option value="80">80%</option><option value="75">75%</option><option value="70">70%</option><option value="65">65%</option><option value="60">60%</option><option value="55">55%</option><option value="50">50%</option></select><span class="small muted" id="tempo-bpm"></span></label>
+      <label class="o sf"><b>Note check</b><select id="seg-strict"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="strict">Strict</option></select><span class="small muted" id="strict-note"></span></label>
+      <label class="o"><b>Fretboard view</b><select id="seg-view"><option value="down">Looking down</option><option value="tab">Tab style</option></select><span class="small muted" id="view-note"></span></label>
+      <label class="o"><b>Fretting hand</b><select id="seg-hand"><option value="0">Right-handed</option><option value="1">Left-handed</option></select></label>
+      <div class="o sf"><b>Start from</b>
+        <select id="sel-section" aria-label="Section to start from"></select>
+        <label class="toggle small"><input type="checkbox" id="chk-loop"> Loop this section only</label>
+      </div>
+    </div>
+    <h2 class="sec-h">Chords you'll need <small id="chord-count"></small></h2>
+    <div class="chord-list" id="chord-list"></div>
+    <h2 class="sec-h">Song map</h2>
+    <div class="map" id="song-map"></div>
+  </div>
+</section>
+
+<!-- ============ GAME ============ -->
+<section id="scr-game" class="screen game" hidden>
+  <div class="hud">
+    <button class="btn btn-sm btn-icon" id="btn-pause" type="button" aria-label="Pause">❚❚</button>
+    <div class="ht"><b id="hud-title">Song</b><span id="hud-sub">Practice</span></div>
+    <span class="chip" id="hud-mic"><span class="dot" id="hud-mic-dot"></span><span id="hud-mic-text">Mic</span></span>
+  </div>
+  <div class="stage-wrap"><canvas id="stage" aria-label="Rhythm stage. Tap or press space to strum when no mic is on."></canvas></div>
+  <div class="board ww" id="board">
+    <i class="bpole l" aria-hidden="true"></i><i class="bpole r" aria-hidden="true"></i><i class="blash l" aria-hidden="true"></i><i class="blash r" aria-hidden="true"></i><i class="bleaf l" aria-hidden="true"></i><i class="bleaf r" aria-hidden="true"></i>
+    <div class="cmd-row">
+      <div class="cmd" aria-live="polite"><span class="cmd-verb">Play</span><b id="now-name">G</b><span class="cmd-bang">!</span></div>
+      <div class="cmd-right">
+        <button class="hear-btn" id="btn-hear" type="button" aria-label="Hear the chord">HEAR<small>tap again: arpeggio</small></button>
+        <div class="next" id="next-box"><div id="next-svg"></div><div><small>Next</small><b id="next-name">C</b></div></div>
+      </div>
+    </div>
+    <span class="cmd-sub" id="now-sub"></span>
+    <div class="fb-card">
+      <i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>
+      <span class="fb-sticker" id="fb-status"></span>
+      <button class="skip-btn" id="btn-skip" type="button">Skip ›</button>
+      <svg id="fretboard" viewBox="0 26 908 262" role="img" aria-label="Fretboard showing finger positions and which strings the game hears"></svg>
+    </div>
+    <div class="gmeter" aria-label="Score and crowd hype">
+      <div class="sc"><b id="hud-score">0</b><span id="hud-score-l">score</span></div>
+      <div class="hype" title="Crowd hype: play chords quickly and cleanly to fire up the band"><div class="hype-bar"><i id="hype-fill"></i><em></em><em></em><em></em><em></em></div><span id="hype-label">Warming up</span></div>
+    </div>
+    <div hidden><span id="fb-view-label"></span><div id="str-chips"></div><div id="hint"></div><ol id="steps"></ol></div>
+  </div>
+</section>
+
+<!-- ============ STORY ============ -->
+<section id="scr-story" class="screen story" hidden>
+  <div class="wrap">
+    <div class="topbar">
+      <button class="btn btn-sm" id="btn-story-home" type="button" data-sfx="back">← Home</button>
+      <div class="grp"><button class="btn btn-sm" id="btn-story-new" type="button">New artist</button></div>
+    </div>
+    <div id="story-pick">
+      <header class="story-hero">
+        <h1>Story <span>mode</span></h1>
+        <p>Choose an artist. Their real albums become up to three eras, each with three guitar-friendly songs checked against real chord charts, and a stage for every chapter of their story. Clear an era to unlock the next one.</p>
+      </header>
+      <form id="story-form" class="search" autocomplete="off">
+        <input id="story-input" type="search" placeholder="Which artist?" aria-label="Artist name">
+        <button class="btn btn-go" type="submit">Build career</button>
+      </form>
+      <div class="status" id="story-status" aria-live="polite"></div>
+      <div id="story-notice"></div>
+      <h2 class="sec-h" id="story-saved-h">Your careers</h2>
+      <div class="careers" id="story-saved"></div>
+    </div>
+    <div id="story-career" hidden>
+      <header class="career-head">
+        <div class="ch-name"><small>Story mode</small><h1 id="career-artist"></h1><p id="career-tag"></p></div>
+        <div class="career-meter"><b id="career-stars"></b><div class="cm-bar"><i id="career-fill"></i></div><span id="career-state"></span></div>
+      </header>
+      <p class="notice career-note" id="career-note" hidden></p>
+      <div id="story-levels"></div>
+      <div class="foot"><button class="btn btn-sm" id="btn-story-remake" type="button">Rebuild this career</button><span class="small" id="story-foot-msg">Albums and years come from MusicBrainz and Apple Music; every song was checked against real chord charts. Era names, blurbs and stages are by Claude and can have mistakes. Chord charts only, no lyrics.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="scr-results" class="screen dots" hidden>
+  <div class="wrap res">
+    <div class="stamp" id="res-grade">A</div>
+    <h2 id="res-title">Rock Solid!</h2>
+    <p class="muted" id="res-sub"></p>
+    <div class="stats" id="res-stats"></div>
+    <div class="tough" id="res-tough"></div>
+    <div class="res-story" id="res-story" hidden></div>
+    <div class="row">
+      <button class="btn btn-go" id="btn-again" type="button">Play again</button>
+      <button class="btn" id="btn-res-song" type="button">Song menu</button>
+      <button class="btn" id="btn-res-home" type="button" data-sfx="back">All songs</button>
+      <button class="btn btn-teal" id="btn-res-career" type="button" data-sfx="back" hidden>Career</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODALS ============ -->
+<div class="modal" id="m-mic" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-mic-h">
+    <div class="hd"><h2 id="m-mic-h">Mic check</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Done</button></div>
+    <div id="mic-msg" class="small"></div>
+    <div class="row">
+      <button class="btn btn-go" id="btn-mic-on" type="button">Turn on mic</button>
+      <select id="sel-device" aria-label="Microphone" style="flex:1;min-width:180px" hidden></select>
+    </div>
+    <div class="warnbox" id="mic-warn" hidden></div>
+    <div><b class="small">Input level</b><div class="meter"><i id="meter"></i></div></div>
+    <div class="row">
+      <button class="btn btn-sm btn-teal" id="btn-mic-cal" type="button">Set up this mic</button>
+      <span class="small" id="mic-cal-msg">Teaches the game what your room sounds like, so it only listens to your guitar.</span>
+    </div>
+    <div><b class="small">Notes I hear right now</b><div class="heard" id="heard"></div></div>
+    <div class="testrow"><b class="small">Test a chord:</b><select id="test-chord" aria-label="Chord to test"></select><span id="test-res" class="small">Strum it and I’ll check every note.</span></div>
+    <div class="tuner">
+      <div class="n" id="tune-note">–</div>
+      <div><div class="needle"><i id="tune-needle"></i></div><div class="small" id="tune-text" style="margin-top:4px">Pluck one string at a time. Standard tuning: E A D G B E.</div></div>
+    </div>
+    <label class="toggle small"><input type="checkbox" id="chk-phones"> I’m wearing headphones (the band adds a bass line; without headphones it plays drums only, so the mic doesn’t mistake the bass for your notes)</label>
+    <label class="field">Strum sensitivity <input type="range" id="sens" min="1" max="10" step="1" value="6"></label>
+    <div class="row" style="justify-content:space-between">
+      <div><b class="small">Timing offset: <span id="lat-val">80</span> ms</b><input type="range" id="lat" min="0" max="300" step="5" value="80" aria-label="Timing offset"></div>
+      <button class="btn btn-sm" id="btn-calib" type="button">Auto-calibrate</button>
+    </div>
+    <div class="small" id="calib-msg"></div>
+    <label class="toggle small"><input type="checkbox" id="chk-echo"> Echo cancellation. Try it only if the drums from your speakers set off false strums.</label>
+  </div>
+</div>
+
+<div class="modal" id="m-settings" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-set-h">
+    <div class="hd"><h2 id="m-set-h">Settings</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Done</button></div>
+    <label class="toggle"><input type="checkbox" id="chk-music"> Menu music</label>
+    <label class="field">Music volume <input type="range" id="vol-music" min="0" max="100" value="50"></label>
+    <label class="toggle"><input type="checkbox" id="chk-sfx"> Sound effects</label>
+    <label class="field">In-game band volume <input type="range" id="vol-drums" min="0" max="100" value="80"></label>
+    <label class="toggle"><input type="checkbox" id="chk-click"> Add a metronome click</label>
+    <label class="toggle"><input type="checkbox" id="chk-lefty"> Left-handed mode</label>
+    <label class="toggle"><input type="checkbox" id="chk-notes"> Show note names on the fretboard</label>
+    <div id="api-box" class="notice" style="margin:0">
+      <b>Claude (optional)</b>
+      <p class="small" style="margin:6px 0">Song lookup works without a key. Songs that aren't in the chord datasets, and Story mode, use Claude: through Strum Jam's shared lookup service (a few free lookups a day; every answer is saved for all players), or with your own Anthropic API key, which skips those limits. The key stays in this browser only.</p>
+      <label class="field">API key <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off"></label>
+      <label class="field" style="margin-top:8px">Model <input type="text" id="api-model" value="claude-sonnet-5"></label>
+      <p class="small" style="margin:6px 0 0">With your own key, Claude reads chord sources on the web only for songs that aren't in the chord datasets, or whose dataset chart doesn't match the recording (web search must be allowed for your organization in the Claude Console: Settings → Privacy → Web search).</p>
+    </div>
+    <div class="row"><button class="btn btn-sm" id="btn-clear-mine" type="button">Clear “My songs”</button><button class="btn btn-sm" id="btn-clear-charts" type="button">Forget looked-up charts</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-confirm" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-cf-h" style="width:min(620px,100%)">
+    <div class="hd"><h2 id="m-cf-h">Check this chart</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Cancel</button></div>
+    <div class="cf-rec" id="cf-rec"></div>
+    <p class="small" id="cf-intro" style="margin:0"></p>
+    <div id="cf-qs" style="display:grid;gap:10px"></div>
+    <div class="row"><button class="btn btn-go" id="btn-cf-ok" type="button">Use this chart</button><button class="btn btn-sm" id="btn-cf-paste" type="button">Paste a chord sheet instead</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-swap" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-sw-h">
+    <div class="hd"><h2 id="m-sw-h">Swap song</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Cancel</button></div>
+    <p class="small" id="sw-intro" style="margin:0"></p>
+    <div class="sw-list" id="sw-list"></div>
+  </div>
+</div>
+
+<div class="modal" id="m-code" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-code-h">
+    <div class="hd"><h2 id="m-code-h">Song code</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Close</button></div>
+    <p class="small" id="code-help"></p>
+    <textarea id="code-text" spellcheck="false" aria-label="Song code"></textarea>
+    <div class="row"><button class="btn btn-go" id="btn-code-act" type="button">Copy</button><span class="small" id="code-msg"></span></div>
+  </div>
+</div>
+
+<div class="modal" id="m-import" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-imp-h" style="width:min(720px,100%)">
+    <div class="hd"><h2 id="m-imp-h">Paste a chord sheet</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Close</button></div>
+    <p class="small" style="margin:0">A backup for songs the search gets wrong. Copy a chord sheet from any site and paste it here. Strum Jam keeps only the chord names and section labels, and ignores every line of words.</p>
+    <div class="grid2">
+      <label class="field">Title <input type="text" id="imp-title"></label>
+      <label class="field">Artist <input type="text" id="imp-artist"></label>
+    </div>
+    <div class="links small" id="imp-links"></div>
+    <textarea id="imp-text" spellcheck="false" style="min-height:170px" aria-label="Chord sheet" placeholder="[Verse 1]&#10;G        D        Em       C&#10;(lines of words are ignored)&#10;&#10;[Chorus]&#10;| C  G | D  Em |  x2"></textarea>
+    <div class="small" id="imp-found"></div>
+    <div class="grid4">
+      <label class="field">Beats <select id="imp-time"><option>4/4</option><option>3/4</option><option>6/8</option><option>2/4</option><option>12/8</option></select></label>
+      <label class="field">Chords per bar <select id="imp-per"><option value="1">1</option><option value="2">2</option></select></label>
+      <label class="field">Tempo (BPM) <span class="row" style="gap:6px;flex-wrap:nowrap"><input type="text" id="imp-bpm" inputmode="numeric" value="100" style="min-width:0"><button class="btn btn-sm" id="btn-tap" type="button">Tap</button></span></label>
+      <label class="field">Drum style <select id="imp-style"></select></label>
+    </div>
+    <div class="row"><button class="btn btn-sm btn-teal" id="btn-imp-ai" type="button" hidden>Fill tempo &amp; groove with Claude</button><span class="small" id="imp-ai-msg"></span></div>
+    <div class="row"><button class="btn btn-go" id="btn-imp-build" type="button">Build chart</button><span class="small" id="imp-msg"></span></div>
+  </div>
+</div>
+
+<div class="modal" id="m-tune" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-tune-h">
+    <div class="hd"><h2 id="m-tune-h">Tune up</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Close</button></div>
+    <p class="small" id="tune2-msg" style="margin:0">Pluck one string at a time and let it ring. Each string turns green once it's in tune. Tap a string to hear its target note.</p>
+    <div class="strings" id="tune2-strings"></div>
+    <div class="tuner">
+      <div class="n" id="tune2-note">–</div>
+      <div><div class="needle"><i id="tune2-needle"></i></div><div class="small" id="tune2-text" style="margin-top:4px">Standard tuning, low to high: E A D G B E.</div></div>
+    </div>
+    <label class="toggle small"><input type="checkbox" id="chk-tune-first"> Offer tuning before every song</label>
+    <div class="row"><button class="btn btn-go" id="btn-tune-go" type="button">Start playing</button><button class="btn" id="btn-tune-skip" type="button">Skip tuning</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-pause" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="m-pause-h" style="width:min(380px,100%)">
+    <h2 id="m-pause-h">Paused</h2>
+    <button class="btn btn-go" id="btn-resume" type="button">Resume</button>
+    <button class="btn" id="btn-restart" type="button">Restart</button>
+    <button class="btn" id="btn-quit" type="button">Quit to song menu</button>
+    <button class="btn btn-sm" id="btn-mic-setup3" type="button">Mic check</button>
+  </div>
+</div>
+
+<div class="wipe" id="wipe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><b>♪</b></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
