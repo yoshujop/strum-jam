@@ -381,7 +381,7 @@ const Stage = {
   placeDrummer(cx, floorY, w, h){ this.drumAt = { cx, floorY, h }; },
   drawDrummer(c, G, beatF){
     const d = this.drumAt; if (!d || typeof FunkDrummer === 'undefined') return;
-    const heard = AudioEngine.now() - AudioEngine.outputLatency(), st = this.drumSt || (this.drumSt = FunkDrummer.create());
+    const heard = AudioEngine.smoothNow() - AudioEngine.outputLatency(), st = this.drumSt || (this.drumSt = FunkDrummer.create());
     FunkDrummer.draw(c, st, { x: d.cx, floorY: d.floorY, h: d.h, now: heard, beat: Groove.cfg ? Groove.beatAt(heard) : beatF, spb: Groove.cfg ? Groove.cfg.beatDur : 0.5,
       level: G.level || 0, events: Groove.events(heard), playing: !!(G.running && !G.paused), missAgo: AudioEngine.now() - (G.lastMissAt || -9) });
   },

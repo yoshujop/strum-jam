@@ -2,7 +2,7 @@
    Audio: synthesized drum kit, groove scheduler, plucked-guitar preview
    ===================================================================== */
 const AudioEngine = (() => {
-  let ctx = null, master, duckBus, drumBus, clickBus, sfxBus, noiseBuf, chordTaps = { key: '', n: 0, at: 0 };
+  let ctx = null, smooth = { off: null }, master, duckBus, drumBus, clickBus, sfxBus, noiseBuf, chordTaps = { key: '', n: 0, at: 0 };
   const pluckCache = new Map();
   function ensure(){
     if (!ctx) {
@@ -186,6 +186,15 @@ const AudioEngine = (() => {
     get master(){ return master; },
     get noiseBuf(){ return noiseBuf; },
     now(){ return ctx ? ctx.currentTime : 0; },
+    // the audio clock for animation: currentTime moves in audio-block steps (a few ms at a time, unevenly),
+    // so it's followed from the frame clock, which keeps drawn motion even. Scoring keeps now().
+    smoothNow(){
+      if (!ctx) return 0;
+      const p = performance.now() / 1000, raw = ctx.currentTime;
+      if (smooth.off == null || Math.abs(raw - (p + smooth.off)) > 0.08 || ctx.state !== 'running') smooth.off = raw - p;
+      else smooth.off += (raw - (p + smooth.off)) * 0.04;
+      return p + smooth.off;
+    },
     setDrumVol(v){ if (drumBus) drumBus.gain.setTargetAtTime(v, ctx.currentTime, 0.05); },
     outputLatency(){ return ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0.03; },
   };
