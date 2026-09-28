@@ -87,6 +87,16 @@ function validateSong(o, source){
   song.strum = /^[DUdu.\-x ]{2,16}$/.test(o.strum || '') ? String(o.strum).toUpperCase().replace(/[-X ]/g, '.') : '';
   song.note = cleanStr(o.note, 220);
   song.level = Math.round(clampNum(o.level, 1, 3, 0)) || 0;
+  // the exact recording (iTunes) and where the chart came from
+  song.album = cleanStr(o.album, 80);
+  song.year = Math.round(clampNum(o.year, 0, 2100, 0)) || 0;
+  song.trackId = /^\d{1,15}$/.test(String(o.trackId || '')) ? String(o.trackId) : '';
+  song.durationMs = Math.round(clampNum(o.durationMs, 0, 3600000, 0)) || 0;
+  song.previewUrl = /^https:\/\/[a-z0-9.-]+\.(apple|mzstatic)\.com\//.test(o.previewUrl || '') ? String(o.previewUrl).slice(0, 400) : '';
+  song.art = /^https:\/\/[a-z0-9.-]+\.mzstatic\.com\//.test(o.art || '') ? String(o.art).slice(0, 400) : '';
+  song.tuning = Math.round(clampNum(o.tuning, -3, 0, 0)) || 0;
+  song.prov = cleanProv(o.prov);
+  song.savedAt = Number(o.savedAt) || 0;
   const T = parseTime(song.time), steps = T.beats * T.sub;
   if (o.drums && typeof o.drums === 'object') {
     const d = {};
@@ -108,7 +118,7 @@ function validateSong(o, source){
         if (t && total < 240) { bars.push(t); total++; }
       }
     }
-    if (bars.length) song.sections.push({ name: cleanStr(s.name, 24) || 'Part ' + (song.sections.length + 1), bars });
+    if (bars.length) song.sections.push({ name: cleanStr(s.name, 24) || 'Part ' + (song.sections.length + 1), bars, conf: ['high', 'medium', 'low'].includes(s.conf) ? s.conf : undefined });
   }
   if (!song.sections.length) throw new Error('No chords were found in that song.');
   // at least one real chord
@@ -119,9 +129,37 @@ function validateSong(o, source){
   return song;
 }
 
+// provenance: plain data only, bounded
+function cleanProv(p){
+  if (!p || typeof p !== 'object') return null;
+  const out = {}, str = (v, n) => cleanStr(v, n || 60), num = v => (v == null || !Number.isFinite(+v)) ? null : +v;
+  out.src = ['dataset', 'hooktheory', 'web', 'claude', 'library', 'paste', 'code'].includes(p.src) ? p.src : 'claude';
+  out.checked = !!p.checked; out.audioErr = str(p.audioErr, 120); out.route = str(p.route, 20);
+  out.row = num(p.row); out.spotifyId = /^[A-Za-z0-9]{10,30}$/.test(p.spotifyId || '') ? p.spotifyId : '';
+  out.rows = Array.isArray(p.rows) ? p.rows.slice(0, 8).map(num).filter(v => v != null) : [];
+  out.sources = Array.isArray(p.sources) ? p.sources.slice(0, 6).map(u => String(u).slice(0, 300)).filter(u => /^https?:\/\//.test(u)) : [];
+  out.timing = p.timing && typeof p.timing === 'object' ? { audio: num(p.timing.audio) || 0, claude: num(p.timing.claude) || 0, hooktheory: num(p.timing.hooktheory) || 0, default: num(p.timing.default) || 0 } : null;
+  out.pitchFrom = ['recording', 'hooktheory', ''].includes(p.pitchFrom) ? p.pitchFrom : '';
+  out.ht = p.ht && typeof p.ht === 'object' ? { id: str(p.ht.id, 120), clips: num(p.ht.clips) || 0, h: num(p.ht.h) || 0, match: num(p.ht.match), key: str(p.ht.key, 8) } : null;
+  out.htFix = p.htFix && typeof p.htFix === 'object' ? { fixed: num(p.htFix.fixed) || 0, clips: num(p.htFix.clips) || 0 } : null;
+  out.auto = p.auto && typeof p.auto === 'object' ? { from: str(p.auto.from, 12), fit: num(p.auto.fit), webFit: num(p.auto.webFit), used: str(p.auto.used, 12), webErr: str(p.auto.webErr, 40) } : null;
+  out.webErr = str(p.webErr, 40);
+  out.bpmFrom = str(p.bpmFrom, 30); out.offset = num(p.offset); out.fit = num(p.fit); out.margin = num(p.margin);
+  out.audioKey = str(p.audioKey, 8); out.shapeKey = str(p.shapeKey, 8);
+  out.status = ['ok', 'confirm', 'confirmed'].includes(p.status) ? p.status : 'ok';
+  if (p.orig && typeof p.orig === 'object' && Array.isArray(p.orig.sections)) {
+    out.orig = { capo: Math.round(clampNum(p.orig.capo, 0, 9, 0)), tuning: Math.round(clampNum(p.orig.tuning, -3, 0, 0)), key: str(p.orig.key, 8),
+      sections: p.orig.sections.slice(0, 40).map(x => ({ name: str(x && x.name, 24), conf: x && ['high', 'medium', 'low'].includes(x.conf) ? x.conf : undefined, bars: (Array.isArray(x && x.bars) ? x.bars : []).slice(0, 240).map(b => str(b, 48)) })).filter(x => x.bars.length) };
+  }
+  out.issues = Array.isArray(p.issues) ? p.issues.slice(0, 20).map(i => ({ id: str(i.id, 60), kind: str(i.kind, 12), t: num(i.t), capo: num(i.capo), name: str(i.name, 24), alt: str(i.alt, 24),
+    conf: str(i.conf, 8), ratio: num(i.ratio), shapesKey: str(i.shapesKey, 8), soundKey: str(i.soundKey, 8), answer: str(i.answer, 12), dw: num(i.dw), dt: num(i.dt), from: str(i.from, 12) })) : [];
+  return out;
+}
+
 /* ---- compile a song into a timeline of chord events ---- */
 function compileSong(song, opts){
-  const easy = !!(opts && opts.easy);
+  const mode = opts && opts.shapes ? opts.shapes : (opts && opts.easy ? 'easy' : 'standard');
+  const easy = mode === 'easy';
   const T = parseTime(song.time);
   const beats = T.beats;
   const raw = []; // {tok, beat, len, sec, bar}
@@ -186,18 +224,30 @@ function compileSong(song, opts){
     const t = transposeChord(ch, shift);
     return { ...t, flat: useFlats, name: chordLabel(t.root, t.quality, t.bass, useFlats) };
   };
-  const events = [];
-  for (const e of evs) {
-    if (!e.ch) { events.push({ ...e, rest: true }); continue; }
-    const shape = shapeOf(e.ch);
-    const v = voicingFor(shape, easy);
-    events.push({ ...e, shape, label: v.simplified || shape.name, full: shape.name, sounds: chordLabel(mod12(e.ch.root + c0), e.ch.quality, e.ch.bass == null ? null : mod12(e.ch.bass + c0), e.ch.flat || useFlats),
-      v, notes: soundingNotes(v, capo) });
-  }
+  const events = [], tun = song.tuning || 0;          // tuned down: every string sounds lower
+  const shapes = evs.map(e => e.ch ? shapeOf(e.ch) : null);
+  // Standard / Whole neck: voicings chosen together, so each chord sits near the one before
+  const led = mode === 'easy' ? null : chooseVoicings(shapes.filter(Boolean), mode);
+  let li = 0;
+  evs.forEach((e, k) => {
+    if (!e.ch) { events.push({ ...e, rest: true }); return; }
+    const shape = shapes[k];
+    const v = led ? led[li++] : voicingFor(shape, true);
+    events.push({ ...e, shape, label: shape.name, full: shape.name, sounds: chordLabel(mod12(e.ch.root + c0 + tun), e.ch.quality, e.ch.bass == null ? null : mod12(e.ch.bass + c0 + tun), e.ch.flat || useFlats),
+      v, notes: soundingNotes(v, capo + tun) });
+  });
   const unique = [];
-  const seen = new Set();
-  for (const e of events) if (!e.rest && !seen.has(e.label)) { seen.add(e.label); unique.push({ label: e.label, v: e.v, sounds: e.sounds, count: events.filter(x => x.label === e.label).length }); }
-  return { song, easy, beats, sub: T.sub, timeLabel: T.label, stepsPerBar: beats * T.sub, bpm: song.bpm, swing: song.feel === 'swing',
+  const seen = new Map();
+  for (const e of events) {
+    if (e.rest) continue;
+    const k = e.label + '|' + e.v.frets.join(',');
+    if (seen.has(k)) { seen.get(k).count++; continue; }
+    const u = { label: e.label, v: e.v, sounds: e.sounds, count: 1 };
+    seen.set(k, u); unique.push(u);
+  }
+  // the same chord in two places on the neck: say where
+  unique.forEach(u => { if (unique.filter(x => x.label === u.label).length > 1) u.where = u.v.minF > 0 ? 'fret ' + u.v.minF : 'open'; });
+  return { song, easy, mode, tuning: tun, beats, sub: T.sub, timeLabel: T.label, stepsPerBar: beats * T.sub, bpm: song.bpm, swing: song.feel === 'swing',
     capo, shift, capoChanged: capo !== c0, events, sections, totalBars, totalBeats, unique };
 }
 

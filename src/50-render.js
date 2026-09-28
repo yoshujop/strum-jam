@@ -398,17 +398,20 @@ const Stage = {
     // background: the street venue (cached image), washed with the section's colour
     const bg = BG_COL[secIdx % BG_COL.length];
     const railY0 = Math.max(18, Math.min(H * 0.08, 60)), railH0 = Math.min(90, Math.max(40, H * 0.16)), floorY0 = H * 0.86;
-    const key = W + 'x' + H;
+    // Story mode paints the era's stage; otherwise the street under the railway bridge
+    const scene = this.scene, key = W + 'x' + H + (scene ? scene.key : '');
     if (this.bgKey !== key) {
       this.bgKey = key; const img = new Image(); img.decoding = 'async';
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(streetSVG(Math.round(W), Math.round(H), railY0, railH0, floorY0));
+      img.src = scene ? Scenes.dataUrl(scene, Math.round(W), Math.round(H), { railY: railY0, railH: railH0, floorY: floorY0 })
+        : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(streetSVG(Math.round(W), Math.round(H), railY0, railH0, floorY0));
       this.bgImg = img;
     }
     if (this.bgImg && this.bgImg.complete && this.bgImg.naturalWidth) c.drawImage(this.bgImg, 0, 0, W, H);
     else { c.fillStyle = '#231C47'; c.fillRect(0, 0, W, H); }
     c.save(); c.globalAlpha = 0.1; c.fillStyle = bg; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore();
     // the lanterns and neon breathe with the beat
-    if (!reduceMotion) { c.save(); c.globalAlpha = 0.07 * Math.pow(1 - phase, 2); c.fillStyle = '#FFB199'; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore(); }
+    if (!reduceMotion) { c.save(); c.globalAlpha = 0.07 * Math.pow(1 - phase, 2); c.fillStyle = scene ? scene.palette[2] : '#FFB199'; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore(); }
+    if (scene) Scenes.drawLive(c, scene, { W, H, top: railY0 + railH0, F: floorY0, now, dt, phase, hype: G.hype || 0, level: G.level || 0 });
     // spotlights sweep harder as the hype grows
     const hype = G.hype || 0, lvl = G.level || 0;
     if (hype > 0.05 && !reduceMotion) {
@@ -613,20 +616,29 @@ const Fretboard = {
     const narrow = window.innerWidth < 600;
     const K = narrow ? 1.75 : 1;
     this.K = K;
-    const v = ev.v, x0 = 150, x1 = 880, top = 26 + 32 * K, gap = 36 * K;
+    // how much neck fits: phones show the 4 frets around the shape; wider screens show more, up to the 12th fret
+    const NF = this.fretsToShow();
+    this.nfShown = NF;
+    const v = ev.v, x0 = 150, top = 26 + 32 * K, gap = 36 * K;
+    const x1 = NF <= 5 ? 880 : x0 + 730 * (0.45 + 0.11 * NF);
     const vbH = top + gap * 5 + 26 + 22 * K; // wide: equal margins so the neck sits in the middle; narrow: no spare margin, every pixel goes to the neck
-    svg.setAttribute("viewBox", narrow ? `${lefty ? 94 : 46} 26 860 ${vbH - 26}` : `${lefty ? 14 : 54} 26 932 ${vbH - 26}`);
+    svg.setAttribute("viewBox", narrow ? `${lefty ? 94 : 46} 26 860 ${vbH - 26}` : `${lefty ? 894 - x1 : 54} 26 ${x1 + 52} ${vbH - 26}`);
     const down = Settings.fbView !== 'tab';                       // looking down: thickest string on top
     const yOf = i => top + (down ? i : 5 - i) * gap;
     const absF = v.frets.map(f => f > 0 ? f + capo : f);
     const fretted = absF.filter(f => f > 0);
-    const maxA = Math.max(capo, ...fretted, 1);
-    let start = capo > 0 ? capo : (maxA <= 5 ? 1 : Math.min(...fretted));
-    const NFv = narrow ? 4 : 5;
-    if (maxA > start + NFv - 1) start = maxA - NFv + 1;
+    const maxA = Math.max(capo, ...fretted, 1), minA = fretted.length ? Math.min(...fretted) : 1;
+    let start;
+    if (NF >= 12) start = Math.max(1, maxA - NF + 1);
+    else { start = capo > 0 ? capo : (maxA <= NF ? 1 : Math.max(1, minA - (NF > 5 ? 1 : 0))); if (maxA > start + NF - 1) start = maxA - NF + 1; }
     start = Math.max(1, start);
-    const NF = NFv, fw = (x1 - x0) / NF;
-    const xOfFret = f => x0 + (f - start + 0.5) * fw;
+    // fret spacing: real proportions (each fret ~6% narrower) when the whole neck shows, even spacing when zoomed in
+    const real = NF > 5, pos = f => real ? 1 - Math.pow(2, -f / 12) : f;
+    const p0 = pos(start - 1), p1 = pos(start - 1 + NF);
+    const lineX = j => x0 + (pos(start - 1 + j) - p0) / (p1 - p0) * (x1 - x0);      // fret line j (0 = left edge of the window)
+    const fw = (x1 - x0) / NF;
+    const xOfFret = f => (lineX(f - start) + lineX(f - start + 1)) / 2;
+    const fwAt = f => lineX(f - start + 1) - lineX(f - start);
     const used = new Set(fretted);
     const nY0 = top - 22, nH = gap * 5 + 44;                       // the neck's box
     // shared paint: rosewood, pearl inlays, taiko drum faces
@@ -638,7 +650,7 @@ const Fretboard = {
       <pattern id="fbWound" width="4" height="6" patternUnits="userSpaceOnUse"><rect width="4" height="6" fill="#D8CFBC"/><rect width="2" height="6" fill="#9C927D"/></pattern>`;
     svg.appendChild(defs);
     // the frets you need, lit from behind
-    for (let f = start; f < start + NF; f++) if (used.has(f)) svg.appendChild(el('rect', { x: Math.min(X(x0 + (f - start) * fw), X(x0 + (f - start + 1) * fw)) + 3, y: nY0 - 10, width: fw - 6, height: nH + 20, rx: 10, fill: 'rgba(255,206,58,.5)' }));
+    for (let f = start; f < start + NF; f++) if (used.has(f)) svg.appendChild(el('rect', { x: Math.min(X(lineX(f - start)), X(lineX(f - start + 1))) + 3, y: nY0 - 10, width: fwAt(f) - 6, height: nH + 20, rx: 10, fill: 'rgba(255,206,58,.5)' }));
     // neck: drop shadow, rosewood, grain streaks, cream binding
     const nx = Math.min(X(x0 - 6), X(x1 + 16)), nw = x1 - x0 + 22;
     svg.appendChild(el('rect', { x: nx + 5, y: nY0 + 7, width: nw, height: nH, rx: 12, fill: 'rgba(30,27,46,.35)' }));
@@ -653,19 +665,21 @@ const Fretboard = {
     for (let f = start; f < start + NF; f++) {
       const cx = X(xOfFret(f)), cy = top + gap * 2.5, r = 8.5 * Math.min(K, 1.3);
       const dot = (y) => { svg.appendChild(el('circle', { cx, cy: y, r, fill: 'url(#fbPearl)', stroke: '#2A1810', 'stroke-width': 1.5 })); };
-      if ([3, 5, 7, 9, 15, 17].includes(f)) dot(cy);
-      if (f === 12) { dot(cy - gap); dot(cy + gap); }
+      if ([3, 5, 7, 9, 15, 17, 19, 21].includes(f)) dot(cy);
+      if (f === 12 || f === 24) { dot(cy - gap); dot(cy + gap); }
     }
     // frets: nickel wire with a shadow; the nut is bone
     for (let j = 0; j <= NF; j++) {
-      const x = X(x0 + j * fw), nut = j === 0 && start === 1;
+      const x = X(lineX(j)), nut = j === 0 && start === 1;
       if (nut) { svg.appendChild(el('rect', { x: x - 7, y: nY0 - 3, width: 14, height: nH + 6, rx: 3, fill: 'url(#fbNut)', stroke: COL.ink, 'stroke-width': 3 })); continue; }
       svg.appendChild(el('rect', { x: x - 1, y: nY0 + 4, width: 6, height: nH - 8, fill: 'rgba(0,0,0,.35)' }));
       svg.appendChild(el('rect', { x: x - 3, y: nY0 + 3, width: 6, height: nH - 6, rx: 2, fill: 'url(#fbFret)' }));
     }
     for (let f = start; f < start + NF; f++) {
       const on = used.has(f);
-      svg.appendChild(el('text', { x: X(xOfFret(f)), y: top + gap * 5 + 24 + 20 * K, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': (on ? 19 : 15) * K, fill: on ? '#3E2616' : '#8A7657' }, 'fret ' + f));
+      const mark = [3, 5, 7, 9, 12, 15, 17, 19, 21].includes(f);
+      if (NF > 7 && !on && !mark) continue;                        // long neck: label the marker frets and the ones in use
+      svg.appendChild(el('text', { x: X(xOfFret(f)), y: top + gap * 5 + 24 + 20 * K, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': (on ? 19 : 15) * K, fill: on ? '#3E2616' : '#8A7657' }, NF > 7 ? String(f) : 'fret ' + f));
     }
     // strings: a shadow line, the string, wound texture on the thick three; name tokens on the left light up
     for (let i = 0; i < 6; i++) {
@@ -700,7 +714,7 @@ const Fretboard = {
     const openX = X(narrow ? 118 : 120), KO = Math.min(K, 1.3);
     for (let i = 0; i < 6; i++) {
       const y = yOf(i), f = v.frets[i];
-      const midi = f >= 0 ? OPEN_MIDI[i] + capo + f : null;
+      const midi = f >= 0 ? OPEN_MIDI[i] + capo + f + (typeof UI !== 'undefined' && UI.chart && UI.chart.tuning || 0) : null;
       const nn = midi != null ? noteName(midi, flat) : '';
       let ring = null;
       if (f < 0) {
@@ -713,7 +727,7 @@ const Fretboard = {
         if (Settings.showNotes) svg.appendChild(el('text', { x: openX, y: y + 5 * KO, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': 13 * KO, fill: COL.ink }, nn));
       } else {
         // a little taiko drum: cream rim with tacks, finger-coloured head
-        const cx = X(xOfFret(f + capo)), fin = v.fingers[i], R = 24 * K;
+        const cx = X(xOfFret(f + capo)), fin = v.fingers[i], R = Math.min(24 * K, fwAt(f + capo) * 0.44);
         ring = el('circle', { class: 'fring', cx, cy: y, r: R + 6 });
         svg.appendChild(ring);
         const gd = el('g', { class: 'fdot', style: `animation-delay:${order.indexOf(i) * 90}ms` });
@@ -731,6 +745,15 @@ const Fretboard = {
     }
     this.wrongG = el('g', { class: 'fwrong-layer' }); svg.appendChild(this.wrongG);
     this.geo = { X, yOf, xOfFret, start, NF, capo, openX, x0, x1, fw, flat };
+  },
+  // frets to show for the space the neck has
+  fretsToShow(){
+    if (window.innerWidth < 600) return 4;
+    const board = this.svg && this.svg.closest('.board');
+    const bw = board ? board.clientWidth : window.innerWidth;
+    const side = window.matchMedia && matchMedia('(orientation:landscape) and (min-width:761px)').matches ? 2 * 250 : 0;
+    const avail = bw - side - 150;
+    return Math.max(5, Math.min(12, Math.floor(avail / 78)));
   },
   // states[i]: '' waiting, 'heard' (green), 'miss' (red: this string isn't ringing)
   // wrong: [{string, fret (absolute), midi, open}] notes that shouldn't be there, drawn where they probably come from

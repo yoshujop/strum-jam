@@ -14,9 +14,13 @@ test harness, and the TODO list in priority order.
 ## Layout
 - `src/`: game source, concatenated by `build.py` in a fixed order (`01-head.html` + numbered JS files).
   `src/drummer.svg` is no longer used.
-- `vendor/`: TF.js + Spotify Basic Pitch model, embedded into the build.
+- `vendor/`: TF.js + Spotify Basic Pitch model, plus the chord data read by `25-lookup.js`/`26-chart.js`
+  (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`), all embedded into the build.
 - `test/`, `ref/`: Playwright/Node test and render scripts (see HANDOFF.md "Test harness bits").
 - `index.html` at the root is what GitHub Pages serves (https://yoshujop.github.io/strum-jam/).
+  `src/` was recovered from it (Story mode, the chart pipeline) and rebuilds it byte-for-byte with
+  `python3 build.py "https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39"`. The source zip was older than
+  the live build; HANDOFF.md predates Story mode and the chart pipeline.
 
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`

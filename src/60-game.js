@@ -17,13 +17,15 @@ const G = {
     if (now - this.lastGoodAt < 0.55) return 'great';
     return this.mode === 'practice' && this.running ? 'focus' : 'idle';
   },
-  relaxed(){ return Settings.strict === 'relaxed'; },
+  // Story levels set their own note check; otherwise the player's setting
+  strictMode(){ return (this.opts && this.opts.strict) || Settings.strict; },
+  relaxed(){ return this.strictMode() === 'relaxed'; },
 
   start(chart, mode, opts){
     this.stop();
     this.chart = chart; this.mode = mode; this.opts = opts;
     this.tapMode = !Mic.on;
-    this.capoText = chart.capo ? 'CAPO ' + chart.capo : '';
+    this.capoText = [chart.capo ? 'CAPO ' + chart.capo : '', chart.tuning ? (chart.tuning === -1 ? 'TUNED ½ STEP DOWN' : 'TUNED ' + (-chart.tuning / 2) + ' STEP DOWN') : ''].filter(Boolean).join(' · ');
     this.strumSteps = chart.song.strum ? chart.song.strum.split('') : null;
     this.hype = 0; this.countText = ''; this.streak = 0; this.bestStreak = 0; this.level = 0; this.topLevel = 0; this.fastest = null; Groove.level = 0; this.lastGoodAt = this.lastMissAt = this.lastStrumAt = -9;
     Stage.reset();
@@ -191,7 +193,7 @@ const G = {
     const midis = ev.notes.map(n => n.midi);
     if (this.judgedStrum !== ts) { this.judgedStrum = ts; this.strumFresh = Listen.freshness(ts, midis); }
     this.judgedUpto = upto;
-    const r = Listen.judge(Listen.heard(ts + 0.04, upto), midis, Settings.strict);
+    const r = Listen.judge(Listen.heard(ts + 0.04, upto), midis, G.strictMode());
     // the model says WHICH notes; the spectrum says they're NEW at this strum
     const fr = this.strumFresh; r.freshDsp = fr;
     if (fr && !fr.ok) r.ok = false;
@@ -224,8 +226,8 @@ const G = {
     const midis = ev.notes.map(n => n.midi);
     const base = Mic.frameBefore(strumT - 0.03) || { R0: null };
     // judge the whole sound, and failing that just what the strum added on top of the background
-    let r = Ear.matchTarget(an, { midis }, Settings.strict);
-    if (!r.ok) { const rd = Ear.matchTarget(Ear.delta(an, base), { midis }, Settings.strict); if (rd.ok) r = rd; }
+    let r = Ear.matchTarget(an, { midis }, G.strictMode());
+    if (!r.ok) { const rd = Ear.matchTarget(Ear.delta(an, base), { midis }, G.strictMode()); if (rd.ok) r = rd; }
     const fr = Ear.fresh(an, base, midis);
     r.fresh = fr; if (!fr.ok) { r.ok = false; r.stale = true; }
     this.lastR = r; this.lastEvalAt = ta;
@@ -255,7 +257,7 @@ const G = {
     const lo = held.length ? Math.min(...held) : capo + 1, hi = held.length ? Math.max(...held) : capo + 3;
     let best = null;
     for (let s = 0; s < 6; s++) {
-      const a = m - OPEN_MIDI[s];
+      const a = m - OPEN_MIDI[s] - (this.chart.tuning || 0);
       if (a < capo || a > 22) continue;
       let cost = fr[s] < 0 ? (a === capo ? 0.2 : 1) : 0.7 * Math.abs(a - fr[s]) + (states[s] === 'heard' ? 3 : 0.3);
       if (a !== capo) cost += Math.max(0, lo - 1 - a, a - hi - 1) * 1.5;
@@ -343,7 +345,7 @@ const G = {
         if (Listen.lastT < t0 + 0.5) continue;
         ev.listened = true;
         const midisS = ev.notes.map(n => n.midi);
-        const r = Listen.judge(Listen.heard(t0, t1), midisS, Settings.strict);
+        const r = Listen.judge(Listen.heard(t0, t1), midisS, G.strictMode());
         const frS = Listen.freshness(t0 - 0.04, midisS); if (frS && !frS.ok) { r.ok = false; r.attempt = false; r.wrongNotes = []; }
         ev.earN = 1; ev.earOk = r.ok ? 2 : 0;
         ev.heardAtS = ev.heardAtS || [-9,-9,-9,-9,-9,-9]; ev.missAtS = ev.missAtS || [-9,-9,-9,-9,-9,-9]; ev.wrongSeenS = ev.wrongSeenS || {};
@@ -382,19 +384,19 @@ const G = {
     else if (last.final && now > last.t + last.earWin + 1.2) this.finish();
   },
   stageFrame(ev, i, an, ta){
-    const P = Ear.TMODES[Settings.strict] || Ear.TMODES.normal;
+    const P = Ear.TMODES[G.strictMode()] || Ear.TMODES.normal;
     const tgt = ev.notes.map(n => n.midi);
     // the chord has to be new since just before this beat (or the player's strum), not background that was already there
     const base = Mic.frameBefore((ev.onsetT != null ? ev.onsetT : ev.t) - 0.05) || { R0: null };
-    let r = Ear.matchTarget(an, { midis: tgt }, Settings.strict);
-    if (!r.ok) { const rd = Ear.matchTarget(Ear.delta(an, base), { midis: tgt }, Settings.strict); if (rd.ok) r = rd; }
+    let r = Ear.matchTarget(an, { midis: tgt }, G.strictMode());
+    if (!r.ok) { const rd = Ear.matchTarget(Ear.delta(an, base), { midis: tgt }, G.strictMode()); if (rd.ok) r = rd; }
     const fr = Ear.fresh(an, base, tgt);
     if (!fr.ok) r.ok = false;
     let ok = r.ok;
     // short chords share the listening window with their neighbours: their notes aren't "wrong"
     if (!ok && fr.ok && !r.missing.length && r.fit >= P.fit - 0.25) {
       const nb = [this.list[i - 1], this.list[i + 1]].filter(Boolean).flatMap(e => e.notes.map(n => n.midi));
-      if (nb.length) { const r2 = Ear.matchTarget(an, { midis: [...new Set(tgt.concat(nb))] }, Settings.strict); ok = !r2.wrong.length && r2.fit >= P.fit; }
+      if (nb.length) { const r2 = Ear.matchTarget(an, { midis: [...new Set(tgt.concat(nb))] }, G.strictMode()); ok = !r2.wrong.length && r2.fit >= P.fit; }
     }
     ev.earN++; if (ok) ev.earOk++;
     ev.heardAtS = ev.heardAtS || [-9,-9,-9,-9,-9,-9]; ev.missAtS = ev.missAtS || [-9,-9,-9,-9,-9,-9]; ev.wrongSeenS = ev.wrongSeenS || {};

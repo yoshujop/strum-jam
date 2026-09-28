@@ -28,12 +28,14 @@ const QUALITIES = {
   'm9':[0,3,7,10,2], 'add9':[0,4,7,2], 'madd9':[0,3,7,2], '69':[0,4,7,9,2], 'sus2':[0,2,7],
   'sus4':[0,5,7], '7sus4':[0,5,7,10], 'dim':[0,3,6], 'dim7':[0,3,6,9], 'm7b5':[0,3,6,10],
   'aug':[0,4,8], '7#9':[0,4,7,10,3], '7b9':[0,4,7,10,1], '7#5':[0,4,8,10], '11':[0,5,7,10,2],
-  '13':[0,4,7,10,9], 'm11':[0,3,7,10,5]
+  '13':[0,4,7,10,9], 'm11':[0,3,7,10,5], 'add11':[0,4,7,5], 'madd11':[0,3,7,5], '7sus2':[0,2,7,10], 'maj7sus2':[0,2,7,11],
+  'maj7sus4':[0,5,7,11], 'augmaj7':[0,4,8,11], 'maj13':[0,4,7,11,9], 'm13':[0,3,7,10,9]
 };
 // used when simplifying a chord (easy mode, or no voicing found)
 const SIMPLER = { 'maj9':'maj7','9':'7','13':'7','11':'7sus4','m11':'m7','m9':'m7','7#9':'7','7b9':'7','7#5':'aug',
   '69':'6','add9':'','madd9':'m','mmaj7':'m','m6':'m','6':'','maj7':'','m7':'m','7':'','7sus4':'sus4','sus2':'','sus4':'',
-  'dim7':'dim','m7b5':'m','aug':'','dim':'m','5':'' };
+  'dim7':'dim','m7b5':'m','aug':'','dim':'m','5':'', 'add11':'', 'madd11':'m', '7sus2':'7', 'maj7sus2':'maj7', 'maj7sus4':'maj7',
+  'augmaj7':'aug', 'maj13':'maj9', 'm13':'m9' };
 
 function normalizeQuality(q){
   let s = (q || '').replace(/[()\s]/g, '').replace(/♭/g,'b').replace(/♯/g,'#');
@@ -44,7 +46,7 @@ function normalizeQuality(q){
     [/^(mmaj7|mM7|m\(maj7\)|minmaj7|m\+7|-Δ7)$/, 'mmaj7'],
     [/^(m7b5|m7-5|ø|ø7|min7b5)$/, 'm7b5'], [/^(dim|°|o)$/, 'dim'], [/^(dim7|°7|o7)$/, 'dim7'],
     [/^(aug|\+|\+5|#5)$/, 'aug'], [/^(7#5|aug7|\+7|7\+)$/, '7#5'],
-    [/^(sus|sus4|4)$/, 'sus4'], [/^(sus2|2)$/, 'sus2'], [/^(7sus|7sus4|7sus2)$/, '7sus4'],
+    [/^(sus|sus4|4)$/, 'sus4'], [/^(sus2|2)$/, 'sus2'], [/^(7sus|7sus4)$/, '7sus4'],
     [/^(add9|add2|2add)$/, 'add9'], [/^(madd9|madd2|m\(add9\)|minadd9)$/, 'madd9'],
     [/^(6\/9|69|6add9)$/, '69'], [/^(min6|-6)$/, 'm6'], [/^(maj6|M6)$/, '6'],
     [/^(7b9|7-9)$/, '7b9'], [/^(7#9|7\+9)$/, '7#9'], [/^(dom7|7)$/, '7'], [/^(power|5|no3)$/, '5'],
@@ -81,7 +83,7 @@ function parseChord(raw){
   return out;
 }
 function chordLabel(root, quality, bass, flat){
-  const q = { '':'', 'm':'m', 'mmaj7':'m(maj7)', '69':'6/9', 'm7b5':'m7♭5', '7#9':'7♯9', '7b9':'7♭9', '7#5':'7♯5' }[quality];
+  const q = { '':'', 'm':'m', 'mmaj7':'m(maj7)', '69':'6/9', 'm7b5':'m7♭5', '7#9':'7♯9', '7b9':'7♭9', '7#5':'7♯5', 'augmaj7':'maj7♯5' }[quality];
   return noteName(root, flat) + (q !== undefined ? q : quality) + (bass != null ? '/' + noteName(bass, flat) : '');
 }
 function chordPcs(ch){
@@ -315,21 +317,15 @@ function voicingFor(ch, easy){
   if (voicingCache.has(key)) return voicingCache.get(key);
   let v = null, simplified = null;
   if (easy) {
+    // easier SHAPES of the same chord only (never a simpler chord): a table shape, or the easiest full voicing
     const normal = voicingFor(ch, false);
-    if (normal.diff < 2.5) { v = normal; simplified = normal.simplified; }
-    else {
-      v = lookupTable(EASY_SHAPES, { ...ch, bass: null });
-      if (v && ch.bass != null) simplified = chordLabel(ch.root, ch.quality, null, ch.flat);
-      let q = ch.quality, guard = 0;
-      while (!v && SIMPLER[q] !== undefined && guard++ < 4) {
-        q = SIMPLER[q];
-        const c2 = { ...ch, quality: q, bass: null };
-        const o = lookupTable(OPEN_SHAPES, c2);
-        v = (o && o.diff < 3) ? o : lookupTable(EASY_SHAPES, c2);
-        if (v) simplified = chordLabel(ch.root, q, null, ch.flat);
-      }
-      if (!v) { v = normal; simplified = normal.simplified; }
+    v = normal;
+    if (normal.diff >= 2.5) {
+      const e = lookupTable(EASY_SHAPES, ch);
+      if (e && e.diff < normal.diff) v = e;
+      else { const all = allVoicings(ch, 7); if (all.length && all[0].v.diff < normal.diff - 0.5) v = all[0].v; }
     }
+    simplified = null;
   } else {
     v = lookupTable(OPEN_SHAPES, ch);
     if (!v && ch.bass != null) { const base = voicingFor({ ...ch, bass: null }, false); v = addBass(base, ch.bass); simplified = base.simplified || null; }
@@ -354,6 +350,75 @@ function voicingFor(ch, easy){
   voicingCache.set(key, v);
   return v;
 }
+/* ---- every playable voicing of a chord, anywhere up to the 15th fret ---- */
+const allVoicingCache = new Map();
+function allVoicings(ch, maxPos){
+  maxPos = maxPos == null ? 12 : maxPos;
+  const key = tableKey(ch.root, ch.quality, ch.bass, false) + '@' + maxPos;
+  if (allVoicingCache.has(key)) return allVoicingCache.get(key);
+  const pcs = chordPcs(ch), iv = QUALITIES[ch.quality] || [0, 4, 7];
+  const required = pcs.filter(pc => !(iv.length >= 4 && pc === mod12(ch.root + 7) && pc !== ch.bass));
+  const bassPc = ch.bass != null ? ch.bass : ch.root;
+  const seen = new Map();
+  for (let pos = 0; pos <= maxPos; pos++) {
+    const lo = pos === 0 ? 1 : pos, hi = pos === 0 ? 3 : pos + 3;
+    const opts = OPEN_MIDI.map(o => {
+      const a = [-1];
+      if (pos <= 5 && pcs.includes(mod12(o))) a.push(0);
+      for (let f = lo; f <= hi; f++) if (pcs.includes(mod12(o + f))) a.push(f);
+      return a;
+    });
+    const cur = [0, 0, 0, 0, 0, 0];
+    const rec = i => {
+      if (i === 6) {
+        const c = evalCandidate(cur, required, bassPc, pos); if (!c) return;
+        const k = c.v.frets.join(',');
+        const prev = seen.get(k); if (!prev || c.score < prev.score) seen.set(k, { score: c.score, v: finishVoicing(c.v.frets, c.v.fingers) });
+        return;
+      }
+      for (const f of opts[i]) { cur[i] = f; rec(i + 1); }
+    };
+    rec(0);
+  }
+  const out = [...seen.values()].sort((a, b) => a.score - b.score);
+  allVoicingCache.set(key, out);
+  return out;
+}
+// where the hand is for a voicing (open strings pull it toward the nut)
+function handPos(v){ const f = v.frets.filter(x => x > 0); if (!f.length) return 0; return f.reduce((a, b) => a + b, 0) / f.length; }
+/* Standard and Whole neck: pick a voicing for every chord so the hand moves as little as it can.
+   Standard keeps to the familiar shapes (open chords, E- and A-shape barres) and moves up the neck only when
+   that saves a jump; Whole neck uses any shape up to the 12th fret and stays close to the last chord. */
+function chooseVoicings(chords, mode){
+  const neck = mode === 'neck', out = [];
+  const cands = chords.map(ch => {
+    const list = [], add = (v, bonus) => { if (!v) return; const k = v.frets.join(','); if (list.some(x => x.k === k)) return; list.push({ k, v, cost: v.diff * (neck ? 0.45 : 1) + (bonus || 0) }); };
+    add(lookupTable(OPEN_SHAPES, ch), neck ? 0 : -1.2);
+    add(movable(E_SHAPES, 0, ch), neck ? 0 : -0.4);
+    add(movable(A_SHAPES, 1, ch), neck ? 0 : -0.4);
+    // Standard sticks to the shapes guitarists learn (open chords, E- and A-shape barres); other voicings only
+    // when a chord has none of those. Whole neck may use any voicing up to the 12th fret.
+    if (neck || !list.length) allVoicings(ch, neck ? 12 : 9).slice(0, neck ? 14 : 6).forEach(x => add(x.v, 0));
+    if (!list.length) add(voicingFor(ch, false), 0);
+    return list;
+  });
+  // Viterbi over the song: difficulty of each shape + how far the hand travels between chords
+  const moveW = neck ? 0.9 : 0.35;
+  let prev = cands[0].map(c => ({ s: c.cost, from: -1 }));
+  const back = [prev];
+  for (let i = 1; i < chords.length; i++) {
+    const row = cands[i].map(c => {
+      let best = Infinity, bi = 0;
+      cands[i - 1].forEach((p, j) => { const d = Math.abs(handPos(c.v) - handPos(p.v)); const s = prev[j].s + c.cost + moveW * d + (d > 5 ? 1 : 0); if (s < best) { best = s; bi = j; } });
+      return { s: best, from: bi };
+    });
+    back.push(row); prev = row;
+  }
+  let k = prev.reduce((b, x, j) => x.s < prev[b].s ? j : b, 0);
+  for (let i = chords.length - 1; i >= 0; i--) { out[i] = cands[i][k].v; k = back[i][k].from; }
+  return out.map(v => ({ ...v, simplified: null }));
+}
+
 function soundingNotes(v, capo){
   // returns [{string, midi}] for played strings
   const out = [];

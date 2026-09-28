@@ -2,6 +2,7 @@
    UI: screens, search (Claude charts any song), song menu, modals, loop
    ===================================================================== */
 const HOSTED_URL = '__HOSTED_URL__';
+const SHARED_URL = '';     // the shared lookup service (worker/): Joshua's key, answers shared by everyone
 const STYLE_NAMES = { rock:'Rock', pop:'Pop', ballad:'Ballad', halftime:'Half-time', funk:'Funk', disco:'Disco', shuffle:'Shuffle', country:'Country', reggae:'Reggae',
   punk:'Punk', hiphop:'Hip-hop', metal:'Metal', folk:'Folk', bossa:'Bossa nova', edm:'Dance', waltz:'Waltz', none:'No drums (click)' };
 const $ = id => document.getElementById(id);
@@ -23,6 +24,7 @@ const UI = {
     Splash.init();
     this.letters = [...document.querySelectorAll('#logo .lt')];
     this.bind();
+    Story.init();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -37,7 +39,8 @@ const UI = {
   show(name, instant){
     const swap = () => {
       this.screen = name;
-      for (const s of ['title', 'song', 'game', 'results']) $('scr-' + s).hidden = s !== name;
+      for (const s of ['title', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
+      if (name === 'title') Story.renderChips();
       if (name === 'game') requestAnimationFrame(() => Stage.resize());
       if (name === 'title') TitleArt.resize();
       $('scr-' + name).scrollTop = 0; window.scrollTo(0, 0);
@@ -58,7 +61,7 @@ const UI = {
   // staggered entrance for the main pieces of a screen
   enter(root){
     if (reduceMotion || !root) return;
-    const els = root.querySelectorAll('.topbar, .hero, .search, .song-head, .modes > *, .opts, .card, .cbox, .map .row, .stat, .stamp, .res h2, .res .row, .sec-h');
+    const els = root.querySelectorAll('.topbar, .hero, .search, .story-promo, .story-hero, .career-head, .lvl, .story-strip, .song-head, .modes > *, .opts, .card, .cbox, .map .row, .stat, .stamp, .res h2, .res-story, .res .row, .sec-h');
     let i = 0;
     els.forEach(el => {
       if (el.offsetParent === null && !el.closest('.game')) return;
@@ -67,9 +70,12 @@ const UI = {
       setTimeout(() => { el.style.animation = ''; }, 520 + d);
     });
   },
-  aiAvailable(){ return !!this.sample || (!this.inViewer && !!Settings.apiKey); },
+  // Claude is available through the claude.ai preview, the player's own API key, or the shared lookup service
+  sharedOn(){ return !this.inViewer && /^https:\/\//.test(SHARED_URL); },
+  aiAvailable(){ return !!this.sample || (!this.inViewer && (!!Settings.apiKey || this.sharedOn())); },
+  canWeb(){ return !this.inViewer && (!!Settings.apiKey || this.sharedOn()); },   // the web backup needs web search
   refreshEnv(){
-    $('setup-card').hidden = this.inViewer || !!Settings.apiKey;
+    $('setup-card').hidden = true;   // song lookup works without a key now; the key is asked for only when a song needs it
     $('hosted-card').hidden = !this.inViewer;
     $('btn-download').hidden = !this.downloads;
     $('api-box').hidden = this.inViewer;
@@ -114,7 +120,7 @@ const UI = {
     if (this._diff[song.id] != null) return this._diff[song.id];
     let d = 1;
     try {
-      const ch = compileSong(song, { easy: false });
+      const ch = compileSong(song, { shapes: 'standard' });
       const avg = ch.unique.reduce((a, u) => a + u.v.diff, 0) / Math.max(1, ch.unique.length);
       const hard = ch.unique.some(u => u.v.barre && u.v.barre.to - u.v.barre.from >= 2);
       d = avg > 2.6 || hard ? 3 : avg > 1.3 || ch.unique.length > 5 || song.bpm > 130 ? 2 : 1;
@@ -127,7 +133,9 @@ const UI = {
     const chords = this.songChords(song);
     const best = Store.get('best', {})[song.id];
     const lvl = ['', 'Easy', 'Medium', 'Hard'][this.difficulty(song)];
-    b.innerHTML = `<div class="stub">${song.bpm}<small>BPM</small></div><div class="body"><div class="t">${esc(song.title)}</div><div class="a">${esc(song.artist || '')}${song.artist ? ' · ' : ''}${lvl}${best ? ' · best ' + esc(best.grade) : ''}</div><div class="cs">${chords.slice(0, 6).map(c => `<span>${esc(c)}</span>`).join('')}${chords.length > 6 ? `<span>+${chords.length - 6}</span>` : ''}</div></div>`;
+    const pr = song.prov, srcTag = pr && pr.src === 'dataset' ? 'Dataset' : pr && pr.src === 'web' ? 'Web sources' : song.source === 'library' ? '' : song.source === 'paste' ? 'Pasted' : song.source === 'code' ? 'Song code' : 'Old chart';
+    const needs = pr && pr.issues && pr.issues.length && pr.status !== 'confirmed';
+    b.innerHTML = `<div class="stub">${song.bpm}<small>BPM</small></div><div class="body"><div class="t">${esc(song.title)}</div><div class="a">${esc(song.artist || '')}${song.artist ? ' · ' : ''}${lvl}${best ? ' · best ' + esc(best.grade) : ''}${srcTag ? ' · ' + esc(needs ? 'Needs confirming' : srcTag) : ''}</div><div class="cs">${chords.slice(0, 6).map(c => `<span>${esc(c)}</span>`).join('')}${chords.length > 6 ? `<span>+${chords.length - 6}</span>` : ''}</div></div>`;
     b.querySelector('.stub').style.background = cardColor(chords[0] || 'C');
     const open = () => { Sfx.open(); this.openSong(song); };
     const note = (this._cardN = (this._cardN || 0) + 1);
@@ -154,7 +162,7 @@ const UI = {
     return `<span>Compare with community charts:</span><a href="https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}" target="_blank" rel="noopener">Ultimate Guitar ↗</a><a href="https://www.songsterr.com/?pattern=${q}" target="_blank" rel="noopener">Songsterr ↗</a>`;
   },
 
-  /* ---------- search ---------- */
+  /* ---------- search: pick the exact recording, then look its chords up ---------- */
   async doSearch(q){
     q = q.trim(); if (!q) { $('search-input').focus(); return; }
     const words = q.toLowerCase().split(/\s+/);
@@ -162,47 +170,160 @@ const UI = {
     const local = pool.filter(s => words.every(w => (s.title + ' ' + s.artist).toLowerCase().includes(w))).slice(0, 6);
     const res = $('search-results'); res.textContent = '';
     local.forEach(s => res.appendChild(this.card(s)));
-    $('search-notice').textContent = '';
-    if (this.aiAvailable()) { Sfx.searchStart(); return this.aiSearch(q, local.length); }
-    const st = $('search-status');
-    st.textContent = local.length ? 'Found in your songs and the library.' : '';
-    const n = document.createElement('div'); n.className = 'notice';
-    n.innerHTML = this.inViewer
-      ? '<b>Song search is starting up.</b> Give it a few seconds and search again.'
-      : `<b>Automatic song search needs your API key.</b> Add it in the box above (or in Settings) and every search charts the song for you. ${HOSTED_URL.startsWith('http') ? `Or search on the <a href="${HOSTED_URL}" target="_blank" rel="noopener">claude.ai version</a>, which needs no key, and paste the song code here.` : ''}`;
-    $('search-notice').appendChild(n);
-  },
-  async aiSearch(q, haveLocal){
+    $('search-notice').textContent = ''; $('lookup').hidden = true;
     if (this.searchCtl) this.searchCtl.abort();
     const ctl = this.searchCtl = new AbortController();
-    const st = $('search-status');
-    st.innerHTML = `<span class="thinking"><span class="eq"><i></i><i></i><i></i><i></i></span> Charting “${esc(q)}”: finding the title, tempo, chords and groove… <button class="btn btn-sm" type="button" id="btn-stop-search">Stop</button></span>`;
-    $('btn-stop-search').onclick = () => ctl.abort();
+    const st = $('search-status'), box = $('rec-results');
+    box.textContent = '';
+    st.innerHTML = `<span class="thinking"><span class="eq"><i></i><i></i><i></i><i></i></span> Finding recordings of “${esc(q)}”…</span>`;
+    Sfx.searchStart();
     try {
-      const data = await this.askClaude(chartPrompt(q), ctl.signal, 'default');
+      const recs = await Lookup.itunes(q, { signal: ctl.signal, limit: 15 });
       if (ctl.signal.aborted) return;
-      if (!data || data.found === false) {
-        Sfx.fail();
-        st.innerHTML = `I couldn’t find “${esc(q)}”. Did you mean one of these?`;
-        const box = document.createElement('div'); box.className = 'sugg';
-        (Array.isArray(data && data.suggestions) ? data.suggestions : []).slice(0, 6).forEach(sg => {
-          const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = String(sg).slice(0, 80);
-          b.onclick = () => { $('search-input').value = b.textContent; this.doSearch(b.textContent); };
-          box.appendChild(b);
-        });
-        st.appendChild(box);
-        return;
-      }
-      const song = validateSong(data, 'claude');
-      this.saveMine(song); this.renderLists();
-      st.textContent = `Charted ${song.title}${song.artist ? ' by ' + song.artist : ''}.`;
+      if (!recs.length) { st.textContent = local.length ? 'No recordings found in Apple’s catalogue, but these are in your songs.' : `No recordings found for “${q}”. Check the spelling, or add the artist’s name.`; Sfx.fail(); return; }
+      st.textContent = 'Pick the exact recording:';
+      const cached = new Set(Object.keys(Store.get('charts', {}) || {}));
+      recs.slice(0, 12).forEach((r, i) => box.appendChild(this.recCard(r, cached.has(Chart.cacheKey(r)), i)));
+      st.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
       Sfx.found();
-      this.openSong(song);
     } catch (e) {
-      if (e && e.code === 'cancelled' || (e && e.name === 'AbortError')) { st.textContent = 'Search stopped.'; return; }
-      st.textContent = this.errCopy(e); Sfx.fail();
-      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled')) { this.sample = null; this.refreshEnv(); }
+      if (e && (e.name === 'AbortError' || e.code === 'cancelled')) return;
+      st.textContent = this.lookupErr(e, 'search'); Sfx.fail();
     } finally { if (this.searchCtl === ctl) this.searchCtl = null; }
+  },
+  recCard(r, ready, i){
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'rec';
+    const len = r.durationMs ? `${Math.floor(r.durationMs / 60000)}:${String(Math.round(r.durationMs / 1000) % 60).padStart(2, '0')}` : '';
+    b.innerHTML = `${r.art ? `<img alt="" loading="lazy" src="${esc(r.art)}">` : '<span class="noart"></span>'}<span class="rt"><b>${esc(r.title)}</b><span>${esc(r.artist)}</span><small>${esc([r.album, r.year || '', len].filter(Boolean).join(' · '))}</small></span><span class="rgo${ready ? ' ready' : ''}">${ready ? 'Ready' : 'Pick'}</span>`;
+    b.setAttribute('aria-label', `${r.title} by ${r.artist}, ${r.album}${r.year ? ', ' + r.year : ''}`);
+    b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Sfx.hover(i); });
+    b.onclick = () => { Sfx.open(); this.pickRecording(r); };
+    return b;
+  },
+  // the lookup pipeline for one recording, with a step-by-step panel
+  async pickRecording(track, opts){
+    opts = opts || {};
+    const cached = Chart.cached(track);
+    if (cached && !opts.fresh) { this.saveMine(cached); this.renderLists(); this.openSong(cached, opts.storyCtx); return cached; }
+    if (this.searchCtl) this.searchCtl.abort();
+    const ctl = this.searchCtl = new AbortController();
+    const panel = opts.panel || $('lookup');
+    const steps = [['find', 'Chord data'], ['web', 'Web sources'], ['listen', 'Check with the recording'], ['timing', 'Tempo & bars'], ['build', 'Chart']];
+    panel.hidden = false;
+    panel.innerHTML = `<div class="lk-head">${track.art ? `<img alt="" src="${esc(track.art)}">` : '<span></span>'}<span><b>${esc(track.title)}</b><small>${esc(track.artist)} · ${esc([track.album, track.year].filter(Boolean).join(' · '))}</small></span><button class="btn btn-sm" type="button" data-stop>Stop</button></div>
+      <div class="lk-steps">${steps.map(([k, l]) => `<span data-k="${k}">${l}</span>`).join('')}</div><div class="lk-msg" aria-live="polite"></div>`;
+    panel.querySelector('[data-stop]').onclick = () => ctl.abort();
+    if (!opts.panel) panel.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+    const msg = panel.querySelector('.lk-msg');
+    let cur = null;
+    const onStep = (k, text) => {
+      const order = steps.map(x => x[0]);
+      if (k !== cur) { panel.querySelectorAll('.lk-steps span').forEach(el => { const i = order.indexOf(el.dataset.k), j = order.indexOf(k); el.classList.toggle('on', el.dataset.k === k); if (i < j && !el.classList.contains('skip')) el.classList.add('done'); }); if (k === 'listen' && cur === 'find') panel.querySelector('[data-k="web"]').classList.add('skip'); cur = k; }
+      msg.textContent = text;
+    };
+    Sfx.searchStart();
+    try {
+      const ai = this.aiAvailable();
+      const o = await Chart.make(track, { signal: ctl.signal, onStep, ai, web: this.canWeb(), forceWeb: !!opts.forceWeb,
+        askClaude: (p, sig, extra) => this.askClaude(p, sig, 'default', extra) });
+      if (ctl.signal.aborted) return null;
+      panel.querySelectorAll('.lk-steps span').forEach(el => { if (!el.classList.contains('skip')) { el.classList.remove('on'); el.classList.add('done'); } });
+      msg.textContent = o.prov.issues.length ? 'Almost there: a couple of things to confirm.' : 'Charted.';
+      Sfx.found();
+      const song = o.prov.issues.length ? await this.confirmChart(o, track) : o;
+      if (!song) { msg.textContent = 'Cancelled. Pick the recording again to redo it.'; return null; }
+      const v = validateSong(song, song.prov && song.prov.src === 'web' ? 'web' : 'dataset');
+      Chart.remember(track, v);
+      if (!opts.storyCtx) { this.saveMine(v); this.renderLists(); }
+      panel.hidden = !!opts.keepPanel ? false : true;
+      if (opts.onDone) opts.onDone(v); else this.openSong(v, opts.storyCtx);
+      return v;
+    } catch (e) {
+      if (e && (e.name === 'AbortError' || e.code === 'cancelled')) { msg.textContent = 'Stopped.'; return null; }
+      console.warn(e);
+      const needKey = e && e.code === 'not_in_dataset' && !this.inViewer && !Settings.apiKey;
+      msg.innerHTML = esc(this.lookupErr(e, 'chart')) + (needKey ? ' <button class="btn btn-sm btn-teal" type="button" data-key>Add API key</button>' : '') + (['not_in_dataset', 'web_nf', 'no_web', 'web_search_off', 'filtered'].includes(e && e.code) || /^shared_/.test(e && e.code || '') ? ' <button class="btn btn-sm" type="button" data-paste>Paste a chord sheet</button>' : '');
+      const pb = msg.querySelector('[data-paste]'); if (pb) pb.onclick = () => this.openImport({ title: track.title, artist: track.artist });
+      const kb = msg.querySelector('[data-key]'); if (kb) kb.onclick = () => { $('btn-settings').click(); setTimeout(() => $('api-key').focus(), 50); };
+      Sfx.fail();
+      if (opts.onError) opts.onError(e);
+      return null;
+    } finally {
+      if (this.searchCtl === ctl) this.searchCtl = null;
+      const sb = panel.querySelector('[data-stop]'); if (sb) { sb.textContent = 'Close'; sb.onclick = () => { panel.hidden = true; }; }
+    }
+  },
+  lookupErr(e, where){
+    const c = e && e.code;
+    if (c === 'not_in_dataset') return this.inViewer ? 'This song isn’t in the chord dataset. Reading chord sites on the web needs the phone/desktop version with your API key (this preview can’t search the web).' : 'This song isn’t in the chord dataset. Add your Anthropic API key in Settings so Claude can read chord sources on the web for it, or paste a chord sheet.';
+    if (c === 'no_index') return 'The chord index didn’t load in this page. Reload and try again.';
+    if (c === 'web_nf') return 'Claude couldn’t find two chord sources for this recording.';
+    if (c === 'shared_daily_limit') return 'Today’s free song lookups are used up. Try again tomorrow, or add your own Anthropic API key in Settings.';
+    if (c === 'shared_ip_limit') return 'You’ve used today’s free song lookups. Try again tomorrow, or add your own Anthropic API key in Settings.';
+    if (c === 'shared_busy') return 'This song is being looked up right now. Try again in a minute.';
+    if (c === 'shared_filtered') return 'Anthropic’s content filter stopped the answer (chord pages carry lyrics, and that sometimes trips it). Try again later, or paste a chord sheet.';
+    if (c && /^shared_/.test(c)) return 'The shared song-lookup service isn’t available right now. Try again later, or add your own Anthropic API key in Settings.';
+    if (c === 'filtered') return 'Anthropic’s content filter stopped Claude’s answer (chord pages carry lyrics, and that sometimes trips it). Try again in a moment, or paste a chord sheet.';
+    if (c === 'web_search_off') return 'Web search is switched off for your Anthropic organization. Turn it on in the Claude Console (Settings → Privacy → Web search), then try again.';
+    if (c === 'no_web') return 'This song isn’t in the chord dataset, and this preview can’t search the web. Use the phone/desktop version with your API key.';
+    if (e && e.status === 403 || e && e.status === 429) return 'Apple’s song search is busy right now. Wait a minute and try again.';
+    if (e instanceof TypeError || /network|Failed to fetch|Load failed/i.test(String(e && e.message))) return this.inViewer ? 'This preview can’t reach the music databases. Use the phone/desktop version to look songs up.' : 'Couldn’t reach the music databases. Check your internet connection and try again.';
+    return this.errCopy(e);
+  },
+  // the confirm screen: one question per thing the checks couldn't settle; resolves with the chosen chart or null
+  confirmChart(o, track){
+    return new Promise(resolve => {
+      this.open('m-confirm');
+      const pr = o.prov;
+      $('cf-rec').innerHTML = `${o.art ? `<img alt="" src="${esc(o.art)}">` : '<span></span>'}<span><b>${esc(o.title)}</b><br><small>${esc(o.artist)} · ${esc([o.album, o.year].filter(Boolean).join(' · '))}</small></span>`;
+      $('cf-intro').innerHTML = pr.src === 'web'
+        ? `This song isn’t in the chord dataset, so Claude read ${pr.sources.length || 'several'} chord source${pr.sources.length === 1 ? '' : 's'} on the web and reconciled them. Check the parts below.`
+        : pr.src === 'hooktheory' ? `The chords come from Hooktheory’s transcription of this recording (parts of the song). ${pr.checked ? 'I compared them with the recording’s preview and found this:' : 'Check this:'}`
+        : `The chords come from the Chordonomicon dataset. ${pr.checked ? 'I compared them with the recording’s preview and found this:' : 'Check this:'}`;
+      const box = $('cf-qs'); box.textContent = '';
+      const choices = {};
+      for (const is of pr.issues) {
+        const fs = document.createElement('fieldset'); fs.className = 'cf-q';
+        let legend = '', text = '', opts = [];
+        const rec = Chart.recommend(is);
+        if (is.kind === 'pitch') {
+          const up = is.t, dn = 12 - is.t;
+          legend = 'Key';
+          const lower = up >= 10;
+          text = `The chart’s shapes are in <b>${esc(is.shapesKey)}</b>, but ${is.from === 'hooktheory' ? 'Hooktheory’s transcription of this recording is' : 'the recording sounds'} <b>${!lower ? up + ' fret' + (up > 1 ? 's' : '') + ' higher' : dn + ' fret' + (dn > 1 ? 's' : '') + ' lower'}</b>, in <b>${esc(is.soundKey)}</b>.`;
+          const tot = ((is.capo || 0) + up) % 12, tdn = 12 - tot;   // from open shapes to the recording
+          if (tot <= 9) opts.push(['capo', `${tot ? 'Capo ' + tot : 'No capo'}, same shapes (sounds in ${esc(is.soundKey)})`]);
+          if (tot >= 10) opts.push(['tune', `Tune down ${tdn === 1 ? 'a half step' : 'a whole step'}, same shapes${is.capo ? ', no capo' : ''} (sounds in ${esc(is.soundKey)})`]);
+          opts.push(['transpose', `Change the chords to ${esc(is.soundKey)}, no capo`]);
+          opts.push(['keep', `Keep it as written (sounds in ${esc(is.shapesKey)}, not like the record)`]);
+        } else if (is.kind === 'chord') {
+          legend = 'Chord ' + is.name;
+          text = `Where the chart plays <b>${esc(is.name)}</b>, the recording sounds more like <b>${esc(is.alt)}</b>.`;
+          opts = [['keep', `Keep ${esc(is.name)}`], ['swap', `Use ${esc(is.alt)} instead`]];
+        } else if (is.kind === 'fit') {
+          legend = 'Match';
+          text = `The chords only partly match what plays in the preview (${Math.round((is.ratio || 0) * 100)}%). It could be a different version of the song, or a weak chart.`;
+          opts = [['keep', 'Use it anyway']];
+          if (this.canWeb() && pr.src !== 'web' && !pr.auto) opts.push(['web', 'Look it up on the web instead (Claude reads two or more chord sources)']);
+        } else if (is.kind === 'section') {
+          legend = is.name;
+          text = is.conf === 'low' ? 'The web sources disagree about this part (or only one source had it).' : 'The web sources mostly agree about this part.';
+          opts = [['keep', 'Keep it (marked “unsure” in the song map)']];
+        }
+        fs.innerHTML = `<legend>${esc(legend)}</legend><p>${text}</p>` + opts.map(([v, l]) => `<label><input type="radio" name="cf-${esc(is.id)}" value="${v}"${v === rec ? ' checked' : ''}><span>${l}${v === rec ? '<em>suggested</em>' : ''}</span></label>`).join('');
+        fs.querySelectorAll('input').forEach(inp => inp.onchange = () => { choices[is.id] = inp.value; });
+        choices[is.id] = rec;
+        box.appendChild(fs);
+      }
+      const done = v => { $('btn-cf-ok').onclick = $('btn-cf-paste').onclick = null; this._cfResolve = null; resolve(v); };
+      this._cfResolve = () => done(null);
+      $('btn-cf-ok').onclick = () => {
+        $('m-confirm').hidden = true; this.openModal = null;
+        if (Object.values(choices).includes('web') && track) { done(null); this.pickRecording(track, { fresh: true, forceWeb: true }); return; }
+        done(Chart.applyChoices(o, choices));
+      };
+      $('btn-cf-paste').onclick = () => { $('m-confirm').hidden = true; this.openModal = null; done(null); this.openImport({ title: o.title, artist: o.artist }); };
+    });
   },
   errCopy(e){
     const c = e && e.code;
@@ -216,13 +337,21 @@ const UI = {
     if (e instanceof TypeError) return 'Couldn’t reach Claude. Check your internet connection and try again.';
     return (e && e.message) ? 'Search failed: ' + e.message : 'Search failed. Try again.';
   },
-  async askClaude(prompt, signal, tier){
+  // extra: { webSearch, kind: 'web' | 'career' | 'groove', body } — kind/body let the shared service build the same
+  // prompt itself (it never takes prompt text from the page). A player's own key goes first (their own account).
+  async askClaude(prompt, signal, tier, extra){
+    if (extra && extra.webSearch) {
+      if (!this.inViewer && Settings.apiKey) return this.askClaudeWeb(prompt, signal);
+      if (this.sharedOn() && extra.kind) return this.askShared(extra.kind, extra.body, signal);
+      throw Object.assign(new Error('Web search needs your API key.'), { code: 'no_web' });
+    }
+    if (!this.sample && !(!this.inViewer && Settings.apiKey) && this.sharedOn() && extra && extra.kind) return this.askShared(extra.kind, extra.body, signal);
     if (this.sample) return await this.sample.json(prompt, { modelTier: tier || 'default', signal });
     if (!this.inViewer && Settings.apiKey) {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', signal,
         headers: { 'content-type': 'application/json', 'x-api-key': Settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: (Settings.apiModel || 'claude-sonnet-4-5').trim(), max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: (Settings.apiModel || 'claude-sonnet-5').trim(), max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
       });
       if (!res.ok) {
         let msg = ''; try { const j = await res.json(); msg = j && j.error && j.error.message; } catch (x) {}
@@ -236,29 +365,87 @@ const UI = {
     throw Object.assign(new Error('Song search is not set up.'), { code: 'unavailable' });
   },
 
+  // the shared lookup service: answers are remembered for everyone, so each song / artist is only paid for once
+  async askShared(kind, body, signal){
+    const url = SHARED_URL.replace(/\/+$/, '') + '/v1/' + kind;
+    for (let tries = 0; tries < 8; tries++) {
+      const res = await fetch(url, { method: 'POST', signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+      let j = null; try { j = await res.json(); } catch (e) {}
+      if (res.ok && j && j.ok) return j.data;
+      const code = j && j.code || (res.status === 429 ? 'daily_limit' : 'upstream');
+      // someone else is looking this one up right now: their answer will be shared, so wait for it
+      if (code === 'busy') { await new Promise((ok, no) => { const t = setTimeout(ok, 12000); if (signal) signal.addEventListener('abort', () => { clearTimeout(t); no(Object.assign(new Error('Stopped'), { name: 'AbortError' })); }, { once: true }); }); continue; }
+      throw Object.assign(new Error('Shared service: ' + code), { code: 'shared_' + code });
+    }
+    throw Object.assign(new Error('Shared service: busy'), { code: 'shared_busy' });
+  },
+  // Claude with the web search tool (API key only): reads chord sources, returns the JSON it was asked for
+  async askClaudeWeb(prompt, signal){
+    const headers = { 'content-type': 'application/json', 'x-api-key': Settings.apiKey.trim(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' };
+    let messages = [{ role: 'user', content: prompt }];
+    for (let turn = 0; turn < 5; turn++) {
+      const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', signal, headers,
+        // no extended thinking: while reading chord pages, thinking out loud can quote the words on them, and the
+        // API then blocks the whole answer ("Output blocked by content filtering policy")
+        body: JSON.stringify({ model: (Settings.apiModel || 'claude-sonnet-5').trim(), max_tokens: 8000, messages, thinking: { type: 'disabled' }, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }] }) });
+      if (!res.ok) {
+        let msg = ''; try { const j = await res.json(); msg = j && j.error && j.error.message || ''; } catch (x) {}
+        const err = new Error(msg || ('HTTP ' + res.status));
+        err.code = /web.?search/i.test(msg) ? 'web_search_off' : /content filtering/i.test(msg) ? 'filtered' : res.status === 401 || res.status === 403 ? 'bad_key' : res.status === 429 ? 'rate_limited' : res.status === 404 ? 'bad_model' : 'upstream_error';
+        throw err;
+      }
+      const j = await res.json(), content = j.content || [];
+      const results = content.filter(b => b.type === 'web_search_tool_result');
+      if (results.length && results.every(b => b.content && !Array.isArray(b.content) && b.content.type === 'web_search_tool_result_error')) {
+        const ec = results[0].content.error_code;
+        if (ec === 'unavailable' || ec === 'invalid_tool_input') throw Object.assign(new Error('Web search is unavailable: ' + ec), { code: 'web_search_off' });
+      }
+      if (j.stop_reason === 'pause_turn') { messages = [...messages, { role: 'assistant', content }]; continue; }
+      // the answer is the text after the last search (earlier text is Claude's notes between searches)
+      let last = -1; content.forEach((b, i) => { if (b.type !== 'text') last = i; });
+      const tail = content.slice(last + 1).filter(b => b.type === 'text').map(b => b.text).join('');
+      try { return parseJsonLoose(tail); } catch (e) { return parseJsonLoose(content.filter(b => b.type === 'text').map(b => b.text).join('')); }
+    }
+    throw Object.assign(new Error('The web search took too long.'), { code: 'web_nf' });
+  },
+
   /* ---------- song menu ---------- */
-  openSong(song){
+  openSong(song, storyCtx){
     this.song = song;
+    this.storyCtx = storyCtx || null;
+    Story.songStrip();
     this.recompile();
     this.renderSong();
     this.show('song');
   },
-  recompile(){ this.chart = compileSong(this.song, { easy: Settings.easy }); },
+  recompile(){ const t = Story.tier(); this.chart = compileSong(this.song, { shapes: t ? (t.easy ? 'easy' : 'standard') : Settings.shapes }); },
   renderSong(){
     const s = this.song, ch = this.chart;
     $('song-title').textContent = s.title;
     $('song-artist').textContent = s.artist || '';
-    const src = { library: 'Library', claude: 'Charted by Claude', code: 'From a song code', paste: 'Pasted chord sheet' }[s.source] || '';
+    const pr = s.prov || null;
+    const src = pr && pr.src === 'dataset' ? ['Dataset' + (pr.checked ? ' ✓ checked' : ''), 'src-data'] : pr && pr.src === 'hooktheory' ? ['Dataset (parts only)' + (pr.checked ? ' ✓ checked' : ''), 'src-data'] : pr && pr.src === 'web' ? ['Web sources', 'src-web'] : [{ library: 'Library', claude: 'Charted by Claude (old)', code: 'From a song code', paste: 'Pasted chord sheet' }[s.source] || '', ''];
+    const needs = pr && pr.issues && pr.issues.length && pr.status !== 'confirmed' ? ['Needs confirming', 'src-confirm'] : null;
     const d = this.difficulty(s);
-    const pills = [`${s.bpm} BPM`, ch.timeLabel, s.key && 'Key ' + s.key, STYLE_NAMES[s.style] || s.style, s.feel === 'swing' && 'Swing feel', ch.capo ? 'Capo ' + ch.capo : 'No capo', ['', 'Easy', 'Medium', 'Hard'][d], src].filter(Boolean);
-    $('song-pills').innerHTML = pills.map(p => `<span class="chip">${esc(p)}</span>`).join('');
-    $('song-links').innerHTML = this.links(s.title, s.artist) + ' <button class="btn btn-sm" type="button" id="btn-fix-chart">Chart looks wrong? Paste a chord sheet</button>';
+    const pills = [[`${s.bpm} BPM`], [ch.timeLabel], [s.key && 'Key ' + s.key], [STYLE_NAMES[s.style] || s.style], [s.feel === 'swing' && 'Swing feel'], [ch.capo ? 'Capo ' + ch.capo : 'No capo'],
+      [s.tuning ? `Tuned down ${s.tuning === -1 ? '½ step' : s.tuning === -2 ? '1 step' : -s.tuning / 2 + ' steps'}` : ''], [['', 'Easy', 'Medium', 'Hard'][d]], src, needs || []].filter(p => p && p[0]);
+    $('song-pills').innerHTML = pills.map(([p, c]) => `<span class="chip ${c || ''}">${esc(p)}</span>`).join('');
+    $('song-artist').textContent = [s.artist, s.album, s.year || ''].filter(Boolean).join(' · ');
+    $('song-links').innerHTML = this.links(s.title, s.artist) + ' <button class="btn btn-sm" type="button" id="btn-fix-chart">Chart looks wrong? Paste a chord sheet</button>' + (pr && pr.issues && pr.issues.length ? ' <button class="btn btn-sm" type="button" id="btn-review">Review the checks</button>' : '');
     $('btn-fix-chart').onclick = () => this.openImport({ title: s.title, artist: s.artist });
+    if ($('btn-review')) $('btn-review').onclick = () => this.reviewChart(s);
+    let srcLine = '';
+    const htLink = `<a href="${Lookup.HT_URL}" target="_blank" rel="noopener">Hooktheory</a> TheoryTab data (Donahue et al., 2022), CC BY-NC-SA 3.0`;
+    const htNote = pr && pr.ht ? ` · key${pr.htFix && pr.htFix.fixed ? ', ' + pr.htFix.fixed + ' chord' + (pr.htFix.fixed > 1 ? 's' : '') : ''} and timing cross-checked with ${htLink}` : '';
+    const checkNote = pr && pr.checked ? (pr.pitchFrom === 'hooktheory' ? ' · pitch checked against Hooktheory’s transcription of this recording' : ` · checked against the recording’s preview${pr.offset ? '' : ' (same key)'}`) : pr && pr.audioErr ? ` · not checked against the recording: ${esc(pr.audioErr)}` : '';
+    if (pr && pr.src === 'dataset') srcLine = `Chords: <a href="${Lookup.CREDIT_URL}" target="_blank" rel="noopener">Chordonomicon</a> dataset (Kantarelis et al., 2024), CC BY-NC 4.0` + checkNote + htNote + ` · timing from ${esc(pr.bpmFrom || 'defaults')}.`;
+    else if (pr && pr.src === 'hooktheory') srcLine = `Chords: ${htLink}, a transcription of this recording. It has only parts of the song (${pr.ht ? pr.ht.clips : 'a few'} passage${pr.ht && pr.ht.clips === 1 ? '' : 's'}), so the chart is shorter than the record` + checkNote + '.' + (pr.webErr ? ` The web backup didn’t work: ${esc(this.lookupErr({ code: pr.webErr }))}` : this.inViewer || !Settings.apiKey ? ' Add your API key in Settings to get the whole song from web sources.' : '');
+    else if (pr && pr.src === 'web') srcLine = (pr.auto ? `The dataset chart only matched ${Math.round((pr.auto.fit || 0) * 100)}% of the recording, so ` : '') + `Chords read from web sources by Claude: ${pr.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(this.host(u) || 'source ' + (i + 1))}</a>`).join(', ') || 'sources not listed'}.` + (pr.checked ? ' Checked against the recording’s preview.' : '') + (pr.ht ? ` Key${pr.htFix && pr.htFix.fixed ? ', ' + pr.htFix.fixed + ' chord' + (pr.htFix.fixed > 1 ? 's' : '') : ''} and timing cross-checked with ${htLink}.` : '');
+    $('song-src').innerHTML = srcLine;
     $('song-note').hidden = !s.note; $('song-note').textContent = s.note || '';
-    this.setSeg('seg-easy', Settings.easy ? '1' : '0');
+    this.setSeg('seg-easy', Settings.shapes);
     const simp = ch.events.filter(e => e.v && e.v.simplified).map(e => e.full);
-    let en = Settings.easy ? (ch.capoChanged ? `Capo ${ch.capo} lets you use easier shapes.` : 'Easier shapes where they help.') : 'The song’s real chord shapes.';
-    if (Settings.easy && simp.length) en += ` Simplified: ${[...new Set(simp)].slice(0, 4).join(', ')}.`;
+    let en = ch.mode === 'easy' ? (ch.capoChanged ? `Capo ${ch.capo}: easier shapes for the same chords.` : 'Easier shapes for the same chords.') : ch.mode === 'neck' ? 'Shapes all over the neck, each one close to the last.' : 'Familiar shapes, including barre chords, close to each other.';
     $('easy-note').textContent = en;
     $('tempo').value = Settings.tempo; this.tempoLabel();
     this.setSeg('seg-strict', Settings.strict);
@@ -272,9 +459,9 @@ const UI = {
     const cl = $('chord-list'); cl.textContent = '';
     ch.unique.forEach(u => {
       const d = document.createElement('div'); d.className = 'cbox';
-      d.innerHTML = `<b>${esc(u.label)}</b>${miniDiagram(u.v, ch.capo)}<small>${ch.capo ? 'sounds ' + esc(u.sounds) : u.v.simplified ? 'easy version' : 'tap to hear'}</small>`;
+      d.innerHTML = `<b>${esc(u.label)}</b>${miniDiagram(u.v, ch.capo)}<small>${[u.where, ch.capo ? 'sounds ' + esc(u.sounds) : 'tap to hear'].filter(Boolean).join(' · ')}</small>`;
       d.title = 'Hear ' + u.label; d.style.cursor = 'pointer';
-      d.addEventListener('click', () => AudioEngine.playChord(soundingNotes(u.v, ch.capo).map(n => n.midi), u.label || d.textContent));
+      d.addEventListener('click', () => AudioEngine.playChord(soundingNotes(u.v, ch.capo), u.label + '|' + u.v.frets.join(',')));
       cl.appendChild(d);
     });
     $('chord-count').textContent = `${ch.unique.length} chord${ch.unique.length === 1 ? '' : 's'} · tap: strum · tap again: arpeggio`;
@@ -282,11 +469,21 @@ const UI = {
     ch.sections.forEach((sec, si) => {
       const row = document.createElement('div'); row.className = 'row';
       const evs = ch.events.filter(e => e.sec === si);
-      row.innerHTML = `<b>${esc(sec.name)}</b><div class="bars">${evs.map(e => `<span class="bar" title="${esc(e.rest ? 'Rest' : e.label)} · ${e.len} beats" style="background:${e.rest ? '#fff' : cardColor(e.label)};color:${e.rest ? COL.ink : textOn(cardColor(e.label))}">${e.rest ? '·' : esc(e.label)}</span>`).join('')}</div>`;
+      const conf = s.sections[si] && s.sections[si].conf;
+      row.innerHTML = `<b>${esc(sec.name)}${conf && conf !== 'high' ? `<small>${conf === 'low' ? 'unsure' : 'mostly sure'}</small>` : ''}</b><div class="bars">${evs.map(e => `<span class="bar" title="${esc(e.rest ? 'Rest' : e.label)} · ${e.len} beats" style="background:${e.rest ? '#fff' : cardColor(e.label)};color:${e.rest ? COL.ink : textOn(cardColor(e.label))}">${e.rest ? '·' : esc(e.label)}</span>`).join('')}</div>`;
       map.appendChild(row);
     });
     const best = Store.get('best', {})[s.id];
     $('best-score').textContent = best ? `Best: ${best.score.toLocaleString()} (${best.grade})` : '';
+  },
+  host(u){ try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } },
+  // reopen the confirm screen for a saved chart (answers can be changed)
+  async reviewChart(s){
+    const v = await this.confirmChart(s, null);
+    if (!v) return;
+    const song = validateSong(v, v.prov && v.prov.src === 'web' ? 'web' : 'dataset');
+    if (song.trackId) Chart.remember({ trackId: song.trackId }, song);
+    this.saveMine(song); this.renderLists(); this.openSong(song, this.storyCtx);
   },
   setSeg(id, v){ const e = $(id); if (e.tagName === 'SELECT') { e.value = String(v); return; } e.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(v)))); },
   tempoLabel(){ $('tempo-val').textContent = Settings.tempo + '%'; $('tempo-bpm').textContent = this.song ? `${Math.round(this.song.bpm * Settings.tempo / 100)} BPM` : ''; },
@@ -300,19 +497,24 @@ const UI = {
     await this.show('game');
     await new Promise(r => requestAnimationFrame(r));
     Stage.resize();
-    const ok = G.start(this.chart, mode, { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
+    // Story levels fix the rules and paint the era's stage
+    const t = Story.tier(), L = Story.level();
+    Stage.scene = t && L ? L.scene : null;
+    const ok = G.start(this.chart, mode, t ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+      : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
     if (!ok) { this.show('song'); }
   },
   hudUpdate(){
     $('hud-title').textContent = this.song ? this.song.title : '';
-    const tempo = Settings.tempo !== 100 ? ` · ${Settings.tempo}% tempo` : '';
+    const tp = G.opts && G.opts.tempo || Settings.tempo, tempo = tp !== 100 ? ` · ${tp}% tempo` : '';
+    const where = this.storyCtx ? `Story · Level ${this.storyCtx.li + 1}` : '';
     if (G.mode === 'practice') {
-      $('hud-sub').textContent = 'Practice' + tempo + (G.opts && G.opts.loop ? ' · looping' : '');
+      $('hud-sub').textContent = (where ? where + ' · practice' : 'Practice') + tempo + (G.opts && G.opts.loop ? ' · looping' : '');
       $('hud-score').textContent = `${Math.min(G.idx + 1, G.list.length)}/${G.list.length}`;
       $('hud-score-l').textContent = (G.streak >= 2 ? `streak ${G.streak}` : 'chord') + (G.laps ? ` · lap ${G.laps + 1}` : '');
       $('btn-skip').hidden = false;
     } else {
-      $('hud-sub').textContent = 'Stage' + tempo;
+      $('hud-sub').textContent = (where || 'Stage') + tempo;
       const sc = $('hud-score'), txt = G.score.toLocaleString();
       if (sc.textContent !== txt) { sc.textContent = txt; sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
       const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
@@ -369,7 +571,7 @@ const UI = {
     if (r.mode === 'stage') {
       $('res-grade').textContent = r.grade;
       $('res-title').textContent = r.title;
-      $('res-sub').textContent = `${ch.song.title} · Stage${r.tempo !== 100 ? ' at ' + r.tempo + '% tempo' : ''}${r.tap ? ' · tap mode (timing only)' : ''}${r.newBest ? ' · New best!' : ''}`;
+      $('res-sub').textContent = `${ch.song.title} · ${this.storyCtx ? 'Story level ' + (this.storyCtx.li + 1) : 'Stage'}${r.tempo !== 100 ? ' at ' + r.tempo + '% tempo' : ''}${r.tap ? ' · tap mode (timing only)' : ''}${r.newBest ? ' · New best!' : ''}`;
       const c = r.counts;
       const stats = [['Score', r.score], ['Accuracy', Math.round(r.acc * 100) + '%'], ...(r.tap ? [] : [['Notes heard', Math.round(r.noteAcc * 100) + '%']]),
         ['Best combo', r.maxCombo], ['Top hype', LEVEL_NAMES[r.topLevel || 0]], ['Perfect', c.perfect], ['Great', c.great], ['Good', c.good + c.ok], ['Missed', c.miss]];
@@ -384,8 +586,15 @@ const UI = {
       $('res-stats').innerHTML = stats.map(([l, v]) => `<div class="stat"><b class="${/^[\d,.%]+$/.test(String(v)) ? '' : 'txt'}">${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
       $('res-tough').innerHTML = r.tough.length && !r.tap ? `<div class="tip"><b>Slowest changes:</b> ${r.tough.map(t => `${esc(t.label)} (${t.avg.toFixed(1)}s)`).join(' · ')}. Speed comes with repetition, so loop the section that has them.</div>` : '';
     }
+    // story mode: record the run, say what it means for the career
+    const so = this.storyCtx ? Story.record(r) : null, rs = $('res-story');
+    this.resStory = so;
+    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : null;
+    rs.hidden = !sr; rs.className = 'res-story' + (sr && sr.big ? ' big' : ''); rs.innerHTML = sr ? sr.html : '';
+    $('btn-res-home').hidden = !!this.storyCtx; $('btn-res-career').hidden = !this.storyCtx;
     Music.fanfareNext();
     this.show('results').then(() => {
+      if (so && (so.levelClear || so.mastered)) setTimeout(() => { Fx.confetti(320); Sfx.stamp(); }, 900);
       setTimeout(() => { Sfx.stamp(); }, 380);
       const good = r.mode === 'practice' || ['S', 'A', 'B'].includes(r.grade);
       if (good) setTimeout(() => Fx.confetti(r.grade === 'S' ? 260 : 150), 420);
@@ -410,6 +619,7 @@ const UI = {
     if (!this.openModal) return;
     if (!quiet) Sfx.modalClose();
     const id = this.openModal; $(id).hidden = true; this.openModal = null;
+    if (id === 'm-confirm' && this._cfResolve) this._cfResolve();
     if (id === 'm-pause' && G.paused) G.resume();
     if (id === 'm-mic' && this.screen === 'game' && G.paused) this.open('m-pause');
   },
@@ -505,18 +715,19 @@ const UI = {
     const m = hzToMidi(p.f), n = Math.round(m), cents = Math.round((m - n) * 100);
     $(ids.note).textContent = noteName(n);
     let si = -1, bd = 99;
-    if (lockString != null) { si = lockString; bd = Math.abs(OPEN_MIDI[si] - m); }
-    else OPEN_MIDI.forEach((o, i) => { if (Math.abs(o - m) < bd) { bd = Math.abs(o - m); si = i; } });
+    const OM = this.tuneTargets();
+    if (lockString != null) { si = lockString; bd = Math.abs(OM[si] - m); }
+    else OM.forEach((o, i) => { if (Math.abs(o - m) < bd) { bd = Math.abs(o - m); si = i; } });
     const label = i => STRING_NAMES[i] === 'e' ? 'High e' : i === 0 ? 'Low E' : STRING_NAMES[i];
     if (si >= 0 && bd <= 1.5) {
-      const c = Math.round((m - OPEN_MIDI[si]) * 100);
+      const c = Math.round((m - OM[si]) * 100);
       $(ids.needle).style.left = (50 + Math.max(-50, Math.min(50, c))) + '%';
       $(ids.text).textContent = `${label(si)} string: ` + (Math.abs(c) <= 5 ? 'in tune ✓' : c > 0 ? `${c} cents sharp. Loosen it a little.` : `${-c} cents flat. Tighten it a little.`);
       return { string: si, cents: c };
     }
     if (si >= 0 && lockString != null) {
-      $(ids.needle).style.left = (m > OPEN_MIDI[si] ? 100 : 0) + '%';
-      $(ids.text).textContent = `${label(si)} string is way ${m > OPEN_MIDI[si] ? 'too high. Loosen it' : 'too low. Tighten it'} until it sounds like ${midiName(OPEN_MIDI[si])}.`;
+      $(ids.needle).style.left = (m > OM[si] ? 100 : 0) + '%';
+      $(ids.text).textContent = `${label(si)} string is way ${m > OM[si] ? 'too high. Loosen it' : 'too low. Tighten it'} until it sounds like ${midiName(OM[si], this.song && this.song.tuning)}.`;
       return null;
     }
     $(ids.needle).style.left = (50 + cents) + '%';
@@ -538,12 +749,14 @@ const UI = {
       ? 'Pluck one string at a time and let it ring. Each string turns green once it’s in tune. Tap a string to hear its target note.'
       : (this.inViewer ? 'This page can’t use the microphone, so tune by ear: tap a string below to hear its note, then match your guitar to it.' : 'The mic is off, so tune by ear: tap a string to hear its note and match your guitar to it. Turn on the mic for the needle tuner.');
   },
+  // standard tuning, or the open song's (tuned down a half or whole step)
+  tuneTargets(){ const t = this.screen !== 'title' && this.song && this.song.tuning || 0; return OPEN_MIDI.map(m => m + t); },
   renderTuneStrings(){
     const box = $('tune2-strings'); box.textContent = '';
-    OPEN_MIDI.forEach((midi, i) => {
+    this.tuneTargets().forEach((midi, i) => {
       const b = document.createElement('button'); b.type = 'button';
       b.className = 'sbtn' + (this.tuneOk[i] ? ' ok' : '') + (this.tuneLock === i ? ' active' : '');
-      b.innerHTML = `<b>${STRING_NAMES[i]}</b><small>${midiName(midi)}${this.tuneOk[i] ? ' ✓' : ''}</small>`;
+      b.innerHTML = `<b>${STRING_NAMES[i]}</b><small>${midiName(midi, midi !== OPEN_MIDI[i])}${this.tuneOk[i] ? ' ✓' : ''}</small>`;
       b.setAttribute('aria-label', `${midiName(midi)} string${this.tuneOk[i] ? ', in tune' : ''}. Play reference note`);
       b.onclick = () => { AudioEngine.strum([midi]); this.tuneLock = this.tuneLock === i ? null : i; this.renderTuneStrings(); };
       box.appendChild(b);
@@ -633,7 +846,7 @@ const UI = {
     const ctl = new AbortController();
     $('imp-ai-msg').textContent = 'Asking Claude for the tempo and groove…'; $('btn-imp-ai').disabled = true;
     try {
-      const d = await this.askClaude(grooveFillPrompt(title, $('imp-artist').value.trim()), ctl.signal, 'default');
+      const d = await this.askClaude(grooveFillPrompt(title, $('imp-artist').value.trim()), ctl.signal, 'default', { kind: 'groove', body: { title, artist: $('imp-artist').value.trim() } });
       if (d && d.bpm) $('imp-bpm').value = Math.round(clampNum(d.bpm, 40, 240, 100));
       if (d && TIMES.includes(d.time)) $('imp-time').value = d.time;
       if (d && STYLES.includes(d.style)) $('imp-style').value = d.style;
@@ -685,11 +898,11 @@ const UI = {
     $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
     $('btn-paste').onclick = () => this.openCode('paste');
     $('btn-import').onclick = () => this.openImport(null);
-    $('btn-song-back').onclick = () => { this.show('title'); };
+    $('btn-song-back').onclick = () => { if (this.storyCtx) Story.openCareer(this.storyCtx.careerId); else this.show('title'); };
     $('btn-song-code').onclick = () => this.openCode('show');
     $('btn-practice').onclick = () => this.startGame('practice');
     $('btn-stage').onclick = () => this.startGame('stage');
-    $('seg-easy').addEventListener('change', e => { Settings.easy = e.target.value === '1'; saveSettings(); this.recompile(); this.renderSong(); });
+    $('seg-easy').addEventListener('change', e => { Settings.shapes = e.target.value; Settings.easy = e.target.value === 'easy'; saveSettings(); this.recompile(); this.renderSong(); });
     $('seg-view').addEventListener('change', e => { Settings.fbView = e.target.value; saveSettings(); this.renderSong(); });
     $('chk-notes').onchange = e => { Settings.showNotes = e.target.checked; saveSettings(); if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) Fretboard.render(ev, this.chart.capo, Settings.lefty); } };
     $('btn-tune-title').onclick = () => this.openTune(null);
@@ -704,12 +917,12 @@ const UI = {
     $('btn-resume').onclick = () => this.closeModal();
     $('btn-restart').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.startGame(G.mode, true); };
     $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.show('song'); this.renderSong(); };
-    $('btn-hear').onclick = () => { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev && ev.notes) { const how = AudioEngine.playChord(ev.notes.map(n => n.midi), 'now:' + ev.label); const b = $('btn-hear'); b.dataset.next = how === 'strum' ? 'arpeggio' : 'strum'; b.querySelector('small') && (b.querySelector('small').textContent = how === 'strum' ? 'tap again: arpeggio' : 'tap again: strum'); } };
+    $('btn-hear').onclick = () => { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev && ev.notes) { const how = AudioEngine.playChord(ev.notes, 'now:' + ev.label + '|' + ev.v.frets.join(',')); const b = $('btn-hear'); b.dataset.next = how === 'strum' ? 'arpeggio' : 'strum'; b.querySelector('small') && (b.querySelector('small').textContent = how === 'strum' ? 'tap again: arpeggio' : 'tap again: strum'); } };
     $('btn-skip').onclick = () => G.skip();
     // redraw the fretboard when the layout switches between phone and wide (e.g. rotating the phone)
     let fbCompact = null, rt = 0;
     window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => {
-      const c = innerWidth < 560 || ($('fretboard').getBoundingClientRect().width || 1000) < 560;
+      const c = (innerWidth < 560 ? 'n' : '') + Fretboard.fretsToShow();
       if (c === fbCompact) return; fbCompact = c;
       if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty); G.fbKey = null; } }
     }, 150); });
@@ -717,6 +930,7 @@ const UI = {
     $('btn-again').onclick = () => this.startGame(G.mode, true);
     $('btn-res-song').onclick = () => { this.show('song'); this.renderSong(); };
     $('btn-res-home').onclick = () => this.show('title');
+    $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li < 2 ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
     // modals
@@ -754,8 +968,9 @@ const UI = {
       if (el.dataset.sfx === 'back') Sfx.back(); else if (el.closest('.seg')) Sfx.toggle(); else Sfx.click();
     }, true);
     $('api-key').onchange = e => { Settings.apiKey = e.target.value.trim(); saveSettings(); this.refreshEnv(); };
-    $('api-model').onchange = e => { Settings.apiModel = e.target.value.trim() || 'claude-sonnet-4-5'; saveSettings(); };
+    $('api-model').onchange = e => { Settings.apiModel = e.target.value.trim() || 'claude-sonnet-5'; saveSettings(); };
     $('btn-clear-mine').onclick = () => { Store.set('mine', []); this.renderLists(); $('btn-clear-mine').textContent = 'Cleared'; };
+    $('btn-clear-charts').onclick = () => { Store.set('charts', {}); $('btn-clear-charts').textContent = 'Forgotten: songs will be looked up again'; };
     // code + import
     $('btn-code-act').onclick = () => this.codeAction();
     let t = 0;
@@ -781,7 +996,7 @@ const UI = {
   loop(){
     this.frameN++;
     try {
-      Music.update(!Splash.on && ['title', 'song', 'results'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
+      Music.update(!Splash.on && ['title', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
@@ -803,8 +1018,9 @@ function parseJsonLoose(text){
   try { return JSON.parse(t); } catch (e) {}
   const fence = /```(?:json)?\s*([\s\S]*?)```/.exec(t);
   if (fence) { try { return JSON.parse(fence[1]); } catch (e) {} }
-  const a = t.indexOf('{'), b = t.lastIndexOf('}');
-  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  const b = t.lastIndexOf('}');
+  // the answer is the last complete JSON object (notes written before it may contain braces of their own)
+  for (let a = t.indexOf('{'); a >= 0 && a < b; a = t.indexOf('{', a + 1)) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
   throw Object.assign(new Error('Unreadable chart'), { code: 'invalid_json' });
 }
 

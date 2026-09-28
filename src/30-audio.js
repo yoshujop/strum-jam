@@ -73,28 +73,81 @@ const AudioEngine = (() => {
     click(t, accent){ tone(t, 'sine', accent ? 2637 : 1976, 0, accent ? 0.5 : 0.32, 0.035, clickBus); },   // above the guitar's range
     sticks(t){ tone(t, 'triangle', 2500, 2400, 0.4, 0.04, clickBus); tone(t, 'sine', 1250, 1200, 0.2, 0.03, clickBus); },
   };
-  function pluckBuffer(midi){
-    if (pluckCache.has(midi)) return pluckCache.get(midi);
-    const sr = ctx.sampleRate, f = midiToHz(midi), N = Math.max(2, Math.round(sr / f)), len = Math.round(sr * 2.4);
-    const buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
-    const ring = new Float32Array(N);
-    let p = 0; for (let i = 0; i < N; i++) { const r = Math.random() * 2 - 1; p = p * 0.55 + r * 0.45; ring[i] = p; }
-    const decay = 0.9975 - Math.max(0, midi - 52) * 0.00012;
-    let idx = 0;
-    for (let i = 0; i < len; i++) { const a = ring[idx], b = ring[(idx + 1) % N]; ring[idx] = decay * 0.5 * (a + b); d[i] = a; idx = (idx + 1) % N; }
-    pluckCache.set(midi, buf);
+  /* ---- acoustic guitar: one physically modelled string per note (extended Karplus-Strong: tuned with an
+     all-pass fractional delay, plucked about an eighth of the way from the bridge, wound strings darker and
+     longer-ringing), then a steel-string guitar body (the air resonance near 100 Hz and the top-plate modes)
+     and a small room. A strum rolls across the strings of the exact shape on screen, low to high. ---- */
+  let gtrIn = null;
+  function guitarBus(){
+    if (gtrIn) return gtrIn;
+    const sr = ctx.sampleRate, len = Math.round(sr * 1.1), ir = ctx.createBuffer(2, len, sr);
+    const modes = [[98, 1.0, 0.07], [118, 0.45, 0.05], [196, 0.8, 0.05], [245, 0.35, 0.04], [290, 0.45, 0.035], [405, 0.55, 0.03], [520, 0.35, 0.025],
+      [690, 0.3, 0.02], [880, 0.22, 0.016], [1150, 0.2, 0.012], [1600, 0.14, 0.009], [2400, 0.1, 0.006]];
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      d[0] = 1.2;
+      for (const [f, a, tau] of modes) { const ff = f * (ch ? 1.012 : 0.994), w = 2 * Math.PI * ff / sr, ph = Math.random() * 0.4; for (let i = 0; i < Math.min(len, sr * tau * 7); i++) d[i] += a * 0.09 * Math.exp(-i / (sr * tau)) * Math.sin(w * i + ph); }
+      // wood texture + a short, soft room
+      let lp = 0; for (let i = 0; i < len; i++) { const r = Math.random() * 2 - 1; lp = lp * 0.72 + r * 0.28; d[i] += lp * (0.05 * Math.exp(-i / (sr * 0.012)) + 0.018 * Math.exp(-i / (sr * 0.32)) * Math.min(1, i / (sr * 0.01))); }
+    }
+    const conv = ctx.createConvolver(); conv.normalize = true; conv.buffer = ir;
+    const dry = ctx.createGain(); dry.gain.value = 0.55;
+    const wet = ctx.createGain(); wet.gain.value = 0.9;
+    const tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 7200; tone.Q.value = 0.5;
+    const out = ctx.createGain(); out.gain.value = 1;
+    gtrIn = ctx.createGain(); gtrIn.gain.value = 1;
+    gtrIn.connect(dry).connect(tone); gtrIn.connect(conv).connect(wet).connect(tone);
+    tone.connect(out).connect(sfxBus);
+    return gtrIn;
+  }
+  function pluckBuffer(midi, string, vel){
+    string = string == null ? (midi < 50 ? 0 : midi < 55 ? 1 : midi < 59 ? 2 : midi < 64 ? 3 : midi < 69 ? 4 : 5) : string;
+    vel = vel == null ? 0.8 : vel;
+    const key = midi + '|' + string + '|' + Math.round(vel * 4);
+    if (pluckCache.has(key)) return pluckCache.get(key);
+    const sr = ctx.sampleRate, f = midiToHz(midi), wound = string <= 2;
+    const t60 = (wound ? 5.2 : 3.4) * Math.pow(110 / f, 0.35);          // lower notes ring longer
+    const len = Math.round(sr * Math.min(4.5, t60 * 0.9 + 0.4));
+    const buf = ctx.createBuffer(1, len, sr), out = buf.getChannelData(0);
+    // loop delay: N whole samples + an all-pass for the fraction (+ 0.5 for the averaging filter) = exactly sr / f
+    const L = sr / f, N = Math.max(2, Math.floor(L - 0.5 - 0.1)), dfrac = L - 0.5 - N, C = (1 - dfrac) / (1 + dfrac);
+    const rho = Math.pow(10, -3 / (t60 * f));                           // loss per trip round the string
+    const S = wound ? 0.5 : 0.5;
+    // excitation: a pick's noise burst, brighter when played harder, with the comb of the pluck point
+    const line = new Float32Array(N), bright = 0.35 + 0.5 * vel - (wound ? 0.12 : 0);
+    let lp = 0; for (let i = 0; i < N; i++) { const r = Math.random() * 2 - 1; lp = lp + bright * (r - lp); line[i] = lp; }
+    const pp = Math.max(1, Math.round(N * 0.13)), ex = new Float32Array(N);
+    for (let i = 0; i < N; i++) ex[i] = line[i] - (i >= pp ? line[i - pp] : 0);
+    let mean = 0; for (let i = 0; i < N; i++) mean += ex[i]; mean /= N;
+    for (let i = 0; i < N; i++) line[i] = (ex[i] - mean) * vel;
+    let idx = 0, prev = 0, apx = 0, apy = 0;
+    for (let i = 0; i < len; i++) {
+      const x = line[idx];
+      const avg = (1 - S) * x + S * prev; prev = x;              // string losses (highs die first)
+      const y = C * (avg - apy) + apx; apx = avg; apy = y;      // fractional delay, tunes the string exactly
+      line[idx] = y * rho;
+      out[i] = x;
+      idx = idx + 1 === N ? 0 : idx + 1;
+    }
+    // a little attack click from the pick, and a fade at the end
+    for (let i = 0; i < Math.min(len, 64); i++) out[i] += (Math.random() * 2 - 1) * 0.05 * vel * (1 - i / 64);
+    const fade = Math.round(sr * 0.08); for (let i = 0; i < fade; i++) out[len - 1 - i] *= i / fade;
+    pluckCache.set(key, buf);
     return buf;
   }
-  function strum(midis, t, gap = 0.028){
+  // notes: midis low -> high, or [{midi, string}] from the shape on screen
+  function strum(midis, t, gap = 0.016, vel = 0.85){
     ensure();
     t = t || ctx.currentTime + 0.03;
+    const notes = midis.map((m, i) => typeof m === 'object' ? m : { midi: m, string: null });
     // the game's own guitar mustn't count as the player's: ignore it while it rings
-    if (typeof Mic !== 'undefined') { Mic.muteUntil = Math.max(Mic.muteUntil, t + midis.length * gap + 0.2); Mic.deafUntil = Math.max(Mic.deafUntil, t + (Settings.headphones ? 0.4 : 2.45)); }
-    midis.forEach((m, i) => {
-      const src = ctx.createBufferSource(); src.buffer = pluckBuffer(m);
-      const g = ctx.createGain(); g.gain.value = 0.32;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200;
-      src.connect(lp).connect(g).connect(sfxBus); src.start(t + i * gap);
+    if (typeof Mic !== 'undefined') { Mic.muteUntil = Math.max(Mic.muteUntil, t + notes.length * gap + 0.2); Mic.deafUntil = Math.max(Mic.deafUntil, t + (Settings.headphones ? 0.4 : 2.45)); }
+    const bus = guitarBus();
+    notes.forEach((n, i) => {
+      const v = Math.max(0.35, vel * (1 - i * 0.035) * (0.92 + Math.random() * 0.12));
+      const src = ctx.createBufferSource(); src.buffer = pluckBuffer(n.midi, n.string, v);
+      const g = ctx.createGain(); g.gain.value = 0.42;
+      src.connect(g).connect(bus); src.start(t + i * gap * (0.85 + Math.random() * 0.3));
     });
   }
   // quick dip of the background music while a chord preview rings, then back up
@@ -106,13 +159,13 @@ const AudioEngine = (() => {
   function arpeggio(midis, t, step = 0.2){
     ensure(); t = t || ctx.currentTime + 0.03;
     const order = midis.concat(midis.slice(1, -1).reverse());
-    order.forEach((m, i) => strum([m], t + i * step, 0));
+    order.forEach((m, i) => strum([m], t + i * step, 0, 0.7));
     return order.length * step;
   }
   // tap a chord: strum; tap the same chord again: arpeggio; keeps alternating
   function playChord(midis, key){
     ensure(); if (!midis || !midis.length) return;
-    key = key || midis.join(',');
+    key = key || midis.map(m => typeof m === 'object' ? m.midi : m).join(',');
     const now = ctx.currentTime;
     if (chordTaps.key === key && now - chordTaps.at < 30) chordTaps.n++; else chordTaps = { key, n: 0, at: now };
     chordTaps.at = now;

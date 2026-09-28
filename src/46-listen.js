@@ -89,7 +89,35 @@ const Listen = {
     }
     return y;
   },
+  // run the model over a whole clip (a song preview): overlapping 2 s windows, keep each window's middle
+  pend: new Map(),
+  async batch(x, onProgress){
+    if (!this.ready) { if (!this.loading) this.init(); for (let i = 0; i < 400 && !this.ready && !this.failed; i++) await new Promise(r => setTimeout(r, 100)); }
+    if (!this.ready) throw Object.assign(new Error('The note model isn’t available here.'), { code: 'no_model' });
+    const NS = this.NS, H = 256, pad = 30 * H, hop = NS - 2 * pad, F = Math.ceil(x.length / H);
+    const note = new Float32Array(F * 88), onset = new Float32Array(F * 88);
+    const nWin = Math.ceil((x.length + pad) / hop); let k = 0;
+    for (let pos = -pad; pos < x.length; pos += hop) {
+      const w = new Float32Array(NS);
+      for (let i = 0; i < NS; i++) { const j = pos + i; if (j >= 0 && j < x.length) w[i] = x[j]; }
+      const d = await new Promise((res, rej) => {
+        const id = ++this.runId; this.pend.set(id, res);
+        this.worker.postMessage({ type: 'run', id, audio: w, tEnd: 0 }, [w.buffer]);
+        setTimeout(() => { if (this.pend.has(id)) { this.pend.delete(id); rej(new Error('The note model timed out.')); } }, 30000);
+      });
+      const nf = d.f.length / 88, first = pos <= -pad, last = pos + hop >= x.length;
+      for (let i = 0; i < nf; i++) {
+        const g = Math.round((pos + i * H) / H); if (g < 0 || g >= F) continue;
+        const edge = Math.min(i, nf - 1 - i);
+        if (edge < 30 && !(first && i < 30) && !(last && i > nf - 31)) continue;
+        note.set(d.f.subarray(i * 88, i * 88 + 88), g * 88); onset.set(d.o.subarray(i * 88, i * 88 + 88), g * 88);
+      }
+      if (onProgress) onProgress(++k / nWin);
+    }
+    return { note, onset, F };
+  },
   onResult(d){
+    if (d.type === 'out' && this.pend.has(d.id)) { const r = this.pend.get(d.id); this.pend.delete(d.id); r(d); return; }
     this.busy = false;
     if (d.type !== 'out') return;
     this.ms = this.ms * 0.8 + d.ms * 0.2;
