@@ -17,7 +17,8 @@ test harness, and the TODO list in priority order.
 - `vendor/`: TF.js + Spotify Basic Pitch model, plus the chord data read by `25-lookup.js`/`26-chart.js`
   (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`), all embedded into the build.
 - `test/`, `ref/`: Playwright/Node test and render scripts (see HANDOFF.md "Test harness bits").
-- `index.html` at the root is what GitHub Pages serves (https://yoshujop.github.io/strum-jam/).
+- `.github/workflows/pages.yml` builds `src/` on every push to `main` and publishes `dist/strum-jam.html` as the
+  site (https://yoshujop.github.io/strum-jam/). The root `index.html` is the old hand-uploaded build, kept for reference.
   `src/` was recovered from it (Story mode, the chart pipeline); at that commit it rebuilt it byte-for-byte
   with `python3 build.py "https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39"`. The source zip was older
   than the live build; HANDOFF.md predates Story mode and the chart pipeline.
