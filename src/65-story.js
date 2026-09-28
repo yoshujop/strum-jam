@@ -397,8 +397,8 @@ const Story = {
     const target = this.fresh;
     this.renderCareer();
     UI.show('story').then(() => {
-      const el = target >= 0 && document.querySelectorAll('#story-levels .lvl')[target];
-      if (el) setTimeout(() => { el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); Sfx.found(); }, 250);
+      const el = target >= 0 ? document.querySelectorAll('#story-levels .era')[target] : document.querySelector('#story-levels .stop.next');
+      if (el) setTimeout(() => { el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: target >= 0 ? 'start' : 'center' }); if (target >= 0) Sfx.found(); }, 250);
     });
   },
   renderCareer(){
@@ -415,50 +415,83 @@ const Story = {
     note.textContent = c.v !== 2 ? 'This career was built before songs were checked against real chord charts and discographies. Rebuild it (below) for checked eras and guitar-friendly picks.'
       : `${c.artist} doesn’t have many guitar-friendly songs, so these are the most playable ones that passed the chord check.`;
     const box = $('story-levels'); box.textContent = '';
+    // the roadmap: one region per era (its stage as the backdrop), a road winding through the songs,
+    // a gate between eras, the trophy at the end
+    const next = this.nextStop(c);
+    let g = 0;
     c.levels.forEach((L, li) => {
       const tier = STORY_TIERS[li], open = this.levelOpen(c, li), done = this.levelDone(c, li);
-      const el = document.createElement('section'); el.className = 'lvl' + (open ? '' : ' locked') + (this.fresh === li ? ' fresh' : '');
+      const el = document.createElement('section'); el.className = 'era' + (open ? '' : ' locked') + (done ? ' done' : '') + (this.fresh === li ? ' fresh' : '');
       el.setAttribute('aria-label', `Level ${li + 1}: ${L.name}${open ? '' : ', locked'}`);
-      el.innerHTML = `<div class="art"><img alt="" src="${Scenes.dataUrl(L.scene, 1000, 312, { floorY: 262 })}"><div class="ov">
-          <div class="tagrow"><span class="ltag t${li + 1}">LEVEL ${li + 1} · ${tier.name.toUpperCase()}</span>${done ? '<span class="ltag done">CLEARED ✓</span>' : this.fresh === li ? '<span class="ltag done">UNLOCKED!</span>' : ''}</div>
-          <div><div class="yrs">${esc(L.years)}</div><h2 class="nm">${esc(L.name)}</h2></div></div>
-          ${open ? '' : `<div class="lock">🔒 Clear Level ${li} to unlock</div>`}</div>
-        <div class="info">${L.albums.length ? `<div class="albums">${L.albums.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : ''}${L.blurb ? `<p class="blurb">${esc(L.blurb)}</p>` : ''}${L.few ? `<p class="few">Only ${L.few} song${L.few === 1 ? '' : 's'} from this era passed the chord check, so this level is shorter.</p>` : ''}<div class="rules">${esc(tier.rules)}</div></div>
-        <div class="songs"></div>`;
-      const songs = el.querySelector('.songs');
-      L.songs.forEach((s, si) => songs.appendChild(this.tile(c, li, si, open)));
+      const pal = L.scene.palette || ['#2E3A5C', '#FFCE3A', '#FF5E7E'];
+      el.style.setProperty('--era-a', pal[1]); el.style.setProperty('--era-b', pal[2]);
+      const STEP = window.innerWidth < 560 ? 208 : 168, top = 30, h = top + L.songs.length * STEP + 10;
+      const xs = L.songs.map((s, si) => ((g + si) % 2 ? 76 : 24));
+      el.innerHTML = `<div class="era-bg" style="background-image:url('${Scenes.dataUrl(L.scene, 1000, 760, { floorY: 640 })}')"></div>
+        <header class="era-card">
+          <div class="tagrow"><span class="ltag t${li + 1}">LEVEL ${li + 1} · ${tier.name.toUpperCase()}</span>${done ? '<span class="ltag done">CLEARED ✓</span>' : this.fresh === li ? '<span class="ltag done">UNLOCKED!</span>' : ''}<span class="need">Clear with a ${tier.pass} or better</span></div>
+          <div class="yrs">${esc(L.years)}</div><h2 class="nm">${esc(L.name)}</h2>
+          ${L.albums.length ? `<div class="albums">${L.albums.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : ''}
+          ${L.blurb ? `<p class="blurb">${esc(L.blurb)}</p>` : ''}${L.few ? `<p class="few">Only ${L.few} song${L.few === 1 ? '' : 's'} from this era passed the chord check, so this level is shorter.</p>` : ''}
+          <div class="rules">${esc(tier.rules)}</div>
+        </header>
+        <div class="road" style="height:${h}px">
+          <svg class="road-svg" viewBox="0 0 1000 ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d=""/><path class="road-top" d=""/><path class="road-line" d=""/></svg>
+        </div>`;
+      const road = el.querySelector('.road');
+      const pts = xs.map((x, si) => [x * 10, top + si * STEP + 42]);
+      // the road comes in from the top of the region, snakes through each stop and leaves at the bottom
+      const d = [`M ${pts[0][0]} 0`, `L ${pts[0][0]} ${pts[0][1]}`];
+      for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], my = (y0 + y1) / 2; d.push(`C ${x0} ${my}, ${x1} ${my}, ${x1} ${y1}`); }
+      d.push(`L ${pts[pts.length - 1][0]} ${h}`);
+      el.querySelectorAll('.road-svg path').forEach(p => p.setAttribute('d', d.join(' ')));
+      L.songs.forEach((s, si) => road.append(...this.stop(c, li, si, open, xs[si], top + si * STEP, next)));
+      g += L.songs.length;
       box.appendChild(el);
+      // the gate to the next era
+      if (li + 1 < c.levels.length) {
+        const gt = document.createElement('div'); gt.className = 'gate' + (done ? ' open' : '');
+        gt.innerHTML = done ? `<span>✓ Level ${li + 2} unlocked</span>` : `<span>🔒 Clear every song above to unlock Level ${li + 2}</span>`;
+        box.appendChild(gt);
+      }
     });
+    const fin = document.createElement('div'); fin.className = 'finale' + (this.mastered(c) ? ' won' : '');
+    fin.innerHTML = `<span class="trophy">🏆</span><b>${this.mastered(c) ? 'Career mastered!' : 'Master the career'}</b><small>${this.mastered(c) ? 'Now chase ★★★ on every song.' : `Clear all ${this.slots(c).length} songs`}</small>`;
+    box.appendChild(fin);
     this.fresh = -1;
   },
-  tile(c, li, si, open){
+  // the first song still to clear, in the furthest open level
+  nextStop(c){ for (let li = 0; li < c.levels.length; li++) { if (!this.levelOpen(c, li)) break; const si = c.levels[li].songs.findIndex((s, k) => !this.passed(c, li, k)); if (si >= 0) return li + '-' + si; } return ''; },
+  stop(c, li, si, open, x, y, next){
     const L = c.levels[li], s = L.songs[si], k = this.key(li, si), p = c.progress[k], passed = this.passed(c, li, si);
-    const w = document.createElement('div'); w.className = 'stile-w';
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'stile' + (passed ? ' passed' : '');
-    const busy = this.charting[c.id + k], working = busy === 'busy' || !!(busy && busy.step);
+    const busy = this.charting[c.id + k], working = busy === 'busy' || !!(busy && busy.step), isNext = next === k;
+    const w = document.createElement('div');
+    w.className = 'stop ' + (x < 50 ? 'l' : 'r') + (passed ? ' passed' : p ? ' tried' : '') + (!open ? ' locked' : '') + (isNext ? ' next' : '') + (working ? ' busy' : '') + (busy && busy.err ? ' err' : '');
+    w.style.setProperty('--x', x + '%'); w.style.top = y + 'px';
     let state;
     if (!open) state = '🔒 Locked';
     else if (working) state = '<span class="eq"><i></i><i></i><i></i><i></i></span> ' + esc(busy && busy.step || 'Looking up the chords…');
-    else if (busy && busy.err) state = busy.err;
-    else if (passed) state = `<span class="stars">${this.starStr(this.stars(c, li, si))}</span> · best ${esc(p.grade)}`;
+    else if (busy && busy.err) state = esc(busy.err);
+    else if (passed) state = `Cleared · best ${esc(p.grade)}`;
     else if (p) state = `Best ${esc(p.grade)} · need ${STORY_TIERS[li].pass}`;
-    else state = c.charts[k] ? '▶ Ready to play' : '▶ Play';
-    if (working) b.classList.add('busy'); if (busy && busy.err) b.classList.add('err');
-    b.innerHTML = `<span class="n">${si + 1}</span><span><div class="t">${esc(s.title)}</div><div class="a">${esc([s.album, s.year].filter(Boolean).join(' · '))}</div>${s.why ? `<div class="why">${esc(s.why)}</div>` : ''}<div class="st">${state}</div></span>`;
-    b.setAttribute('aria-label', `${s.title}. ${s.why ? s.why + '. ' : ''}${b.querySelector('.st').textContent}`);
-    w.appendChild(b);
-    if (Career.options(L).length) {
-      w.classList.add('can-swap');
-      const x = document.createElement('button'); x.type = 'button'; x.className = 'swap'; x.textContent = '⇄ Swap';
-      x.setAttribute('aria-label', `Swap ${s.title} for another song from this era`);
-      x.disabled = working;
-      x.onclick = () => { Sfx.open(); this.openSwap(c.id, li, si); };
-      w.appendChild(x);
-    }
-    if (!open) { b.setAttribute('aria-disabled', 'true'); b.onclick = () => Sfx.fail(); return w; }
-    b.onclick = () => this.playSong(c.id, li, si);
-    b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Sfx.hover(li * 3 + si); });
-    return w;
+    else state = isNext ? 'Up next' : 'Not played yet';
+    const face = !open ? '🔒' : passed ? '✓' : String(si + 1);
+    w.innerHTML = `${isNext ? '<span class="you">YOU ARE HERE</span>' : ''}
+      <button type="button" class="node" aria-label="${esc(s.title)}. ${esc(state.replace(/<[^>]+>/g, ''))}"><span>${face}</span></button>
+      ${passed ? `<span class="stars">${this.starStr(this.stars(c, li, si))}</span>` : ''}`;
+    // the label takes the rest of the road's width beside the stop
+    const lbl = document.createElement('div'); lbl.className = 'stop-lbl ' + (x < 50 ? 'l' : 'r') + (!open ? ' locked' : '');
+    lbl.style.top = (y - 4) + 'px'; lbl.style.setProperty('--x', x + '%');
+    lbl.innerHTML = `<b class="t">${esc(s.title)}</b><span class="a">${esc([s.album, s.year].filter(Boolean).join(' · '))}</span>${s.why ? `<i class="why">${esc(s.why)}</i>` : ''}<span class="st">${state}</span><span class="acts"></span>`;
+    const node = w.querySelector('.node'), acts = lbl.querySelector('.acts');
+    const addAct = (label, aria, fn, dis) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'swap'; b.textContent = label; b.setAttribute('aria-label', aria); b.disabled = !!dis; b.onclick = e => { e.stopPropagation(); Sfx.open(); fn(); }; acts.appendChild(b); };
+    if (open) { addAct('▶ Play', `Play ${s.title}`, () => this.playSong(c.id, li, si), working); acts.lastChild.classList.add('play'); }
+    if (Career.options(L).length) addAct('⇄ Swap', `Swap ${s.title} for another song from this era`, () => this.openSwap(c.id, li, si), working);
+    if (c.v === 2) addAct('✎ Pick', `Pick any song from this era instead of ${s.title}`, () => this.openPicker(c.id, li, si), working);
+    if (!open) { node.setAttribute('aria-disabled', 'true'); node.onclick = () => Sfx.fail(); return [w, lbl]; }
+    node.onclick = () => this.playSong(c.id, li, si);
+    node.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Sfx.hover(li * 3 + si); });
+    return [w, lbl];
   },
   /* ---------- swapping a song for another checked one from the same era ---------- */
   openSwap(id, li, si){
@@ -530,13 +563,31 @@ const Story = {
   /* ---------- during and after a song ---------- */
   tier(){ const x = UI.storyCtx; return x ? STORY_TIERS[x.li] : null; },
   level(){ const x = UI.storyCtx, c = x && this.get(x.careerId); return c ? c.levels[x.li] : null; },
+  // a Story song opens on its gig: the stage run that counts, what it takes to clear, and Practice beside it
   songStrip(){
     const x = UI.storyCtx, c = x && this.get(x.careerId), el = $('song-story');
     $('scr-song').classList.toggle('in-story', !!c);
     if (!c) { el.hidden = true; $('btn-song-back').textContent = '← Songs'; return; }
-    const L = c.levels[x.li], t = STORY_TIERS[x.li];
+    const L = c.levels[x.li], t = STORY_TIERS[x.li], s = L.songs[x.si], p = c.progress[this.key(x.li, x.si)], passed = this.passed(c, x.li, x.si);
     el.hidden = false; $('btn-song-back').textContent = '← Career';
-    el.innerHTML = `<img alt="" src="${Scenes.dataUrl(L.scene, 360, 150, { floorY: 126 })}"><div><b>${esc(c.artist)} · Level ${x.li + 1}: ${esc(L.name)}</b><p>Song ${x.si + 1} of ${L.songs.length}. Stage mode counts toward your career. ${esc(t.rules)}.</p></div>`;
+    const sub = [s.album, s.year].filter(Boolean).join(' · ');
+    el.innerHTML = `<div class="gig-art" style="background-image:url('${Scenes.dataUrl(L.scene, 1000, 420, { floorY: 360 })}')"></div>
+      <div class="gig-in">
+        <div class="gig-top"><span class="ltag t${x.li + 1}">LEVEL ${x.li + 1} · ${esc(L.name)}</span><span class="gig-n">Song ${x.si + 1} of ${L.songs.length}</span></div>
+        <h1 class="gig-title">${esc(UI.song ? UI.song.title : s.title)}</h1>
+        <div class="gig-by">${esc(c.artist)}${sub ? ' · ' + esc(sub) : ''}</div>
+        <div class="gig-goal">
+          <div class="need"><small>To clear</small><b>${t.pass}</b><span>or better</span></div>
+          <div class="best"><small>Your best</small><b>${p ? esc(p.grade) : '–'}</b><span class="stars">${this.starStr(this.stars(c, x.li, x.si))}</span></div>
+          <div class="rules">${esc(t.rules)}.${passed ? ' Cleared! Play again for more stars.' : ''}</div>
+        </div>
+        <div class="gig-go">
+          <button class="btn btn-go btn-big" type="button" id="btn-gig-stage">🎤 Take the stage</button>
+          <button class="btn" type="button" id="btn-gig-practice">Practice first <small>(doesn’t count)</small></button>
+        </div>
+      </div>`;
+    $('btn-gig-stage').onclick = () => UI.startGame('stage');
+    $('btn-gig-practice').onclick = () => UI.startGame('practice');
   },
   // called with a finished Stage run while a story song is open
   record(r){

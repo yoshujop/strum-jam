@@ -500,7 +500,8 @@ const UI = {
     // Story levels fix the rules and paint the era's stage
     const t = Story.tier(), L = Story.level();
     Stage.scene = t && L ? L.scene : null;
-    const ok = G.start(this.chart, mode, t ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+    const ok = G.start(this.chart, mode, t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+      : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
       : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
     if (!ok) { this.show('song'); }
   },
@@ -514,7 +515,7 @@ const UI = {
       $('hud-score-l').textContent = (G.streak >= 2 ? `streak ${G.streak}` : 'chord') + (G.laps ? ` · lap ${G.laps + 1}` : '');
       $('btn-skip').hidden = false;
     } else {
-      $('hud-sub').textContent = (where || 'Stage') + tempo;
+      $('hud-sub').textContent = (where ? where + ' · need ' + (Story.tier() || {}).pass : 'Stage') + tempo;
       const sc = $('hud-score'), txt = G.score.toLocaleString();
       if (sc.textContent !== txt) { sc.textContent = txt; sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
       const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
