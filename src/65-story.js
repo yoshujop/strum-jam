@@ -17,7 +17,7 @@ const STORY_TIERS = [
   { name: 'Medium', easy: true,  strict: 'normal',  tempo: 100, pass: 'B', rules: 'Easy chord shapes · normal note check · full tempo · pass with a B' },
   { name: 'Hard',   easy: false, strict: 'normal',  tempo: 100, pass: 'A', rules: 'The real chord shapes · normal note check · full tempo · pass with an A' },
 ];
-const GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+const GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1, F: 0 };
 
 const qt = x => String(x == null ? '' : x).replace(/"/g, "'");
 // the discography as Claude sees it: every album, its first release date and its tracklist
@@ -542,6 +542,7 @@ const Story = {
   record(r){
     const x = UI.storyCtx; if (!x || r.mode !== 'stage') return null;
     const c = this.get(x.careerId); if (!c) return null;
+    if (r.failed) return { c, li: x.li, si: x.si, failed: true, need: STORY_TIERS[x.li].pass };
     const k = this.key(x.li, x.si), before = { passed: this.passed(c, x.li, x.si), level: this.levelDone(c, x.li), master: this.mastered(c), stars: this.stars(c, x.li, x.si) };
     const old = c.progress[k];
     if (!old || GRADE_RANK[r.grade] > GRADE_RANK[old.grade] || (r.grade === old.grade && r.score > old.score)) c.progress[k] = { grade: r.grade, score: r.score, tap: !!r.tap };
@@ -553,6 +554,7 @@ const Story = {
   resultsHtml(o){
     if (!o) return '';
     const { c, li, si } = o, L = c.levels[li];
+    if (o.failed) return { html: `<b>Booed off stage</b><span>The crowd walked out. Run the song in Practice, then come back and get a ${o.need} or better.</span>` };
     if (o.mastered) return { big: true, html: `<b>Career mastered!</b><span>${c.levels.length > 1 ? `You played ${esc(c.artist)} from ${esc(c.levels[0].name)} to ${esc(c.levels[c.levels.length - 1].name)}.` : `You played all of ${esc(c.levels[0].name)}.`}</span><span class="stars">${this.starStr(o.stars)}</span>` };
     if (o.levelClear && c.levels[li + 1]) return { big: true, html: `<b>Level ${li + 1} cleared!</b><span>${esc(L.name)} is done. Level ${li + 2} unlocked: ${esc(c.levels[li + 1].name)}.</span><span class="stars">${this.starStr(o.stars)}</span>` };
     if (o.passedNow) return { html: `<b>${o.newPass ? 'Song cleared!' : o.moreStars ? 'New stars!' : 'Passed'}</b><span class="stars">${this.starStr(o.stars)}</span><span>${this.levelDone(c, li) ? 'This level is cleared. Chase more stars, or head back to the career.' : `${L.songs.filter((s, k) => !this.passed(c, li, k)).length} more in ${esc(L.name)} to ${li + 1 < c.levels.length ? 'unlock the next level' : 'master the career'}.`}</span>` };

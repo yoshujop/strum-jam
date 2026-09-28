@@ -4,7 +4,7 @@
 const PRAISE = ['GOT IT!', 'NICE!', 'SWEET!', 'YES!', 'CLEAN!', 'GROOVY!'];
 const G = {
   chart: null, mode: 'practice', running: false, paused: false, tapMode: false,
-  beatNow: 0, trackBeat: 0, trackEvents: [], sectionIndex: 0, capoText: '', strumSteps: null, countText: '', hype: 0,
+  beatNow: 0, trackBeat: 0, danger: 0, failed: false, trackEvents: [], sectionIndex: 0, capoText: '', strumSteps: null, countText: '', hype: 0,
   streak: 0, bestStreak: 0, level: 0, topLevel: 0, fastest: null,
   lastStrumAt: -9, lastGoodAt: -9, lastMissAt: -9, opts: null, lastFrame: 0,
   // practice
@@ -27,7 +27,7 @@ const G = {
     this.tapMode = !Mic.on;
     this.capoText = [chart.capo ? 'CAPO ' + chart.capo : '', chart.tuning ? (chart.tuning === -1 ? 'TUNED ½ STEP DOWN' : 'TUNED ' + (-chart.tuning / 2) + ' STEP DOWN') : ''].filter(Boolean).join(' · ');
     this.strumSteps = chart.song.strum ? chart.song.strum.split('') : null;
-    this.hype = 0; this.countText = ''; this.streak = 0; this.bestStreak = 0; this.level = 0; this.topLevel = 0; this.fastest = null; Groove.level = 0; this.lastGoodAt = this.lastMissAt = this.lastStrumAt = -9;
+    this.hype = 0; this.danger = 0; this.failed = false; this.countText = ''; this.streak = 0; this.bestStreak = 0; this.level = 0; this.topLevel = 0; this.fastest = null; Groove.level = 0; this.lastGoodAt = this.lastMissAt = this.lastStrumAt = -9;
     Stage.reset();
     const secs = chart.sections, s0 = secs[opts.section] || secs[0];
     this.fromBar = s0.startBar;
@@ -104,6 +104,28 @@ const G = {
     if (L < 4 && this.hype >= up[L]) n = L + 1;
     else if (L > 0 && this.hype < up[L - 1] - 0.08) n = L - 1;
     if (n !== L) this.setLevel(n);
+  },
+  /* ---------- danger: playing badly in Stage mode turns the room against you, then ends the show ---------- */
+  addDanger(d){
+    if (this.mode !== 'stage' || !this.running || this.failed) return;
+    // gentler with the relaxed note check (easy Story levels) and in tap mode; no fail in the first few chords
+    const rate = d > 0 ? (this.relaxed() ? 0.7 : 1) * (this.tapMode ? 0.8 : 1) : 1;
+    this.danger = Math.max(0, Math.min(1, this.danger + d * rate));
+    if (this.judgedN < 6) this.danger = Math.min(this.danger, 0.9);
+    if (this.danger >= 1) this.fail();
+  },
+  fail(){
+    if (this.failed) return;
+    this.failed = true; this.running = false;
+    Groove.stop(); Mic.onsetListeners.clear();
+    Stage.failAt = performance.now() / 1000; Stage.shake = 16;
+    Sfx.fail && Sfx.fail(); Sfx.boo && Sfx.boo();
+    const chart = this.chart, acc = this.judgedN ? this.accSum / (100 * this.judgedN) : 0;
+    const done = this.list.filter(e => e.final).length;
+    // the stage falls apart for a moment, then the results
+    setTimeout(() => UI.showResults({ mode: 'stage', failed: true, chart, score: this.score, acc, grade: 'F', title: 'Booed Off!', counts: this.counts,
+      maxCombo: this.maxCombo, noteAcc: 0, tough: [], tap: this.tapMode, tempo: this.opts.tempo, topLevel: this.topLevel,
+      progress: this.list.length ? done / this.list.length : 0, newBest: false }), 2200);
   },
   setLevel(n){
     const up = n > this.level;
@@ -379,6 +401,7 @@ const G = {
       } else if (this.fbKey !== '') { this.fbKey = ''; Fretboard.feedback(['', '', '', '', '', ''], []); UI.stepsHeard(['', '', '', '', '', '']); }
     }
     this.addHype(-0.012 / 60);
+    if (this.danger > 0 && now - this.lastMissAt > 2) this.danger = Math.max(0, this.danger - 0.012 / 60);
     const last = this.list[this.list.length - 1];
     if (last.final && !Groove.running) this.finish();
     else if (last.final && now > last.t + last.earWin + 1.2) this.finish();
@@ -434,6 +457,7 @@ const G = {
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.streak = this.combo; this.bestStreak = Math.max(this.bestStreak, this.streak);
     if (!hit && ev.timing !== 'miss') this.addHype(-0.08);
+    this.addDanger(ev.timing === 'miss' ? 0.13 : !hit ? 0.08 : -({ perfect: 0.11, great: 0.08, good: 0.05 }[ev.timing] || 0.02));
     const mult = 1 + Math.min(3, Math.floor(this.combo / 8));
     this.score += pts * mult;
     this.accSum += pts; this.judgedN++;
