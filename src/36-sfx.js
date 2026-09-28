@@ -47,6 +47,11 @@ const Sfx = (() => {
       [52, 56, 59, 64, 68, 71].forEach((m, i) => pluck(c, t + i * 0.02, m, 0.13, 1.2));
       [88, 92, 95].forEach((m, i) => T(t + 0.15 + i * 0.07, 'sine', midiToHz(m), midiToHz(m), 0.08, 0.25));
     },
+    // the crowd boos you off: a low, wavering murmur sliding down, and a sad trombone
+    boo(){ const c = ready(); if (!c) return; const t = c.currentTime;
+      for (let i = 0; i < 6; i++) T(t + i * 0.05, 'sawtooth', 150 + i * 9, 95 + i * 5, 0.05, 1.3);
+      N(t, 0.12, 1.4, 'bandpass', 420, 0.8);
+      [392, 370, 349, 311].forEach((f, i) => T(t + 0.5 + i * 0.32, 'triangle', f, i === 3 ? f * 0.93 : f, 0.14, i === 3 ? 0.8 : 0.3)); },
     fail(){ const c = ready(); if (!c) return; const t = c.currentTime; T(t, 'square', 330, 330, 0.06, 0.1); T(t + 0.14, 'square', 247, 247, 0.06, 0.18); },
     whoosh(){
       const c = ready(); if (!c) return; const t = c.currentTime;

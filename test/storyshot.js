@@ -13,15 +13,18 @@ const career = JSON.parse(fs.readFileSync(careerFile, 'utf8'));
     await p.goto('file://' + __dirname + '/../dist/strum-jam.html'); await p.waitForTimeout(1000);
     await p.click('#btn-start', { force: true }); await p.waitForTimeout(1000);
     await p.evaluate(() => Story.openCareer('c-kanye-west')); await p.waitForTimeout(1200);
-    await p.screenshot({ path: `${out}/${name}-career.png`, fullPage: true });
+    // the career scrolls inside its screen: a tall window shows the whole roadmap
+    await p.setViewportSize({ width: W, height: name === 'phone' ? 3400 : 3000 }); await p.waitForTimeout(1500);
+    await p.screenshot({ path: `${out}/${name}-career.png` });
+    await p.setViewportSize({ width: W, height: H }); await p.waitForTimeout(300);
     // swap the second song of level 1
     const before = await p.evaluate(() => Story.get('c-kanye-west').levels[0].songs.map(s => s.title));
-    await p.locator('#story-levels .lvl').first().locator('.swap').nth(1).click(); await p.waitForTimeout(700);
+    await p.locator('#story-levels .era').first().locator('.stop-lbl').nth(1).locator('.swap', { hasText: 'Swap' }).click(); await p.waitForTimeout(700);
     await p.screenshot({ path: `${out}/${name}-swap.png` });
     const opts = await p.$$eval('#sw-list .sw-opt .t', els => els.map(e => e.textContent));
     await p.click('#sw-list .sw-opt >> nth=0'); await p.waitForTimeout(700);
     const after = await p.evaluate(() => { const L = Story.get('c-kanye-west').levels[0]; return { songs: L.songs.map(s => s.title), alts: L.alts.map(s => s.title), name: L.name, albums: L.albums, years: L.years, prog: Story.get('c-kanye-west').progress }; });
-    await p.locator('#story-levels .lvl').first().screenshot({ path: `${out}/${name}-after.png` });
+    await p.locator('#story-levels .era').first().screenshot({ path: `${out}/${name}-after.png` });
     console.log(name, JSON.stringify({ before, opts, after }), errs.length ? 'ERR ' + errs.join('; ') : 'no page errors');
     await p.close();
   }

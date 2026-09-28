@@ -17,7 +17,7 @@ const STORY_TIERS = [
   { name: 'Medium', easy: true,  strict: 'normal',  tempo: 100, pass: 'B', rules: 'Easy chord shapes · normal note check · full tempo · pass with a B' },
   { name: 'Hard',   easy: false, strict: 'normal',  tempo: 100, pass: 'A', rules: 'The real chord shapes · normal note check · full tempo · pass with an A' },
 ];
-const GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1 };
+const GRADE_RANK = { S: 5, A: 4, B: 3, C: 2, D: 1, F: 0 };
 
 const qt = x => String(x == null ? '' : x).replace(/"/g, "'");
 // the discography as Claude sees it: every album, its first release date and its tracklist
@@ -34,6 +34,19 @@ const CAREER_SONG_RULES = `Choose songs for PLAYABILITY FIRST, then fame:
 - "why": one short line, max 60 characters, on why it's a good guitar pick, like "Famous acoustic guitar loop" or "Four-chord piano ballad". No lyrics, no quotes from the song.
 - "bpm": the recording's tempo. "changes": about how many chord changes per bar (0.5, 1, 2…). "chords": about how many distinct chords it uses.`;
 
+// how Claude designs an era's stage (the Scenes vocabulary)
+function sceneRules(){
+  return `- "scene" designs the level's stage. Work like a production designer for this one era: first picture the real places of that period (the neighbourhood, the rooms they recorded in, the venues they toured, the look of the records and videos), then build a set that says it. Places and things only, never people, logos or album art. Make the three levels look clearly different from each other (setting, time of day, palette).
+  - "stage": one sentence, max 110 characters, describing the set, like "A South Side dorm-room studio at night, CD stacks by the window".
+  - "setting": one of ${Scenes.SETTINGS.join(', ')}.
+  - "time": day, dusk or night. "weather": one of ${Scenes.WEATHER.join(', ')}.
+  - "palette": 3 hex colours that capture the era's visual aesthetic (main, accent, glow), taken from how that era actually looked.
+  - "props": 3 to 5 of ${Scenes.PROPS.join(', ')}.
+  - "motif": a shape painted big on the back wall that stands for the era: one of ${Scenes.MOTIFS.join(', ')}.
+  - "sign": 1 to 3 words, max 16 characters, shown on a sign, banner or screen: a place or venue name that fits the era. Not a lyric and not a brand.
+  - "posters": 2 or 3 flyers on the wall, each max 14 characters: real places, venues, tour stops or the year from that era (like "CHICAGO 2003", "HOUSE OF BLUES"). Not lyrics and not brands.
+  Example thinking: an early hustle on the streets → street with cd-table and boombox; a college-themed debut → campus; small clubs → club; arena tours → arena with lasers and pyro; a lavish era → mansion or theater; a stark experimental era → artspace; a gospel era → church; a quiet rural era → countryside or mountains.`;
+}
 function careerPrompt(artist, disc, web){
   return `You are the career planner for STORY MODE in "Strum Jam", a game that teaches people to play real songs on guitar. The player picked the artist: "${qt(artist).slice(0, 80)}".
 
@@ -41,7 +54,7 @@ This is the artist's verified discography from MusicBrainz and Apple Music: stud
 ${discographyText(disc)}
 
 ${web ? 'Use web search for context: the phases of their career, their stylistic shifts, which songs defined each period, and which of their songs guitarists actually play (chord sites, lessons, covers). ' : ''}Map the career into levels in chronological order: 3 levels when there are 3 or more albums with tracks, otherwise one level per album. Level 1 is where they started, then the breakthrough or peak, then the later or latest work. Reply with JSON only, in exactly this shape:
-{"found":true,"artist":"Official Name","tagline":"One line about the arc of their career","few":false,"levels":[{"albums":["A1"],"name":"The College Dropout","period":"Chicago Come-Up","blurb":"One or two plain sentences.","scene":{"setting":"street","time":"night","weather":"none","palette":["#4B3F7A","#FF5E7E","#FFCE3A"],"props":["cd-table","boombox"],"sign":"SOUTH SIDE"},"songs":[{"title":"All Falls Down","album":"A1","why":"Famous acoustic guitar loop","bpm":91,"changes":1,"chords":4}]}]}
+{"found":true,"artist":"Official Name","tagline":"One line about the arc of their career","few":false,"levels":[{"albums":["A1"],"name":"The College Dropout","period":"Chicago Come-Up","blurb":"One or two plain sentences.","scene":{"stage":"A South Side dorm-room studio at night, CD stacks by the window","setting":"campus","time":"night","weather":"none","palette":["#4B3F7A","#FF5E7E","#FFCE3A"],"props":["cd-table","boombox","books"],"motif":"crown","sign":"SOUTH SIDE","posters":["CHICAGO 2003","OPEN MIC"]},"songs":[{"title":"All Falls Down","album":"A1","why":"Famous acoustic guitar loop","bpm":91,"changes":1,"chords":4}]}]}
 
 ERAS
 - "albums": the ids of a run of consecutive albums from the list. Levels never share an album and never overlap in time. You may leave albums out.
@@ -49,13 +62,7 @@ ERAS
 - "period": always also a period name (max 28 characters) that is not any album's title. It is used if the songs end up spanning several albums.
 - "blurb": one or two plain factual sentences, max 200 characters, about their sound and where their life was at in that period: the places, venues and lifestyle. No lyrics, no quotes, no gossip.
 - "tagline": max 90 characters, plain and factual.
-- "scene" designs the level's stage background so it tells the story of that era: where they came from, the venues they played, how they lived, the look of the records. Places and things only, never people.
-  - "setting": one of ${Scenes.SETTINGS.join(', ')}.
-  - "time": day, dusk or night. "weather": one of ${Scenes.WEATHER.join(', ')}.
-  - "palette": 3 hex colours that capture the era's visual aesthetic (main, accent, glow).
-  - "props": up to 3 of ${Scenes.PROPS.join(', ')}.
-  - "sign": 1 to 3 words, max 16 characters, shown on a sign, banner or screen in the scene: a place or venue name that fits the era. Not a lyric and not a brand.
-  Example thinking: an early hustle on the streets → street with cd-table; a college-themed debut → campus; small clubs → club; arena tours → arena with lasers and pyro; a lavish era → mansion or theater; a stark experimental era → artspace; a gospel era → church; a quiet rural era → countryside or mountains.
+${sceneRules()}
 
 SONGS (this matters most)
 For each level list 7 candidate songs from that level's albums, best pick first. Every one is checked against real chord charts; the first ones that pass are played, the rest can be swapped in.
@@ -78,6 +85,17 @@ ${asks.map(a => `Level ${a.level} (albums ${a.albums.join(', ')}): already tried
 For each of these levels list up to 6 more candidate songs from that level's albums only, best first.
 ${CAREER_SONG_RULES}
 Reply with JSON only: {"levels":[{"level":1,"songs":[{"title":"Song","album":"A1","why":"Short reason","bpm":100,"changes":1,"chords":4}]}]}`;
+}
+
+// themes for a career the player built: blurbs and stages for their levels
+function careerThemePrompt(c){
+  return `You are the art director for STORY MODE in "Strum Jam", a guitar game. The player built their own career for "${qt(c.artist).slice(0, 80)}" with these levels:
+${c.levels.map((L, i) => `Level ${i + 1} "${qt(L.name)}" (${L.years}): albums ${L.albums.map(a => '"' + qt(a) + '"').join(', ')}; songs ${L.songs.map(s => '"' + qt(s.title) + '"').join(', ')}.`).join('\n')}
+
+For each level write a blurb and design its stage. Reply with JSON only: {"tagline":"One line about the arc of their career","levels":[{"blurb":"One or two plain sentences.","scene":{"stage":"…","setting":"…","time":"…","weather":"…","palette":["#…","#…","#…"],"props":["…"],"motif":"…","sign":"…","posters":["…"]}}]}
+- "tagline": max 90 characters, plain and factual. "blurb": max 200 characters about their sound and where their life was at in that period: the places, venues and lifestyle. No lyrics, no quotes, no gossip.
+${sceneRules()}
+NO LYRICS anywhere. Reply with the JSON only.`;
 }
 
 // Claude's plan, cleaned: nothing in it is trusted until it's checked against the discography and the chord data
@@ -271,6 +289,7 @@ const Story = {
     $('story-form').addEventListener('submit', e => { e.preventDefault(); this.build($('story-input').value); });
     $('btn-story-remake').onclick = () => { if (this.cur) { $('story-input').value = this.cur.artist; this.openPick(); this.build(this.cur.artist, true); } };
     $('sw-list').addEventListener('click', e => { const b = e.target.closest('[data-alt]'); if (b) this.swap(+b.dataset.alt); });
+    $('btn-story-custom').onclick = () => { Sfx.open(); this.openCustom(); };
     // the promo art: three eras, from the street to the arena
     const demo = [{ setting: 'street', props: ['cd-table'] }, { setting: 'campus', props: ['pennants'] }, { setting: 'arena', props: ['lasers'] }];
     demo.forEach((d, i) => { $('sp-a' + (i + 1)).src = Scenes.dataUrl(Scenes.validate(d), 240, 200, { floorY: 170 }); });
@@ -397,8 +416,8 @@ const Story = {
     const target = this.fresh;
     this.renderCareer();
     UI.show('story').then(() => {
-      const el = target >= 0 && document.querySelectorAll('#story-levels .lvl')[target];
-      if (el) setTimeout(() => { el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); Sfx.found(); }, 250);
+      const el = target >= 0 ? document.querySelectorAll('#story-levels .era')[target] : document.querySelector('#story-levels .stop.next');
+      if (el) setTimeout(() => { el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: target >= 0 ? 'start' : 'center' }); if (target >= 0) Sfx.found(); }, 250);
     });
   },
   renderCareer(){
@@ -415,50 +434,83 @@ const Story = {
     note.textContent = c.v !== 2 ? 'This career was built before songs were checked against real chord charts and discographies. Rebuild it (below) for checked eras and guitar-friendly picks.'
       : `${c.artist} doesn’t have many guitar-friendly songs, so these are the most playable ones that passed the chord check.`;
     const box = $('story-levels'); box.textContent = '';
+    // the roadmap: one region per era (its stage as the backdrop), a road winding through the songs,
+    // a gate between eras, the trophy at the end
+    const next = this.nextStop(c);
+    let g = 0;
     c.levels.forEach((L, li) => {
       const tier = STORY_TIERS[li], open = this.levelOpen(c, li), done = this.levelDone(c, li);
-      const el = document.createElement('section'); el.className = 'lvl' + (open ? '' : ' locked') + (this.fresh === li ? ' fresh' : '');
+      const el = document.createElement('section'); el.className = 'era' + (open ? '' : ' locked') + (done ? ' done' : '') + (this.fresh === li ? ' fresh' : '');
       el.setAttribute('aria-label', `Level ${li + 1}: ${L.name}${open ? '' : ', locked'}`);
-      el.innerHTML = `<div class="art"><img alt="" src="${Scenes.dataUrl(L.scene, 1000, 312, { floorY: 262 })}"><div class="ov">
-          <div class="tagrow"><span class="ltag t${li + 1}">LEVEL ${li + 1} · ${tier.name.toUpperCase()}</span>${done ? '<span class="ltag done">CLEARED ✓</span>' : this.fresh === li ? '<span class="ltag done">UNLOCKED!</span>' : ''}</div>
-          <div><div class="yrs">${esc(L.years)}</div><h2 class="nm">${esc(L.name)}</h2></div></div>
-          ${open ? '' : `<div class="lock">🔒 Clear Level ${li} to unlock</div>`}</div>
-        <div class="info">${L.albums.length ? `<div class="albums">${L.albums.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : ''}${L.blurb ? `<p class="blurb">${esc(L.blurb)}</p>` : ''}${L.few ? `<p class="few">Only ${L.few} song${L.few === 1 ? '' : 's'} from this era passed the chord check, so this level is shorter.</p>` : ''}<div class="rules">${esc(tier.rules)}</div></div>
-        <div class="songs"></div>`;
-      const songs = el.querySelector('.songs');
-      L.songs.forEach((s, si) => songs.appendChild(this.tile(c, li, si, open)));
+      const pal = L.scene.palette || ['#2E3A5C', '#FFCE3A', '#FF5E7E'];
+      el.style.setProperty('--era-a', pal[1]); el.style.setProperty('--era-b', pal[2]);
+      const STEP = window.innerWidth < 560 ? 208 : 168, top = 30, h = top + L.songs.length * STEP + 10;
+      const xs = L.songs.map((s, si) => ((g + si) % 2 ? 76 : 24));
+      el.innerHTML = `<div class="era-bg" style="background-image:url('${Scenes.dataUrl(L.scene, 1000, 760, { floorY: 640 })}')"></div>
+        <header class="era-card">
+          <div class="tagrow"><span class="ltag t${li + 1}">LEVEL ${li + 1} · ${tier.name.toUpperCase()}</span>${done ? '<span class="ltag done">CLEARED ✓</span>' : this.fresh === li ? '<span class="ltag done">UNLOCKED!</span>' : ''}<span class="need">Clear with a ${tier.pass} or better</span></div>
+          <div class="yrs">${esc(L.years)}</div><h2 class="nm">${esc(L.name)}</h2>
+          ${L.albums.length ? `<div class="albums">${L.albums.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : ''}
+          ${L.blurb ? `<p class="blurb">${esc(L.blurb)}</p>` : ''}${L.scene.stage ? `<p class="set">🎨 ${esc(L.scene.stage)}</p>` : ''}${L.few ? `<p class="few">Only ${L.few} song${L.few === 1 ? '' : 's'} from this era passed the chord check, so this level is shorter.</p>` : ''}
+          <div class="rules">${esc(tier.rules)}</div>
+        </header>
+        <div class="road" style="height:${h}px">
+          <svg class="road-svg" viewBox="0 0 1000 ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="road-edge" d=""/><path class="road-top" d=""/><path class="road-line" d=""/></svg>
+        </div>`;
+      const road = el.querySelector('.road');
+      const pts = xs.map((x, si) => [x * 10, top + si * STEP + 42]);
+      // the road comes in from the top of the region, snakes through each stop and leaves at the bottom
+      const d = [`M ${pts[0][0]} 0`, `L ${pts[0][0]} ${pts[0][1]}`];
+      for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], my = (y0 + y1) / 2; d.push(`C ${x0} ${my}, ${x1} ${my}, ${x1} ${y1}`); }
+      d.push(`L ${pts[pts.length - 1][0]} ${h}`);
+      el.querySelectorAll('.road-svg path').forEach(p => p.setAttribute('d', d.join(' ')));
+      L.songs.forEach((s, si) => road.append(...this.stop(c, li, si, open, xs[si], top + si * STEP, next)));
+      g += L.songs.length;
       box.appendChild(el);
+      // the gate to the next era
+      if (li + 1 < c.levels.length) {
+        const gt = document.createElement('div'); gt.className = 'gate' + (done ? ' open' : '');
+        gt.innerHTML = done ? `<span>✓ Level ${li + 2} unlocked</span>` : `<span>🔒 Clear every song above to unlock Level ${li + 2}</span>`;
+        box.appendChild(gt);
+      }
     });
+    const fin = document.createElement('div'); fin.className = 'finale' + (this.mastered(c) ? ' won' : '');
+    fin.innerHTML = `<span class="trophy">🏆</span><b>${this.mastered(c) ? 'Career mastered!' : 'Master the career'}</b><small>${this.mastered(c) ? 'Now chase ★★★ on every song.' : `Clear all ${this.slots(c).length} songs`}</small>`;
+    box.appendChild(fin);
     this.fresh = -1;
   },
-  tile(c, li, si, open){
+  // the first song still to clear, in the furthest open level
+  nextStop(c){ for (let li = 0; li < c.levels.length; li++) { if (!this.levelOpen(c, li)) break; const si = c.levels[li].songs.findIndex((s, k) => !this.passed(c, li, k)); if (si >= 0) return li + '-' + si; } return ''; },
+  stop(c, li, si, open, x, y, next){
     const L = c.levels[li], s = L.songs[si], k = this.key(li, si), p = c.progress[k], passed = this.passed(c, li, si);
-    const w = document.createElement('div'); w.className = 'stile-w';
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'stile' + (passed ? ' passed' : '');
-    const busy = this.charting[c.id + k], working = busy === 'busy' || !!(busy && busy.step);
+    const busy = this.charting[c.id + k], working = busy === 'busy' || !!(busy && busy.step), isNext = next === k;
+    const w = document.createElement('div');
+    w.className = 'stop ' + (x < 50 ? 'l' : 'r') + (passed ? ' passed' : p ? ' tried' : '') + (!open ? ' locked' : '') + (isNext ? ' next' : '') + (working ? ' busy' : '') + (busy && busy.err ? ' err' : '');
+    w.style.setProperty('--x', x + '%'); w.style.top = y + 'px';
     let state;
     if (!open) state = '🔒 Locked';
     else if (working) state = '<span class="eq"><i></i><i></i><i></i><i></i></span> ' + esc(busy && busy.step || 'Looking up the chords…');
-    else if (busy && busy.err) state = busy.err;
-    else if (passed) state = `<span class="stars">${this.starStr(this.stars(c, li, si))}</span> · best ${esc(p.grade)}`;
+    else if (busy && busy.err) state = esc(busy.err);
+    else if (passed) state = `Cleared · best ${esc(p.grade)}`;
     else if (p) state = `Best ${esc(p.grade)} · need ${STORY_TIERS[li].pass}`;
-    else state = c.charts[k] ? '▶ Ready to play' : '▶ Play';
-    if (working) b.classList.add('busy'); if (busy && busy.err) b.classList.add('err');
-    b.innerHTML = `<span class="n">${si + 1}</span><span><div class="t">${esc(s.title)}</div><div class="a">${esc([s.album, s.year].filter(Boolean).join(' · '))}</div>${s.why ? `<div class="why">${esc(s.why)}</div>` : ''}<div class="st">${state}</div></span>`;
-    b.setAttribute('aria-label', `${s.title}. ${s.why ? s.why + '. ' : ''}${b.querySelector('.st').textContent}`);
-    w.appendChild(b);
-    if (Career.options(L).length) {
-      w.classList.add('can-swap');
-      const x = document.createElement('button'); x.type = 'button'; x.className = 'swap'; x.textContent = '⇄ Swap';
-      x.setAttribute('aria-label', `Swap ${s.title} for another song from this era`);
-      x.disabled = working;
-      x.onclick = () => { Sfx.open(); this.openSwap(c.id, li, si); };
-      w.appendChild(x);
-    }
-    if (!open) { b.setAttribute('aria-disabled', 'true'); b.onclick = () => Sfx.fail(); return w; }
-    b.onclick = () => this.playSong(c.id, li, si);
-    b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Sfx.hover(li * 3 + si); });
-    return w;
+    else state = isNext ? 'Up next' : 'Not played yet';
+    const face = !open ? '🔒' : passed ? '✓' : String(si + 1);
+    w.innerHTML = `${isNext ? '<span class="you">YOU ARE HERE</span>' : ''}
+      <button type="button" class="node" aria-label="${esc(s.title)}. ${esc(state.replace(/<[^>]+>/g, ''))}"><span>${face}</span></button>
+      ${passed ? `<span class="stars">${this.starStr(this.stars(c, li, si))}</span>` : ''}`;
+    // the label takes the rest of the road's width beside the stop
+    const lbl = document.createElement('div'); lbl.className = 'stop-lbl ' + (x < 50 ? 'l' : 'r') + (!open ? ' locked' : '');
+    lbl.style.top = (y - 4) + 'px'; lbl.style.setProperty('--x', x + '%');
+    lbl.innerHTML = `<b class="t">${esc(s.title)}</b><span class="a">${esc([s.album, s.year].filter(Boolean).join(' · '))}</span>${s.why ? `<i class="why">${esc(s.why)}</i>` : ''}<span class="st">${state}</span><span class="acts"></span>`;
+    const node = w.querySelector('.node'), acts = lbl.querySelector('.acts');
+    const addAct = (label, aria, fn, dis) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'swap'; b.textContent = label; b.setAttribute('aria-label', aria); b.disabled = !!dis; b.onclick = e => { e.stopPropagation(); Sfx.open(); fn(); }; acts.appendChild(b); };
+    if (open) { addAct('▶ Play', `Play ${s.title}`, () => this.playSong(c.id, li, si), working); acts.lastChild.classList.add('play'); }
+    if (Career.options(L).length) addAct('⇄ Swap', `Swap ${s.title} for another song from this era`, () => this.openSwap(c.id, li, si), working);
+    if (c.v === 2) addAct('✎ Pick', `Pick any song from this era instead of ${s.title}`, () => this.openPicker(c.id, li, si), working);
+    if (!open) { node.setAttribute('aria-disabled', 'true'); node.onclick = () => Sfx.fail(); return [w, lbl]; }
+    node.onclick = () => this.playSong(c.id, li, si);
+    node.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') Sfx.hover(li * 3 + si); });
+    return [w, lbl];
   },
   /* ---------- swapping a song for another checked one from the same era ---------- */
   openSwap(id, li, si){
@@ -473,20 +525,186 @@ const Story = {
   swap(i){
     const x = this.swapping; if (!x) return;
     const c = this.get(x.id), o = x.opts[i]; if (!c || !o) return;
-    const L = c.levels[x.li], out = L.songs[x.si];
+    this.replaceSong(c, x.li, x.si, o, true);
+    this.swapping = null; UI.closeModal(); Sfx.found();
+  },
+  // put a checked song into a slot: progress and charts follow their songs when the level re-sorts easy -> hard
+  replaceSong(c, li, si, o, keepOut){
+    const L = c.levels[li], out = L.songs[si];
     const id = s => s.track ? 'it' + s.track.trackId : s.title;
-    // progress and charts follow their songs when the level re-sorts easy -> hard
     const prog = new Map(), charts = new Map();
-    L.songs.forEach((s, k) => { const kk = this.key(x.li, k); if (s !== out) { if (c.progress[kk]) prog.set(id(s), c.progress[kk]); if (c.charts[kk]) charts.set(id(s), c.charts[kk]); } delete c.progress[kk]; delete c.charts[kk]; });
-    const songs = L.songs.slice(); songs[x.si] = o;
-    L.alts = [out, ...(L.alts || []).filter(a => id(a) !== id(o))];     // the song swapped out comes first, to swap back
+    L.songs.forEach((s, k) => { const kk = this.key(li, k); if (s !== out) { if (c.progress[kk]) prog.set(id(s), c.progress[kk]); if (c.charts[kk]) charts.set(id(s), c.charts[kk]); } delete c.progress[kk]; delete c.charts[kk]; });
+    const songs = L.songs.slice(); songs[si] = o;
+    L.alts = (L.alts || []).filter(a => id(a) !== id(o));
+    if (keepOut && out.track) L.alts.unshift(out);     // the song swapped out comes first, to swap back
     L.songs = songs.sort((a, b) => (a.score || 0) - (b.score || 0));
-    L.songs.forEach((s, k) => { const kk = this.key(x.li, k); if (prog.has(id(s))) c.progress[kk] = prog.get(id(s)); if (charts.has(id(s))) c.charts[kk] = charts.get(id(s)); });
-    Object.keys(this.charting).filter(k => k.startsWith(c.id + x.li + '-')).forEach(k => delete this.charting[k]);
-    if (c.v === 2) Career.meta(L, (c.disc && c.disc.albums) || [], x.li);
-    this.save(c); this.swapping = null;
-    UI.closeModal(); Sfx.found();
-    this.cur = c; this.renderCareer();
+    L.songs.forEach((s, k) => { const kk = this.key(li, k); if (prog.has(id(s))) c.progress[kk] = prog.get(id(s)); if (charts.has(id(s))) c.charts[kk] = charts.get(id(s)); });
+    Object.keys(this.charting).filter(k => k.startsWith(c.id + li + '-')).forEach(k => delete this.charting[k]);
+    if (c.v === 2) Career.meta(L, (c.disc && c.disc.albums) || [], li);
+    this.save(c); this.cur = c; this.renderCareer();
+  },
+
+  /* ---------- picking any song from an era's albums ---------- */
+  discCache: {},
+  async loadDisc(artist, signal){
+    const k = Lookup.normArtist(artist);
+    if (!this.discCache[k]) this.discCache[k] = Lookup.discography(artist, { signal }).catch(e => { delete this.discCache[k]; throw e; });
+    return this.discCache[k];
+  },
+  pctx(signal){ const w = this._web || (this._web = { left: 3 }); return { signal, web: UI.canWeb(), get webLeft(){ return w.left; }, set webLeft(v){ w.left = v; } }; },
+  // the albums a level may draw from: its own album if it's named after one, else its run of albums
+  levelAlbums(c, L, disc){
+    const own = (c.disc && c.disc.albums) || [], keyOf = id => { const a = own.find(x => x.id === id); return a ? Lookup.albumKey(a.title) : ''; };
+    const keys = new Set((L.albumId ? [L.albumId] : (L.pool || [])).map(keyOf).filter(Boolean));
+    if (!keys.size) L.albums.forEach(t => keys.add(Lookup.albumKey(t)));
+    return disc.albums.filter(a => keys.has(Lookup.albumKey(a.title)) && a.tracks.length);
+  },
+  async openPicker(id, li, si){
+    const c = this.get(id); if (!c) return;
+    const L = c.levels[li], s = L.songs[si];
+    this.picking = { id, li, si };
+    $('pk-intro').textContent = `Loading ${c.artist}’s albums…`; $('pk-list').innerHTML = '';
+    UI.open('m-pick');
+    let disc;
+    try { disc = await this.loadDisc(c.artist); } catch (e) { $('pk-intro').textContent = UI.lookupErr(e, 'story'); return; }
+    if (!this.picking || this.picking.id !== id) return;
+    const albums = this.levelAlbums(c, L, disc), have = new Set(L.songs.map(x => x.track && x.track.trackId));
+    const scope = L.albumId ? L.albums[0] : albums.length === 1 ? albums[0].title : `this era’s albums (${albums.map(a => a.title).join(', ')})`;
+    $('pk-intro').textContent = `Any song from ${scope} can take the place of “${s.title}”. Each one is checked against real chord charts before it goes in.`;
+    const box = $('pk-list'); box.innerHTML = '';
+    for (const a of albums) {
+      const sec = document.createElement('div'); sec.className = 'pk-alb';
+      sec.innerHTML = `<h3>${esc(a.title)} <small>${a.year}</small></h3>`;
+      for (const t of a.tracks) {
+        if (have.has(t.trackId)) continue;
+        const row = document.createElement('div'); row.className = 'pk-row';
+        row.innerHTML = `<span class="t">${esc(Career.cleanTitle(t.title))}</span><span class="r"></span>`;
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm'; b.textContent = 'Use this';
+        b.onclick = async () => {
+          b.disabled = true; row.querySelector('.r').innerHTML = '<span class="eq"><i></i><i></i><i></i><i></i></span> Checking the chords…';
+          let r; try { r = await this.probe(t, { why: '' }, this.pctx()); } catch (e) { r = { ok: false, reason: UI.lookupErr(e, 'story') }; }
+          if (!r.ok) { row.classList.add('bad'); row.querySelector('.r').textContent = r.reason === 'no chord chart found' ? 'No chord chart found' : r.reason === 'the chart is basically one chord' ? 'Basically one chord' : r.reason; Sfx.fail(); return; }
+          const cc = this.get(id); if (!cc) return;
+          const own = (cc.disc && cc.disc.albums || []).find(x => Lookup.albumKey(x.title) === Lookup.albumKey(a.title)) || a;
+          this.replaceSong(cc, li, si, Career.song({ album: own, track: t, hint: { why: 'Your pick' } }, r), true);
+          this.picking = null; UI.closeModal(); Sfx.found();
+        };
+        row.appendChild(b); sec.appendChild(row);
+      }
+      box.appendChild(sec);
+    }
+  },
+
+  async theme(id){
+    const c = this.get(id); if (!c) return;
+    this.theming = id; if (this.cur && this.cur.id === id) this.renderCareer();
+    try {
+      const d = await UI.askClaude(careerThemePrompt(c), undefined, 'default');
+      const cc = this.get(id); if (!cc || !d || !Array.isArray(d.levels)) return;
+      if (d.tagline) cc.tagline = cleanStr(d.tagline, 110);
+      cc.levels.forEach((L, i) => { const x = d.levels[i]; if (!x) return; if (x.blurb) L.blurb = cleanStr(x.blurb, 240); if (x.scene) L.scene = Scenes.validate(x.scene); });
+      this.save(cc);
+    } catch (e) { /* the default stages stay */ }
+    finally { this.theming = null; const cc = this.get(id); if (cc && UI.screen === 'story' && this.cur && this.cur.id === id) { this.cur = cc; this.renderCareer(); } }
+  },
+  /* ---------- building a career yourself: your albums per level, your songs ---------- */
+  async openCustom(){
+    const q = $('story-input').value.trim(); if (!q) { $('story-input').focus(); return; }
+    const box = $('story-custom'); box.hidden = false; $('story-status').textContent = '';
+    box.innerHTML = `<div class="cb-card"><p><span class="eq"><i></i><i></i><i></i><i></i></span> Looking up ${esc(q)}’s albums…</p></div>`;
+    let disc;
+    try { disc = await this.loadDisc(q); } catch (e) { box.innerHTML = `<div class="cb-card"><p class="cb-err">${esc(UI.lookupErr(e, 'story'))}</p></div>`; return; }
+    if (!disc || !disc.albums.some(a => a.tracks.length)) { box.innerHTML = `<div class="cb-card"><p class="cb-err">I couldn’t find studio albums for “${esc(q)}”.</p></div>`; return; }
+    // a start: the albums split into up to three runs, oldest first
+    const usable = disc.albums.filter(a => a.tracks.length), n = Math.min(3, usable.length), assign = {};
+    usable.forEach((a, i) => { assign[a.id] = Math.min(n, Math.floor(i * n / usable.length) + 1); });
+    this.cb = { disc, assign, picks: { 1: [], 2: [], 3: [] }, checks: {}, names: {} };
+    this.renderCustom(); Sfx.found();
+  },
+  cbLevels(){
+    const { disc, assign } = this.cb, used = [...new Set(Object.values(assign).filter(Boolean))].sort();
+    let err = '';
+    if (!used.length) err = 'Put at least one album in a level.';
+    else if (used.some((l, i) => l !== i + 1)) err = 'Use the levels in order: Level 1 first, then 2, then 3.';
+    else for (let k = 1; k < used.length; k++) {
+      const idx = l => disc.albums.map((a, i) => assign[a.id] === l ? i : -1).filter(i => i >= 0);
+      if (Math.max(...idx(k)) > Math.min(...idx(k + 1))) { err = `Level ${k + 1}’s albums have to come after Level ${k}’s. Levels run in time order and don’t overlap.`; break; }
+    }
+    return { used, err, albumsOf: l => disc.albums.filter(a => assign[a.id] === l) };
+  },
+  // a level named after an album may only hold that album's songs
+  cbNameWarn(l, albums){
+    const nm = (this.cb.names[l] || '').trim(), hit = nm && Career.albumIn(nm, this.cb.disc.albums);
+    if (!hit) return '';
+    const ids = new Set(this.cb.picks[l].map(id => albums.find(a => a.tracks.some(t => t.trackId === id))).filter(Boolean).map(a => a.id));
+    if (albums.length === 1 && albums[0].id === hit.id) return '';
+    return `<p class="cb-err small">“${esc(hit.title)}” is an album title. A level named after an album can only hold that album’s songs, so this one will get a period name instead${ids.size > 1 ? '' : ' unless it only has that album'}. Try a name for the period, like “The Stadium Years”.</p>`;
+  },
+  autoName(albums){ return albums.length === 1 ? albums[0].title : ''; },
+  renderCustom(){
+    const cb = this.cb, box = $('story-custom'); if (!cb) return;
+    const { disc } = cb, lv = this.cbLevels();
+    const albumRows = disc.albums.map(a => a.tracks.length
+      ? `<div class="cb-alb"><span class="t">${esc(a.title)} <small>${a.year}</small></span><span class="cb-seg">${[0, 1, 2, 3].map(l => `<button type="button" data-alb="${a.id}" data-l="${l}" class="${(cb.assign[a.id] || 0) === l ? 'on' : ''} l${l}" aria-label="${l ? 'Level ' + l : 'Leave out'}">${l || '–'}</button>`).join('')}</span></div>`
+      : `<div class="cb-alb"><span class="t">${esc(a.title)} <small>${a.year} · not on Apple Music</small></span></div>`).join('');
+    let html = `<div class="cb-card"><h2>Your ${esc(disc.artist)} career</h2><p>Put albums into up to three levels, oldest first, then pick the songs you want to play in each.</p>${albumRows}${lv.err ? `<p class="cb-err">${esc(lv.err)}</p>` : ''}</div>`;
+    if (!lv.err) for (const l of lv.used) {
+      const albums = lv.albumsOf(l), picks = cb.picks[l] || (cb.picks[l] = []);
+      const ids = new Set(albums.flatMap(a => a.tracks.map(t => t.trackId)));
+      cb.picks[l] = picks.filter(id => ids.has(id));
+      html += `<div class="cb-card cb-lvl"><h2>Level ${l} <small class="small">· ${STORY_TIERS[l - 1].name}</small></h2>
+        <label class="small"><b>Name</b> <input type="text" data-name="${l}" maxlength="28" value="${esc(cb.names[l] || '')}" placeholder="${esc(this.autoName(albums) || 'A name for this chapter')}"></label>
+        ${this.cbNameWarn(l, albums)}
+        <p class="small">${cb.picks[l].length} of 5 picked. Songs are checked against real chord charts as you pick them.</p>
+        <div class="cb-songs">${albums.map(a => a.tracks.map(t => { const ck = cb.checks[t.trackId] || {}, on = cb.picks[l].includes(t.trackId);
+          const r = ck.state === 'busy' ? 'Checking…' : ck.state === 'bad' ? ck.reason : ck.state === 'ok' ? '✓ ' + ck.res.stats.distinct + ' chords' : '';
+          return `<label class="cb-song${on ? ' on' : ''}${ck.state === 'bad' ? ' bad' : ''}"><input type="checkbox" data-song="${t.trackId}" data-lv="${l}" ${on ? 'checked' : ''} ${ck.state === 'bad' || ck.state === 'busy' ? 'disabled' : ''}><span class="t">${esc(Career.cleanTitle(t.title))} <small class="small">· ${esc(a.title)}</small></span><span class="r">${esc(r)}</span></label>`; }).join('')).join('')}</div></div>`;
+    }
+    const ready = !lv.err && lv.used.every(l => cb.picks[l].length) && !Object.values(cb.checks).some(x => x.state === 'busy');
+    html += `<div class="cb-card"><p>${ready ? 'Ready. Songs in each level are ordered easy to hard for you.' : 'Pick at least one song in every level.'}</p><div><button class="btn btn-go" type="button" id="btn-cb-save" ${ready ? '' : 'disabled'}>Save my career</button> <button class="btn btn-sm" type="button" id="btn-cb-cancel">Cancel</button></div></div>`;
+    box.innerHTML = html;
+    box.querySelectorAll('[data-alb]').forEach(b => b.onclick = () => { cb.assign[b.dataset.alb] = +b.dataset.l; Sfx.click && Sfx.click(); this.renderCustom(); });
+    box.querySelectorAll('[data-name]').forEach(inp => inp.oninput = () => {
+      cb.names[inp.dataset.name] = inp.value;
+      const card = inp.closest('.cb-lvl'), old = card.querySelector('.cb-err'), l = +inp.dataset.name, html = this.cbNameWarn(l, this.cbLevels().albumsOf(l));
+      if (old) old.remove(); if (html) inp.closest('label').insertAdjacentHTML('afterend', html);
+    });
+    box.querySelectorAll('[data-song]').forEach(inp => inp.onchange = () => this.cbToggle(+inp.dataset.lv, +inp.dataset.song, inp.checked));
+    $('btn-cb-save').onclick = () => this.cbSave();
+    $('btn-cb-cancel').onclick = () => { this.cb = null; box.hidden = true; box.innerHTML = ''; };
+  },
+  async cbToggle(l, trackId, on){
+    const cb = this.cb, picks = cb.picks[l];
+    if (!on) { cb.picks[l] = picks.filter(x => x !== trackId); this.renderCustom(); return; }
+    if (picks.length >= 5) { Sfx.fail(); this.renderCustom(); return; }
+    const t = cb.disc.albums.flatMap(a => a.tracks).find(x => x.trackId === trackId); if (!t) return;
+    if (!cb.checks[trackId]) {
+      cb.checks[trackId] = { state: 'busy' }; this.renderCustom();
+      let r; try { r = await this.probe(t, {}, this.pctx()); } catch (e) { r = { ok: false, reason: UI.lookupErr(e, 'story') }; }
+      if (this.cb !== cb) return;
+      cb.checks[trackId] = r.ok ? { state: 'ok', res: r } : { state: 'bad', reason: r.reason === 'no chord chart found' ? 'No chord chart found' : r.reason === 'the chart is basically one chord' ? 'Basically one chord' : r.reason };
+      if (!r.ok) { Sfx.fail(); this.renderCustom(); return; }
+    }
+    if (cb.checks[trackId].state === 'ok' && !cb.picks[l].includes(trackId) && cb.picks[l].length < 5) cb.picks[l].push(trackId);
+    this.renderCustom();
+  },
+  cbSave(){
+    const cb = this.cb, { disc } = cb, lv = this.cbLevels(); if (lv.err) return;
+    const DEF_SCENES = [{ setting: 'garage', props: ['amps'] }, { setting: 'club', props: ['disco-ball', 'speakers'] }, { setting: 'arena', props: ['lasers', 'pyro'] }];
+    const levels = lv.used.map((l, li) => {
+      const albums = lv.albumsOf(l), tracks = albums.flatMap(a => a.tracks.map(t => ({ a, t })));
+      const songs = cb.picks[l].map(id => tracks.find(x => x.t.trackId === id)).filter(Boolean).map(({ a, t }) => Career.song({ album: a, track: t, hint: { why: '' } }, cb.checks[t.trackId].res));
+      const L = { claim: (cb.names[l] || '').trim() || this.autoName(albums), period: '', blurb: '', scene: Scenes.validate(DEF_SCENES[li]), pool: albums.map(a => a.id),
+        songs: songs.sort((a, b) => a.score - b.score), alts: [], few: 0 };
+      return Career.meta(L, disc.albums, li);
+    });
+    const c = { v: 2, custom: true, artist: disc.artist, tagline: 'Your own setlist', charts: {}, progress: {}, created: Date.now(), few: false,
+      disc: { source: disc.source, albums: disc.albums.map(a => ({ id: a.id, title: a.title, year: a.year })) }, levels };
+    c.id = 'c-' + slug(c.artist) + '-mine';
+    const old = this.get(c.id); if (old) c.created = old.created;
+    this.save(c); this.cb = null; $('story-custom').hidden = true; $('story-custom').innerHTML = ''; Sfx.found();
+    this.openCareer(c.id);
+    if (UI.aiAvailable()) this.theme(c.id);
   },
   async playSong(id, li, si){
     const c = this.get(id); if (!c || !this.levelOpen(c, li)) return;
@@ -530,18 +748,37 @@ const Story = {
   /* ---------- during and after a song ---------- */
   tier(){ const x = UI.storyCtx; return x ? STORY_TIERS[x.li] : null; },
   level(){ const x = UI.storyCtx, c = x && this.get(x.careerId); return c ? c.levels[x.li] : null; },
+  // a Story song opens on its gig: the stage run that counts, what it takes to clear, and Practice beside it
   songStrip(){
     const x = UI.storyCtx, c = x && this.get(x.careerId), el = $('song-story');
     $('scr-song').classList.toggle('in-story', !!c);
     if (!c) { el.hidden = true; $('btn-song-back').textContent = '← Songs'; return; }
-    const L = c.levels[x.li], t = STORY_TIERS[x.li];
+    const L = c.levels[x.li], t = STORY_TIERS[x.li], s = L.songs[x.si], p = c.progress[this.key(x.li, x.si)], passed = this.passed(c, x.li, x.si);
     el.hidden = false; $('btn-song-back').textContent = '← Career';
-    el.innerHTML = `<img alt="" src="${Scenes.dataUrl(L.scene, 360, 150, { floorY: 126 })}"><div><b>${esc(c.artist)} · Level ${x.li + 1}: ${esc(L.name)}</b><p>Song ${x.si + 1} of ${L.songs.length}. Stage mode counts toward your career. ${esc(t.rules)}.</p></div>`;
+    const sub = [s.album, s.year].filter(Boolean).join(' · ');
+    el.innerHTML = `<div class="gig-art" style="background-image:url('${Scenes.dataUrl(L.scene, 1000, 420, { floorY: 360 })}')"></div>
+      <div class="gig-in">
+        <div class="gig-top"><span class="ltag t${x.li + 1}">LEVEL ${x.li + 1} · ${esc(L.name)}</span><span class="gig-n">Song ${x.si + 1} of ${L.songs.length}</span></div>
+        <h1 class="gig-title">${esc(UI.song ? UI.song.title : s.title)}</h1>
+        <div class="gig-by">${esc(c.artist)}${sub ? ' · ' + esc(sub) : ''}</div>
+        <div class="gig-goal">
+          <div class="need"><small>To clear</small><b>${t.pass}</b><span>or better</span></div>
+          <div class="best"><small>Your best</small><b>${p ? esc(p.grade) : '–'}</b><span class="stars">${this.starStr(this.stars(c, x.li, x.si))}</span></div>
+          <div class="rules">${esc(t.rules)}.${passed ? ' Cleared! Play again for more stars.' : ''}</div>
+        </div>
+        <div class="gig-go">
+          <button class="btn btn-go btn-big" type="button" id="btn-gig-stage">🎤 Take the stage</button>
+          <button class="btn" type="button" id="btn-gig-practice">Practice first <small>(doesn’t count)</small></button>
+        </div>
+      </div>`;
+    $('btn-gig-stage').onclick = () => UI.startGame('stage');
+    $('btn-gig-practice').onclick = () => UI.startGame('practice');
   },
   // called with a finished Stage run while a story song is open
   record(r){
     const x = UI.storyCtx; if (!x || r.mode !== 'stage') return null;
     const c = this.get(x.careerId); if (!c) return null;
+    if (r.failed) return { c, li: x.li, si: x.si, failed: true, need: STORY_TIERS[x.li].pass };
     const k = this.key(x.li, x.si), before = { passed: this.passed(c, x.li, x.si), level: this.levelDone(c, x.li), master: this.mastered(c), stars: this.stars(c, x.li, x.si) };
     const old = c.progress[k];
     if (!old || GRADE_RANK[r.grade] > GRADE_RANK[old.grade] || (r.grade === old.grade && r.score > old.score)) c.progress[k] = { grade: r.grade, score: r.score, tap: !!r.tap };
@@ -553,6 +790,7 @@ const Story = {
   resultsHtml(o){
     if (!o) return '';
     const { c, li, si } = o, L = c.levels[li];
+    if (o.failed) return { html: `<b>Booed off stage</b><span>The crowd walked out. Run the song in Practice, then come back and get a ${o.need} or better.</span>` };
     if (o.mastered) return { big: true, html: `<b>Career mastered!</b><span>${c.levels.length > 1 ? `You played ${esc(c.artist)} from ${esc(c.levels[0].name)} to ${esc(c.levels[c.levels.length - 1].name)}.` : `You played all of ${esc(c.levels[0].name)}.`}</span><span class="stars">${this.starStr(o.stars)}</span>` };
     if (o.levelClear && c.levels[li + 1]) return { big: true, html: `<b>Level ${li + 1} cleared!</b><span>${esc(L.name)} is done. Level ${li + 2} unlocked: ${esc(c.levels[li + 1].name)}.</span><span class="stars">${this.starStr(o.stars)}</span>` };
     if (o.passedNow) return { html: `<b>${o.newPass ? 'Song cleared!' : o.moreStars ? 'New stars!' : 'Passed'}</b><span class="stars">${this.starStr(o.stars)}</span><span>${this.levelDone(c, li) ? 'This level is cleared. Chase more stars, or head back to the career.' : `${L.songs.filter((s, k) => !this.passed(c, li, k)).length} more in ${esc(L.name)} to ${li + 1 < c.levels.length ? 'unlock the next level' : 'master the career'}.`}</span>` };

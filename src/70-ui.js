@@ -500,7 +500,8 @@ const UI = {
     // Story levels fix the rules and paint the era's stage
     const t = Story.tier(), L = Story.level();
     Stage.scene = t && L ? L.scene : null;
-    const ok = G.start(this.chart, mode, t ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+    const ok = G.start(this.chart, mode, t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+      : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
       : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
     if (!ok) { this.show('song'); }
   },
@@ -514,7 +515,7 @@ const UI = {
       $('hud-score-l').textContent = (G.streak >= 2 ? `streak ${G.streak}` : 'chord') + (G.laps ? ` · lap ${G.laps + 1}` : '');
       $('btn-skip').hidden = false;
     } else {
-      $('hud-sub').textContent = (where || 'Stage') + tempo;
+      $('hud-sub').textContent = (where ? where + ' · need ' + (Story.tier() || {}).pass : 'Stage') + tempo;
       const sc = $('hud-score'), txt = G.score.toLocaleString();
       if (sc.textContent !== txt) { sc.textContent = txt; sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
       const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
@@ -569,16 +570,17 @@ const UI = {
   showResults(r){
     const ch = r.chart;
     if (r.mode === 'stage') {
-      $('res-grade').textContent = r.grade;
+      $('res-grade').textContent = r.grade; $('res-grade').classList.toggle('fail', !!r.failed);
       $('res-title').textContent = r.title;
       $('res-sub').textContent = `${ch.song.title} · ${this.storyCtx ? 'Story level ' + (this.storyCtx.li + 1) : 'Stage'}${r.tempo !== 100 ? ' at ' + r.tempo + '% tempo' : ''}${r.tap ? ' · tap mode (timing only)' : ''}${r.newBest ? ' · New best!' : ''}`;
       const c = r.counts;
       const stats = [['Score', r.score], ['Accuracy', Math.round(r.acc * 100) + '%'], ...(r.tap ? [] : [['Notes heard', Math.round(r.noteAcc * 100) + '%']]),
         ['Best combo', r.maxCombo], ['Top hype', LEVEL_NAMES[r.topLevel || 0]], ['Perfect', c.perfect], ['Great', c.great], ['Good', c.good + c.ok], ['Missed', c.miss]];
       $('res-stats').innerHTML = stats.map(([l, v]) => `<div class="stat"><b class="${/^[\d,.%]+$/.test(String(v)) ? '' : 'txt'}">${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
-      $('res-tough').innerHTML = r.tough.length ? `<div class="tip"><b>Work on:</b> ${r.tough.map(t => `${esc(t.label)} (${Math.round(t.frac * 100)}% of notes heard)`).join(' · ')}. Try them in Practice.</div>` : '';
+      if (r.failed) $('res-sub').textContent = `${ch.song.title} · the crowd walked out ${Math.round((r.progress || 0) * 100)}% of the way through`;
+      $('res-tough').innerHTML = r.failed ? `<div class="tip"><b>Too many misses in a row.</b> Learn the tough changes in Practice (it waits for every chord), or slow the tempo down, then take the stage again.</div>` : r.tough.length ? `<div class="tip"><b>Work on:</b> ${r.tough.map(t => `${esc(t.label)} (${Math.round(t.frac * 100)}% of notes heard)`).join(' · ')}. Try them in Practice.</div>` : '';
     } else {
-      $('res-grade').textContent = r.skipped ? 'OK!' : 'YES!';
+      $('res-grade').textContent = r.skipped ? 'OK!' : 'YES!'; $('res-grade').classList.remove('fail');
       $('res-title').textContent = 'Practice complete';
       $('res-sub').textContent = `${ch.song.title}${r.tap ? ' · tap mode' : ''}`;
       const stats = [['Chords played', r.played], ['Avg. time to get each', r.avg ? r.avg.toFixed(1) + 's' : '–'], ['Best streak', r.bestStreak || 0],

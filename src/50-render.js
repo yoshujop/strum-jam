@@ -292,11 +292,12 @@ function makeCrowd(W){
   for (let i = 0; i < n; i++) {
     const seed = Math.sin((i + 1) * 12.9898) * 43758.5453, r = seed - Math.floor(seed);
     const seed2 = Math.sin((i + 1) * 78.233) * 12543.123, r2 = seed2 - Math.floor(seed2);
-    out.push({ x: (i + 0.5) / n + (r - 0.5) * 0.015, h: 38 + (i * 13 % 3) * 7, thr: i % 2 ? r2 * 0.9 : r2 * 0.4, army: r2 > 0.5, pres: 0, arm: 0, ph: (i % 2) * 0.5, dark: i % 3 === 0 });
+    out.push({ x: (i + 0.5) / n + (r - 0.5) * 0.015, h: 38 + (i * 13 % 3) * 7, thr: i % 2 ? r2 * 0.9 : r2 * 0.4, army: r2 > 0.5, pres: 0, arm: 0, ph: (i % 2) * 0.5, dark: i % 3 === 0,
+      lthr: 0.22 + ((r * 7.31) % 1) * 0.62, leave: 0, dir: (i + 0.5) / n < 0.5 ? -1 : 1 });
   }
   return out;
 }
-function drawCrowd(c, W, H, beatPhase, hype, now, level, crowd, dt){
+function drawCrowd(c, W, H, beatPhase, hype, now, level, crowd, dt, danger){
   const full = !crowd;
   crowd = crowd || (drawCrowd._c && drawCrowd._c.W === W ? drawCrowd._c.list : (drawCrowd._c = { W, list: makeCrowd(W) }).list);
   dt = dt == null ? 1 / 60 : dt;
@@ -311,25 +312,41 @@ function drawCrowd(c, W, H, beatPhase, hype, now, level, crowd, dt){
       c.fillStyle = 'rgba(255,244,184,.25)'; c.beginPath(); c.arc(x, y, 11, 0, Math.PI * 2); c.fill();
     });
   }
+  danger = danger || 0;
+  const cross = danger > 0.35 ? Math.min(1, (danger - 0.35) / 0.35) : 0;
   for (const m of crowd) {
-    const wantP = full || hype * 1.2 + 0.35 > m.thr ? 1 : 0;
+    const wantP = full || hype * 1.2 + 0.35 > m.thr || m.leave > 0.02 ? 1 : 0;
+    // playing badly: people turn around and walk out, the least patient first; they drift back as you recover
+    m.leave = m.leave == null ? 0 : m.leave;
+    if (!full) m.leave += ((danger > m.lthr ? 1 : 0) - m.leave) * (1 - Math.pow(0.25, dt)) * (danger > m.lthr ? 1 : 0.6);
     const wantA = hype > 0.35 && (m.army || hype > 0.75) ? 1 : 0;
     if (full) { m.pres = 1; m.arm = wantA; } else { m.pres += (wantP - m.pres) * k; m.arm += (wantA - m.arm) * k * 0.8; }
     if (m.pres < 0.02) continue;
-    const x = m.x * W, hgt = m.h;
+    const lv = m.leave || 0, walk = lv > 0.02;
+    const x = m.x * W + m.dir * Math.pow(lv, 1.6) * W * 0.75, hgt = m.h;
+    if (x < -hgt || x > W + hgt) continue;
     const ph = (beatPhase + m.ph) % 1;
-    const jump = reduceMotion ? 0 : Math.abs(Math.sin(ph * Math.PI)) * (4 + hype * 10) * m.pres;
+    const jump = reduceMotion ? 0 : walk ? Math.abs(Math.sin(now * 9 + m.ph * 6)) * 5 : Math.abs(Math.sin(ph * Math.PI)) * (4 + hype * 10) * m.pres * (1 - cross);
     const y = baseY - hgt * m.pres - jump;
     const body = m.dark ? COL.ink2 : COL.ink;
-    if (m.arm > 0.05) {
+    if (m.arm > 0.05 && !walk && !cross) {
       c.strokeStyle = body; c.lineWidth = 5; c.lineCap = 'round';
       const ax = x - hgt * 0.3, ay = y + 20, ex = x - hgt * (0.3 + 0.2 * m.arm), ey = y + 20 - (24 + jump * 0.3) * m.arm;
       c.beginPath(); c.moveTo(ax, ay); c.lineTo(ex, ey); c.stroke();
     }
     c.fillStyle = body;
     c.beginPath(); c.ellipse(x, y + hgt * 0.62, hgt * 0.42, hgt * 0.62, 0, 0, Math.PI * 2); c.fill();
+    if (walk && lv > 0.25) continue;                       // walking away: we see the back of their heads
+    const look = walk ? m.dir * 3 : 0;
     c.fillStyle = '#fff';
-    c.beginPath(); c.arc(x - 6, y + 12, 3, 0, Math.PI * 2); c.arc(x + 6, y + 12, 3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x - 6 + look, y + 12, 3, 0, Math.PI * 2); c.arc(x + 6 + look, y + 12, 3, 0, Math.PI * 2); c.fill();
+    // the ones still here are losing patience: cross brows, then arms folded
+    if (cross > 0.05) {
+      c.strokeStyle = '#fff'; c.lineWidth = 2.2; c.lineCap = 'round'; c.globalAlpha = cross;
+      c.beginPath(); c.moveTo(x - 10, y + 5 - 2 * cross); c.lineTo(x - 3, y + 8); c.moveTo(x + 10, y + 5 - 2 * cross); c.lineTo(x + 3, y + 8); c.stroke();
+      if (cross > 0.5) { c.strokeStyle = m.dark ? COL.ink : COL.ink2; c.lineWidth = 5; c.beginPath(); c.moveTo(x - hgt * 0.32, y + hgt * 0.62); c.lineTo(x + hgt * 0.32, y + hgt * 0.7); c.stroke(); }
+      c.globalAlpha = 1;
+    }
   }
 }
 
@@ -355,7 +372,7 @@ const Stage = {
     const old = this.crowd; this.crowd = makeCrowd(this.W);
     this.crowd.forEach((m, i) => { if (old[i]) { m.pres = old[i].pres; m.arm = old[i].arm; } });
   },
-  reset(){ this.popups = []; this.parts = []; this.banner = null; this.flashes = []; this.shake = 0; this.flash = 0; this.thrumIn = 0; this.thrumHold = 0; this.crowd.forEach(m => { m.pres = 0; m.arm = 0; }); },
+  reset(){ this.popups = []; this.parts = []; this.banner = null; this.flashes = []; this.shake = 0; this.flash = 0; this.thrumIn = 0; this.thrumHold = 0; this.dangerV = 0; this.failAt = 0; this.cracks = null; this.crowd.forEach(m => { m.pres = 0; m.arm = 0; m.leave = 0; }); },
   burst(x, y, n, cols){
     if (reduceMotion) return;
     x = x == null ? this.hitPt.x : x; y = y == null ? this.hitPt.y : y;
@@ -381,7 +398,7 @@ const Stage = {
   placeDrummer(cx, floorY, w, h){ this.drumAt = { cx, floorY, h }; },
   drawDrummer(c, G, beatF){
     const d = this.drumAt; if (!d || typeof FunkDrummer === 'undefined') return;
-    const heard = AudioEngine.now() - AudioEngine.outputLatency(), st = this.drumSt || (this.drumSt = FunkDrummer.create());
+    const heard = AudioEngine.smoothNow() - AudioEngine.outputLatency(), st = this.drumSt || (this.drumSt = FunkDrummer.create());
     FunkDrummer.draw(c, st, { x: d.cx, floorY: d.floorY, h: d.h, now: heard, beat: Groove.cfg ? Groove.beatAt(heard) : beatF, spb: Groove.cfg ? Groove.cfg.beatDur : 0.5,
       level: G.level || 0, events: Groove.events(heard), playing: !!(G.running && !G.paused), missAgo: AudioEngine.now() - (G.lastMissAt || -9) });
   },
@@ -412,15 +429,18 @@ const Stage = {
     // the lanterns and neon breathe with the beat
     if (!reduceMotion) { c.save(); c.globalAlpha = 0.07 * Math.pow(1 - phase, 2); c.fillStyle = scene ? scene.palette[2] : '#FFB199'; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore(); }
     if (scene) Scenes.drawLive(c, scene, { W, H, top: railY0 + railH0, F: floorY0, now, dt, phase, hype: G.hype || 0, level: G.level || 0 });
+    // playing badly: the room goes dark and red, the lights start failing
+    const dv = this.dangerV = (this.dangerV || 0) + ((G.failed ? 1 : G.danger || 0) - (this.dangerV || 0)) * Math.min(1, dt * 2.5);
+    if (dv > 0.02) { c.fillStyle = `rgba(70,0,16,${Math.min(0.6, dv * 0.55)})`; c.fillRect(0, 0, W, H); }
     // spotlights sweep harder as the hype grows
     const hype = G.hype || 0, lvl = G.level || 0;
-    if (hype > 0.05 && !reduceMotion) {
+    if (hype > 0.05 && !reduceMotion && dv < 0.6) {
       const nBeams = 2 + lvl;
       for (let i = 0; i < nBeams; i++) {
         const ox = W * (i + 0.5) / nBeams, ang = Math.sin(now * (0.6 + i * 0.17) + i * 2) * 0.5;
         c.save(); c.translate(ox, -20); c.rotate(ang);
         const g = c.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, `rgba(255,255,255,${0.12 + hype * 0.28})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+        g.addColorStop(0, `rgba(255,${Math.round(255 - dv * 200)},${Math.round(255 - dv * 220)},${(0.12 + hype * 0.28) * (1 - dv)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
         c.fillStyle = g; c.beginPath(); c.moveTo(-12, 0); c.lineTo(12, 0); c.lineTo(90, H * 1.1); c.lineTo(-90, H * 1.1); c.closePath(); c.fill();
         c.restore();
       }
@@ -524,7 +544,7 @@ const Stage = {
     if (lvl >= 3 && !reduceMotion && Math.random() < 0.04 * (lvl - 2)) this.flashes.push({ x: Math.random() * W, y: H - 40 - Math.random() * 30, a: 1 });
     this.flashes = this.flashes.filter(f => (f.a -= dt * 4) > 0);
     this.flashes.forEach(f => { c.fillStyle = `rgba(255,255,255,${f.a})`; c.beginPath(); c.arc(f.x, f.y, 6 + (1 - f.a) * 14, 0, Math.PI * 2); c.fill(); });
-    { const cs = Math.max(0.55, Math.min(1, H / 420)); c.save(); c.translate(0, H * (1 - cs)); c.scale(cs, cs); drawCrowd(c, W / cs, H, phase, hype, now, lvl, this.crowd, dt); c.restore(); }
+    { const cs = Math.max(0.55, Math.min(1, H / 420)); c.save(); c.translate(0, H * (1 - cs)); c.scale(cs, cs); drawCrowd(c, W / cs, H, phase, hype, now, lvl, this.crowd, dt * (G.failed ? 2.5 : 1), dv); c.restore(); }
     this.drawDrummer(c, G, beatF);
     // everything from here on goes on the top layer
     if (this.fxc) { c = this.fxc; c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H); }
@@ -585,11 +605,57 @@ const Stage = {
       c.font = `${Math.round(Math.min(H * 0.4, 130))}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.lineWidth = 12; c.strokeStyle = COL.ink; c.strokeText(G.countText, W / 2, H * 0.52); c.fillStyle = COL.paper; c.fillText(G.countText, W / 2, H * 0.52);
     }
+    this.drawDanger(c, W, H, dv, now, G);
     if (G.tapMode && G.running) {
       c.font = `800 13px ${UI_FONT}`; c.textAlign = 'right'; c.textBaseline = 'top';
       const t = 'No mic: tap here or press Space to strum'; const tw = c.measureText(t).width;
       c.fillStyle = 'rgba(30,27,46,.8)'; rr(c, W - tw - 24, 8, tw + 16, 22, 11); c.fill(); c.fillStyle = COL.paper; c.fillText(t, W - 16, 11);
     }
+  }
+};
+
+// the screen turns on you: a red vignette that throbs like a heartbeat, glass cracks spreading in from the corners,
+// flickering lights, and when the show fails the glass shatters under a BOOED OFF sign
+Stage.drawDanger = function (c, W, H, dv, now, G){
+  if (dv < 0.03) return;
+  const rm = reduceMotion, beat = rm ? 0 : Math.pow(Math.max(0, Math.sin(now * (4 + dv * 5))), 6) * (dv > 0.55 ? 1 : 0);
+  const a = Math.min(0.92, Math.pow(dv, 1.3) * 0.8 + beat * 0.12 * dv);
+  const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * (0.62 - dv * 0.35), W / 2, H / 2, Math.hypot(W, H) * 0.6);
+  g.addColorStop(0, 'rgba(160,0,24,0)'); g.addColorStop(0.55, `rgba(150,0,22,${a * 0.55})`); g.addColorStop(1, `rgba(60,0,10,${a})`);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // lights failing
+  if (dv > 0.7 && !rm && Math.random() < (dv - 0.7) * 0.25) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, W, H); }
+  // cracks: fixed shapes per stage size, growing with the danger
+  if (!this.cracks || this.cracks.W !== W || this.cracks.H !== H) {
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const list = [];
+    for (const [x0, y0, ang] of [[0, 0, 0.7], [W, 0, 2.4], [0, H, -0.7], [W, H, -2.4], [W * 0.5, 0, 1.57], [W * 0.18, H, -1.2]]) {
+      const pts = [[x0, y0]]; let x = x0, y = y0, a2 = ang; const len = Math.min(W, H) * (0.5 + rnd() * 0.35);
+      for (let d = 0; d < len; ) { const st = 14 + rnd() * 30; a2 += (rnd() - 0.5) * 0.9; x += Math.cos(a2) * st; y += Math.sin(a2) * st; d += st; pts.push([x, y]);
+        if (rnd() < 0.25) { const b = [[x, y]]; let bx = x, by = y, ba = a2 + (rnd() < 0.5 ? 1 : -1) * (0.6 + rnd() * 0.6); for (let k = 0; k < 4; k++) { bx += Math.cos(ba) * 18; by += Math.sin(ba) * 18; ba += (rnd() - 0.5) * 0.8; b.push([bx, by]); } list.push({ pts: b, at: d / len, branch: true }); } }
+      list.push({ pts, at: 0 });
+    }
+    this.cracks = { W, H, list };
+  }
+  const grow = G.failed ? 1 : Math.max(0, (dv - 0.5) / 0.45);
+  if (grow > 0) {
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    for (const cr of this.cracks.list) {
+      if (cr.branch && grow < cr.at + 0.1) continue;
+      const n = Math.max(2, Math.ceil(cr.pts.length * (cr.branch ? Math.min(1, (grow - cr.at) * 3) : grow)));
+      c.beginPath(); cr.pts.slice(0, n).forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y));
+      c.strokeStyle = 'rgba(20,0,6,.75)'; c.lineWidth = cr.branch ? 3 : 5; c.stroke();
+      c.strokeStyle = 'rgba(255,230,235,.8)'; c.lineWidth = cr.branch ? 1.2 : 2; c.stroke();
+    }
+  }
+  if (G.failed && this.failAt) {
+    const t = performance.now() / 1000 - this.failAt;
+    c.fillStyle = `rgba(20,0,6,${Math.min(0.55, t * 0.5)})`; c.fillRect(0, 0, W, H);
+    const k = Math.min(1, t / 0.35), sc = rm ? 1 : 1 + (1 - k) * 1.6, fs = Math.round(Math.min(H * 0.26, W * 0.13, 110));
+    c.save(); c.translate(W / 2, H * 0.48); c.rotate(-0.08); c.scale(sc, sc); c.globalAlpha = k;
+    c.font = `${fs}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.lineWidth = Math.max(8, fs * 0.14); c.strokeStyle = COL.ink; c.strokeText('BOOED OFF!', 0, 0); c.fillStyle = COL.bad; c.fillText('BOOED OFF!', 0, 0);
+    c.restore(); c.globalAlpha = 1;
   }
 };
 

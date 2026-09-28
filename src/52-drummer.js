@@ -38,7 +38,7 @@ const FunkDrummer = (() => {
   const upP = (d, lift) => { const h = HIT[d], L = lift * h.size;
     if (d === 'crash') return pose(h.x - 14, h.y - L * 0.9, h.a + h.up * 1.1, h.e[0] - 4, h.e[1] - L * 0.6);
     if (d.startsWith('click')) return pose(h.x - h.side * 10, h.y + 10, h.a - h.up * 0.55, h.e[0], h.e[1] + 4);
-    return pose(h.x - h.side * L * 0.1, h.y - L, h.a + h.up * (0.75 + h.size * 0.35), h.e[0] + h.side * 5, h.e[1] - L * 0.45); };
+    return pose(h.x - h.side * L * 0.1, h.y - L * 0.55, h.a + h.up * (0.95 + h.size * 0.4), h.e[0] + h.side * 6, h.e[1] - L * 0.25); };
   const rebP = (d, lift) => { const h = HIT[d], L = lift * h.size;
     if (d === 'crash') return pose(h.x + 14, h.y + 22, h.a + 0.5, h.e[0] + 6, h.e[1] + 8);
     if (d.startsWith('click')) return pose(h.x, h.y + 4, h.a + h.up * 0.2, h.e[0], h.e[1]);
@@ -92,9 +92,7 @@ const FunkDrummer = (() => {
     yell: P('M222 228 Q250 218 278 228 Q286 262 250 270 Q214 262 222 228 Z'),
     oh: P('M236 236 Q250 226 264 236 Q268 258 250 262 Q232 258 236 236 Z'),
     pucker: P('M241 240 Q250 233 259 240 Q261 252 250 254 Q239 252 241 240 Z'),
-    tongue: P('M220 232 Q250 226 280 232 Q276 256 250 258 Q224 256 220 232 Z'),
     laugh: P('M214 232 Q250 226 286 232 Q282 272 250 276 Q218 272 214 232 Z'),
-    bite: P('M237 240 Q250 234 263 240 Q263 251 250 252 Q237 251 237 240 Z'),
     grit: P('M216 234 Q250 230 284 234 Q284 254 250 258 Q216 254 216 234 Z'),
   };
   const STACHE_L = P('M249 226 Q224 214 206 230 Q198 238 192 228'), STACHE_R = P('M251 226 Q276 214 294 230 Q302 238 308 228');
@@ -138,8 +136,8 @@ const FunkDrummer = (() => {
     const bar = Math.floor(beat / 4), bpos = ((beat % 4) + 4) % 4, slot = ((bar % 4) + 4) % 4, { dSn, dCr, dHat, dTom } = hits;
     if (missAgo < 0.8) { f.mouth = missAgo < 0.3 ? 'oh' : 'grit'; f.eyes = 'wide'; f.browUp = -14; f.browAng = -0.18; f.shades = 'down'; return f; }
     if (lvlUpAgo < 1.1) { f.mouth = 'laugh'; f.eyes = 'happy'; f.browUp = -14; f.shades = 'up'; return f; }
-    // drum fills: full concentration going round the kit (tongue out, shades slipping, eyes on the drums)...
-    if (playing && ctx.inFill) { f.mouth = 'bite'; f.eyes = 'fierce'; f.browAng = 0.3; f.browUp = 3; f.shades = 'slip'; f.look = ctx.look; return f; }
+    // drum fills: full concentration going round the kit (clenched grill, fierce brows, shades slipping, eyes on the sticks)...
+    if (playing && ctx.inFill) { f.mouth = 'grit'; f.eyes = 'fierce'; f.browAng = 0.34; f.browUp = 4; f.shades = 'slip'; f.look = ctx.look; return f; }
     // ...then the payoff when it lands
     if (playing && ctx.afterFill < 0.75) { f.mouth = L >= 2 ? 'yell' : 'laugh'; f.eyes = 'happy'; f.browUp = -14; f.shades = L >= 3 ? 'up' : 'on'; return f; }
     if (!playing) { f.mouth = 'smirk'; if (((Math.floor(beat / 8) % 3) + 3) % 3 === 2) { f.shades = 'peek'; f.eyes = 'side'; f.browUp = -8; } return f; }
@@ -157,11 +155,11 @@ const FunkDrummer = (() => {
       f.wiggle = slot === 1 ? 1 : 0;
       if (slot === 2 && bpos >= 1 && bpos < 3) { f.shades = 'peek'; f.eyes = 'wink'; f.browUp = -10; }
     } else if (L === 3) {
-      f.mouth = dCr < 0.4 ? 'yell' : hitNow ? 'grit' : slot === 3 && bpos >= 2 ? 'tongue' : 'grin';
+      f.mouth = dCr < 0.4 ? 'yell' : hitNow ? 'grit' : slot === 3 && bpos >= 2 ? 'yell' : 'grin';
       f.browAng = 0.2; f.eyes = 'fierce';
       if (slot === 1 && bpos >= 2) { f.shades = 'peek'; f.browUp = -6; }
     } else {
-      f.mouth = dSn < 0.24 || dCr < 0.4 ? 'yell' : slot === 1 ? 'tongue' : 'laugh';
+      f.mouth = dSn < 0.24 || dCr < 0.4 ? 'yell' : 'laugh';
       f.browAng = 0.24; f.eyes = slot === 3 ? 'happy' : 'fierce'; f.browUp = dSn < 0.2 ? -6 : 0;
       if (slot === 3) f.shades = 'up';
     }
@@ -175,7 +173,7 @@ const FunkDrummer = (() => {
     const rm = typeof reduceMotion !== 'undefined' && reduceMotion;
     const real = o.real != null ? o.real : performance.now() / 1000, dt = clamp(real - (st.lastReal || real), 0, 0.05); st.lastReal = real;
     const beat = o.beat, ph = ((beat % 1) + 1) % 1, beatN = Math.floor(beat);
-    const pl = plan(events || []), lift = [22, 28, 34, 42, 50][L];
+    const pl = plan(events || []), lift = [22, 26, 30, 34, 38][L];
     const hA = rm ? hovP('snare', lift) : handAt(pl.A, now, 'A', lift), hB = rm ? hovP('hat', lift) : handAt(pl.B, now, 'B', lift);
     const sinceIn = (list, ds) => { let b = 9; for (const e of list) if (ds.includes(e.d) && e.t <= now) b = Math.min(b, now - e.t); return b; };
     const dSn = Math.min(sinceIn(pl.A, ['snare']), sinceIn(pl.B, ['bsn'])), dTom = sinceIn(pl.A, ['tom']), dHat = sinceIn(pl.B, ['hat']), dCr = sinceIn(pl.B, ['crash']);
@@ -222,7 +220,7 @@ const FunkDrummer = (() => {
     if (st.forceFace) Object.assign(face, st.forceFace);
     st.look = lerp(st.look || 0, face.look, clamp(dt * 12, 0, 1));
     // shades: bounce on the nose with every kick and snare, creep down over two bars and get flicked back up,
-    // slide down for a peek, flip up onto the headband, fly off on the big crashes
+    // slide down for a peek, flip up into the afro, fly off on the big crashes
     { const sh = st.sh; let tgt = face.shades === 'down' ? 34 : face.shades === 'peek' ? 30 : face.shades === 'slip' ? 6 : face.shades === 'up' ? -66 : 0;
       if (face.shades === 'on' && playing && L >= 1) tgt += 9 * (((beat % 8) + 8) % 8) / 8;
       if (!rm) {
@@ -305,10 +303,10 @@ const FunkDrummer = (() => {
       const tipAt = g => [g.x + Math.cos(g.a) * STICK, g.y + Math.sin(g.a) * STICK], path = [];
       for (let j = 0; j <= 8; j++) path.push(tipAt(j ? handAt(list, now - j * 0.009, hand, lift) : cur));
       const band = new Path2D(), Lb = [], Rb = [];
-      for (let j = 0; j < path.length; j++) { const a = path[Math.max(0, j - 1)], b2 = path[Math.min(path.length - 1, j + 1)], ddx = b2[0] - a[0], ddy = b2[1] - a[1], l = Math.hypot(ddx, ddy) || 1, w = 9 * (1 - j / path.length);
+      for (let j = 0; j < path.length; j++) { const a = path[Math.max(0, j - 1)], b2 = path[Math.min(path.length - 1, j + 1)], ddx = b2[0] - a[0], ddy = b2[1] - a[1], l = Math.hypot(ddx, ddy) || 1, w = 6 * (1 - j / path.length);
         Lb.push([path[j][0] - ddy / l * w, path[j][1] + ddx / l * w]); Rb.push([path[j][0] + ddy / l * w, path[j][1] - ddx / l * w]); }
       band.moveTo(Lb[0][0], Lb[0][1]); for (const q of Lb) band.lineTo(q[0], q[1]); for (let j = Rb.length - 1; j >= 0; j--) band.lineTo(Rb[j][0], Rb[j][1]); band.closePath();
-      c.fillStyle = 'rgba(255,255,255,.8)'; c.fill(band); c.strokeStyle = INK; c.lineWidth = 3; c.stroke(band);
+      c.fillStyle = 'rgba(255,255,255,.55)'; c.fill(band); c.strokeStyle = 'rgba(43,26,18,.7)'; c.lineWidth = 2.5; c.stroke(band);
       for (let j = 2; j >= 1; j--) { const g = handAt(list, now - j * 0.02, hand, lift); c.globalAlpha = 0.28 * (3 - j); stickShape(c, g); }
       c.globalAlpha = 1;
     }
@@ -370,10 +368,6 @@ const FunkDrummer = (() => {
   function drawHead(c, st, HM, f, s){
     const { L, playing, rm, real, now, dSn, dHat, dK, missed } = s;
     c.save(); c.setTransform(c.getTransform().multiply(HM));
-    c.strokeStyle = INK; c.lineWidth = 26; c.beginPath(); c.moveTo(150, 146); c.quadraticCurveTo(250, 96, 350, 146); c.stroke();
-    c.strokeStyle = GOLD; c.lineWidth = 16; c.stroke();
-    c.strokeStyle = '#fff'; c.lineWidth = 3; c.setLineDash([2, 10]); c.beginPath(); c.moveTo(160, 140); c.quadraticCurveTo(250, 100, 340, 140); c.stroke(); c.setLineDash([]);
-    star(c, 250, 120, 12, 5, 0); c.fillStyle = PINK; c.fill(); c.strokeStyle = INK; c.lineWidth = 3.5; c.stroke();
     for (const x of [190, 310]) { c.beginPath(); c.ellipse(x, 200, 13, 17, 0, 0, 7); c.fillStyle = SKIN; c.fill(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke(); }
     const de = Math.min(dSn, dHat), ear = rm ? 0 : Math.sin(de * 30) * Math.exp(-de * 8) * 0.4;
     for (const [x, sg] of [[188, -1], [312, 1]]) { c.save(); c.translate(x, 212); c.rotate(ear * sg); c.beginPath(); c.arc(0, 10, 10, 0, 7); c.lineWidth = 7; c.strokeStyle = INK; c.stroke(); c.lineWidth = 3.5; c.strokeStyle = GOLD; c.stroke(); c.restore(); }
@@ -428,28 +422,13 @@ const FunkDrummer = (() => {
     c.strokeStyle = INK; c.lineWidth = 5;
     const open = (shape, teethH, tongue) => { c.save(); c.clip(shape); c.fillStyle = MOUTH; c.fillRect(200, 215, 100, 70); if (tongue) { c.fillStyle = TONGUE; c.beginPath(); c.ellipse(250, tongue, 18, 10, 0, 0, 7); c.fill(); }
       if (teethH) { c.fillStyle = GOLD; c.fillRect(200, 215, 100, teethH); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(200, 215 + teethH); c.lineTo(300, 215 + teethH); c.stroke(); } c.restore(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(shape); };
-    // a tongue drawn in front of the lower lip: its top sits inside the dark mouth, so it needs no top outline
-    const tongueOut = (x0, x1, y0, y1) => { const xm = (x0 + x1) / 2, r = (x1 - x0) / 2, T = new Path2D();
-      T.moveTo(x0, y0); T.lineTo(x0, y1 - r); T.quadraticCurveTo(x0, y1, xm, y1); T.quadraticCurveTo(x1, y1, x1, y1 - r); T.lineTo(x1, y0); T.quadraticCurveTo(xm, y0 - 3, x0, y0);
-      c.fillStyle = TONGUE; c.fill(T);
-      c.strokeStyle = INK; c.lineWidth = 4; c.beginPath(); c.moveTo(x0, y0 + 2); c.lineTo(x0, y1 - r); c.quadraticCurveTo(x0, y1, xm, y1); c.quadraticCurveTo(x1, y1, x1, y1 - r); c.lineTo(x1, y0 + 2); c.stroke();
-      c.lineWidth = 2.5; c.beginPath(); c.moveTo(xm, y0 + (y1 - y0) * 0.45); c.lineTo(xm, y1 - r * 0.6); c.stroke(); };
     if (m === 'grin') { c.save(); c.clip(M.grin); c.fillStyle = MOUTH; c.fillRect(200, 220, 100, 60); c.fillStyle = GOLD; c.fillRect(200, 220, 100, 29); c.strokeStyle = GOLD_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [222, 236, 264, 278]) { c.moveTo(x, 238); c.lineTo(x, 249); } c.stroke(); c.restore(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke(M.grin); }
-    else if (m === 'smirk') { c.beginPath(); c.moveTo(226, 240); c.quadraticCurveTo(256, 252, 282, 234); c.stroke(); c.lineWidth = 4; c.beginPath(); c.moveTo(280, 230); c.quadraticCurveTo(288, 234, 286, 242); c.stroke(); c.fillStyle = GOLD; c.beginPath(); c.moveTo(262, 244); c.lineTo(270, 242); c.lineTo(268, 249); c.closePath(); c.fill(); }
+    else if (m === 'smirk') { c.beginPath(); c.moveTo(226, 240); c.quadraticCurveTo(256, 252, 282, 234); c.stroke(); c.lineWidth = 4; c.beginPath(); c.moveTo(280, 230); c.quadraticCurveTo(288, 234, 286, 242); c.stroke(); }
     else if (m === 'pucker') { c.fillStyle = MOUTH; c.fill(M.pucker); c.lineWidth = 7; c.strokeStyle = LIP; c.stroke(M.pucker); c.lineWidth = 4; c.strokeStyle = INK; c.stroke(M.pucker);
       if (!rm) { const cyc = (real * 1.5) % 1; c.globalAlpha = 1 - cyc; c.lineWidth = 3; c.beginPath(); c.arc(300 + cyc * 30, 238 - cyc * 20, 6 + cyc * 6, -1, 1); c.stroke(); c.globalAlpha = 1; } }
     else if (m === 'oh') open(M.oh, 0, 258);
     else if (m === 'yell') open(M.yell, 24, 266);
     else if (m === 'laugh') open(M.laugh, 26, 268);
-    else if (m === 'tongue') {
-      // rock-out tongue: from inside the open mouth, over the lower lip, hanging down
-      open(M.tongue, 20, 0); tongueOut(237, 267, 249, 279);
-    }
-    else if (m === 'bite') {
-      // concentrating: a small mouth with the tip of the tongue poking out over the lower lip
-      c.save(); c.clip(M.bite); c.fillStyle = MOUTH; c.fillRect(230, 225, 40, 35); c.restore();
-      c.lineWidth = 5; c.strokeStyle = INK; c.stroke(M.bite); tongueOut(243, 259, 244, 263);
-    }
     else if (m === 'grit') { c.save(); c.clip(M.grit); c.fillStyle = GOLD; c.fillRect(200, 225, 100, 40); c.strokeStyle = GOLD_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [228, 239, 250, 261, 272]) { c.moveTo(x, 230); c.lineTo(x, 258); } c.stroke(); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(214, 245); c.lineTo(286, 245); c.stroke(); c.restore(); c.lineWidth = 5; c.stroke(M.grit); }
   }
 
