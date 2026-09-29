@@ -418,9 +418,9 @@ const UI = {
   modeBurst(card, kind, go){
     Sfx.open();
     if (reduceMotion) { go(); return; }
-    card.classList.remove('pressed'); void card.offsetWidth; card.classList.add('pressed');
+    card.classList.add('pressed'); setTimeout(() => card.classList.remove('pressed'), 160);
     ModeIcons.kick(kind);
-    setTimeout(go, 360);
+    setTimeout(go, 200);
   },
   /* ---------- song menu ---------- */
   openSong(song, storyCtx){
@@ -1179,14 +1179,20 @@ const TitleArt = {
     const now = playing && actx ? actx.currentTime : t;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H);
     // a record spinning behind the band at 33⅓ rpm: a true circle
-    const R = Math.min(W * 0.45, H * 0.4), vx = W * 0.5, vy = H * 0.42;
+    // the record and the stage float gently, out of step with each other
+    const fv = reduceMotion ? 0 : Math.sin(t * 1.25) * H * 0.012, fs = reduceMotion ? 0 : Math.sin(t * 1.05 + 1.3) * H * 0.008;
+    const R = Math.min(W * 0.45, H * 0.4), vx = W * 0.5, vy = H * 0.42 + fv;
     drawVinyl(c, vx, vy, R, R, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
-    // floating chord cards
+    // floating chord cards: black-and-white sketches, like the backdrop's doodles
     ['G', 'C', 'D', 'Em'].forEach((name, i) => {
       const x = W * (0.2 + i * 0.2), y = H * 0.1 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
-      const col = cardColor(name); c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
-      c.fillStyle = col; rr(c, -26, -18, 52, 36, 10); c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
-      c.fillStyle = textOn(col); c.font = `22px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 0, 2); c.restore();
+      c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
+      c.fillStyle = '#FFF4E6'; rr(c, -26, -18, 52, 36, 10); c.fill();
+      c.strokeStyle = COL.ink; c.lineJoin = 'round'; c.lineCap = 'round';
+      c.lineWidth = 3; rr(c, -26, -18, 52, 36, 10); c.stroke();
+      c.lineWidth = 1.4; c.save(); c.translate(1.6, -1.2); c.rotate(0.02); rr(c, -26, -18, 52, 36, 10); c.stroke(); c.restore();     // a second, looser pencil line
+      c.globalAlpha = 0.35; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-18 + k * 5, 14); c.lineTo(-24 + k * 5, 8); c.stroke(); } c.globalAlpha = 1;   // hatching in a corner
+      c.fillStyle = COL.ink; c.font = `22px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 0, 2); c.restore();
     });
     // the band sized and spaced so Pip (guitar neck out to the left) and the kit never overlap
     const floorY = H * 0.64;
@@ -1195,6 +1201,8 @@ const TitleArt = {
     let L = lay(s); if (L.total > W * 0.94) { s *= W * 0.94 / L.total; L = lay(s); }
     const x0 = W / 2 - L.total / 2, pipX0 = x0 + L.pipL, drumX0 = pipX0 + L.pipR + L.gap + L.dw / 2;
     const pipX = Settings.lefty ? W - pipX0 : pipX0, drumX = Settings.lefty ? W - drumX0 : drumX0;
+    this.drawLights(c, W, H, floorY + fs, t, ph);
+    c.save(); c.translate(0, fs);
     this.drawStage(c, W, H, floorY, beat, ph, playing);
     let hits = Music.hits;
     if (!playing) { hits = []; for (let n = 0; n < 2; n++) { const bb = Math.floor(beat) - n; hits.push({ t: bb * 60 / bpm, kind: bb % 2 ? 'snare' : 'kick' }); hits.push({ t: (bb + 0.5) * 60 / bpm, kind: 'hat' }); } }
@@ -1212,18 +1220,40 @@ const TitleArt = {
       FunkDrummer.draw(c, this.dSt || (this.dSt = FunkDrummer.create()), { x: drumX, floorY: floorY + L.h * 0.012, h: L.h, now: tb, beat, spb, level: playing ? 2 : 1, events: ev, playing: true, missAgo: 9 });
     }
     drawPip(c, pipX, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
+    c.restore();
     // the crowd in front of the stage, whole: their round bodies sit above the bottom edge
     const crowdH = H * 0.17;
     c.save(); c.translate(0, H - crowdH * 1.02); const k = crowdH / 80; c.scale(k, k);
     drawCrowd(c, W / k, 80 - 16, ph, playing ? 0.8 : 0.4, now, playing ? 3 : 0); c.restore();
   },
-  // the stage: a wooden deck on a riser with chase lights, a lip of light along the front
+  // two show lights hanging above the band, sweeping slowly and brightening on the beat
+  drawLights(c, W, H, floorY, t, ph){
+    const pulse = reduceMotion ? 0.5 : 0.55 + 0.45 * Math.pow(1 - ph, 2);
+    for (const [k, col] of [[-1, '255,236,170'], [1, '255,190,220']]) {
+      const lx = W * (0.5 + k * 0.22), ly = H * 0.015, sw = reduceMotion ? 0 : Math.sin(t * 0.7 + (k > 0 ? 2 : 0)) * 0.16;
+      const tx = W * 0.5 + k * W * 0.08 + Math.sin(sw) * H, ty = floorY, ang = Math.atan2(ty - ly, tx - lx), len = Math.hypot(tx - lx, ty - ly) * 1.05, spread = 0.2;
+      c.save(); c.translate(lx, ly); c.rotate(ang);
+      const g = c.createLinearGradient(0, 0, len, 0); g.addColorStop(0, `rgba(${col},${0.75 * pulse})`); g.addColorStop(0.7, `rgba(${col},${0.28 * pulse})`); g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g; c.beginPath(); c.moveTo(0, -6); c.lineTo(len, -len * spread); c.quadraticCurveTo(len * 1.04, 0, len, len * spread); c.lineTo(0, 6); c.closePath(); c.fill();
+      c.restore();
+      // the pool of light where it lands
+      c.save(); c.translate(tx, ty); c.scale(1, 0.22); const pg = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.12); pg.addColorStop(0, `rgba(${col},${0.5 * pulse})`); pg.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = pg; c.beginPath(); c.arc(0, 0, W * 0.12, 0, Math.PI * 2); c.fill(); c.restore();
+      // the lamp: a black can on a bracket
+      c.save(); c.translate(lx, ly); c.rotate(ang - Math.PI / 2); c.lineWidth = 3; c.strokeStyle = COL.ink; c.lineJoin = 'round';
+      c.fillStyle = COL.ink; rr(c, -11, -18, 22, 22, 5); c.fill(); c.stroke();
+      c.fillStyle = `rgba(${col},${0.7 + 0.3 * pulse})`; c.beginPath(); c.ellipse(0, 4, 10, 4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.restore();
+    }
+  },
+  // the stage: a wooden deck on a black riser with chase lights, a lip of light along the front
   drawStage(c, W, H, floorY, beat, ph, playing){
     const x0 = W * 0.04, x1 = W * 0.96, top = floorY - H * 0.02, deck = H * 0.045, face = H * 0.085;
     c.save(); c.lineJoin = 'round';
     // glow on the deck from the lights above
-    const g = c.createRadialGradient(W / 2, top, 0, W / 2, top, W * 0.5); g.addColorStop(0, 'rgba(255,236,170,.55)'); g.addColorStop(1, 'rgba(255,236,170,0)');
-    c.fillStyle = g; c.fillRect(0, top - H * 0.3, W, H * 0.35);
+    // (a soft ellipse that fades out all round, so it has no edge of its own)
+    c.save(); c.translate(W / 2, top); c.scale(1, 0.32); const g = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.46); g.addColorStop(0, 'rgba(255,236,170,.5)'); g.addColorStop(1, 'rgba(255,236,170,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, W * 0.46, 0, Math.PI * 2); c.fill(); c.restore();
     // deck: warm planks in perspective
     c.beginPath(); c.moveTo(x0 + W * 0.03, top); c.lineTo(x1 - W * 0.03, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
     const dg = c.createLinearGradient(0, top, 0, top + deck); dg.addColorStop(0, '#F2C27A'); dg.addColorStop(1, '#D9954E');
@@ -1231,17 +1261,17 @@ const TitleArt = {
     c.save(); c.clip(); c.strokeStyle = 'rgba(122,62,20,.45)'; c.lineWidth = 1.5;
     for (let i = 1; i < 14; i++) { const u = i / 14, xa = x0 + W * 0.03 + (x1 - x0 - W * 0.06) * u, xb = x0 + (x1 - x0) * u; c.beginPath(); c.moveTo(xa, top); c.lineTo(xb, top + deck); c.stroke(); }
     c.beginPath(); c.moveTo(x0, top + deck * 0.5); c.lineTo(x1, top + deck * 0.5); c.stroke(); c.restore();
-    // riser front: deep plum with a gold trim and chase-light bulbs that run on the beat
+    // riser front: black with a gold trim and chase-light bulbs that run on the beat
     const fy = top + deck;
-    c.fillStyle = '#3B2366'; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
-    c.fillStyle = '#2A1850'; c.fillRect(x0 + 4, fy + face * 0.62, x1 - x0 - 8, face * 0.3);
+    c.fillStyle = COL.ink; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.fillStyle = '#2E2A40'; c.fillRect(x0 + 4, fy + face * 0.62, x1 - x0 - 8, face * 0.3);
     c.fillStyle = COL.sun; c.fillRect(x0 + 2, fy + 1, x1 - x0 - 4, 4);
     const n = Math.max(8, Math.round((x1 - x0) / 30)), step = Math.floor(beat * 2);
     for (let i = 0; i < n; i++) {
       const x = x0 + (i + 0.5) * (x1 - x0) / n, y = fy + face * 0.34, on = reduceMotion ? i % 2 === 0 : (i + step) % 3 === 0;
       const r = Math.max(3, face * 0.13);
       if (on) { c.fillStyle = 'rgba(255,214,90,.35)'; c.beginPath(); c.arc(x, y, r * 2.2, 0, Math.PI * 2); c.fill(); }
-      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = on ? '#FFE37A' : '#6B4E8F'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = on ? '#FFE37A' : '#4A4660'; c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
     }
     c.restore();
   },

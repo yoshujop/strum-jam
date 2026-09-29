@@ -284,8 +284,6 @@ const FunkDrummer = (() => {
     chain(-76, 16, 8, 4, [3, 2]); chain(-56, 24, 9, 5, [4, 2]);
     c.save(); c.translate(0, -98); c.rotate(st.med.a); c.translate(0, 98);
     chain(-26, 30, 10, 6, [5, 2]);
-    star(c, 0, -40, 20, 9, 0); c.fillStyle = GOLD; c.fill(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke();
-    c.beginPath(); c.moveTo(0, -48); c.lineTo(9, -38); c.lineTo(0, -24); c.lineTo(-9, -38); c.closePath(); c.fillStyle = CYAN; c.fill(); c.lineWidth = 3; c.stroke();
     c.restore();
     c.restore();
     // --- head ---
@@ -393,7 +391,17 @@ const FunkDrummer = (() => {
     const brows = () => { const wig = f.wiggle && !rm ? Math.sin(real * 16) * 4 : 0;
       for (const [x0, x1, sg] of [[200, 244, -1], [256, 300, 1]]) { c.save(); c.translate((x0 + x1) / 2, 147 + f.browUp + (sg > 0 ? wig : -wig)); c.rotate(f.browAng * sg); c.beginPath(); c.moveTo(x0 - (x0 + x1) / 2, 6); c.quadraticCurveTo(0, -11, x1 - (x0 + x1) / 2, 6); c.lineWidth = 10; c.strokeStyle = INK; c.stroke(); c.restore(); } };
     if (shY > -30) brows();
-    drawMouth(c, f.mouth, real, rm);
+    // the open mouths (oh, yell, laugh) ease open and closed instead of snapping, and the tongue rolls out with them
+    { const isOpen = ['oh', 'yell', 'laugh'].includes(f.mouth), dt = Math.min(0.1, Math.max(0, real - (st.moT == null ? real : st.moT))); st.moT = real;
+      if (isOpen) st.moShape = f.mouth;
+      st.mo = st.mo == null ? 0 : st.mo + ((isOpen ? 1 : 0) - st.mo) * Math.min(1, dt * (isOpen ? 16 : 10));
+      if (rm) st.mo = isOpen ? 1 : 0;
+      if (st.mo > 0.06 && st.moShape) {
+        if (!isOpen && st.mo < 0.5) drawMouth(c, f.mouth, real, rm, 0);
+        const k = st.mo < 1 ? 1 - Math.pow(1 - st.mo, 3) : 1;
+        c.save(); c.translate(250, 232); c.scale(0.7 + 0.3 * k, Math.max(0.05, k)); c.translate(-250, -232);
+        drawMouth(c, st.moShape, real, rm, k); c.restore();
+      } else drawMouth(c, f.mouth, real, rm, 0); }
     c.save(); c.translate(250, 226); c.scale(1, 1 - 0.12 * Math.exp(-Math.min(dSn, dK) * 14)); c.translate(-250, -226);
     c.lineWidth = 12; c.strokeStyle = INK; c.stroke(STACHE_L); c.stroke(STACHE_R); c.lineWidth = 6; c.strokeStyle = HAIR; c.stroke(STACHE_L); c.stroke(STACHE_R); c.restore();
     c.beginPath(); c.ellipse(250, 216, 19, 14, 0, 0, 7); c.fillStyle = '#96582f'; c.fill(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke();
@@ -418,9 +426,13 @@ const FunkDrummer = (() => {
     }
     c.restore();
   }
-  function drawMouth(c, m, real, rm){
+  function drawMouth(c, m, real, rm, k){
     c.strokeStyle = INK; c.lineWidth = 5;
-    const open = (shape, teethH, tongue) => { c.save(); c.clip(shape); c.fillStyle = MOUTH; c.fillRect(200, 215, 100, 70); if (tongue) { c.fillStyle = TONGUE; c.beginPath(); c.ellipse(250, tongue, 18, 10, 0, 0, 7); c.fill(); }
+    // the tongue: rises into view as the mouth opens and bobs a little while it's open
+    const open = (shape, teethH, tongue) => { c.save(); c.clip(shape); c.fillStyle = MOUTH; c.fillRect(200, 215, 100, 70);
+      if (tongue) { const bob = rm ? 0 : Math.sin(real * 11) * 2.2 * (k || 0), ty = tongue + (1 - (k || 1)) * 14 + bob;
+        c.fillStyle = TONGUE; c.beginPath(); c.ellipse(250, ty, 18, 10 + (k || 0) * 2, 0, 0, 7); c.fill();
+        c.strokeStyle = 'rgba(90,15,30,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(250, ty - 6); c.lineTo(250, ty + 3); c.stroke(); }
       if (teethH) { c.fillStyle = GOLD; c.fillRect(200, 215, 100, teethH); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(200, 215 + teethH); c.lineTo(300, 215 + teethH); c.stroke(); } c.restore(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(shape); };
     if (m === 'grin') { c.save(); c.clip(M.grin); c.fillStyle = MOUTH; c.fillRect(200, 220, 100, 60); c.fillStyle = GOLD; c.fillRect(200, 220, 100, 29); c.strokeStyle = GOLD_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [222, 236, 264, 278]) { c.moveTo(x, 238); c.lineTo(x, 249); } c.stroke(); c.restore(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke(M.grin); }
     else if (m === 'smirk') { c.beginPath(); c.moveTo(226, 240); c.quadraticCurveTo(256, 252, 282, 234); c.stroke(); c.lineWidth = 4; c.beginPath(); c.moveTo(280, 230); c.quadraticCurveTo(288, 234, 286, 242); c.stroke(); }
@@ -473,7 +485,6 @@ const FunkDrummer = (() => {
       c.beginPath(); c.arc(0, 0, R * 0.75, 0, 7); c.fillStyle = CREAM; c.fill(); c.lineWidth = 5; c.stroke();
       star(c, 0, -2, 46 * (1 + 0.08 * q), 20, 0); c.fillStyle = '#7b2fe0'; c.fill(); c.stroke();
       star(c, 0, -2, 24, 11, 0); c.fillStyle = GOLD; c.fill(); c.lineWidth = 3; c.stroke();
-      c.strokeStyle = PINK; c.lineWidth = 6; c.beginPath(); c.moveTo(-38, 40); c.quadraticCurveTo(0, 54, 38, 40); c.stroke();
       c.restore(); }
   }
   return { create, draw, plan, handAt, HIT, KIT };

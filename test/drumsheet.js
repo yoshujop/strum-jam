@@ -8,6 +8,7 @@ const [,, out = '/tmp/dsheet.png', LV = '3', OFF = '0', N = '24', COLS = '8', DT
   const p = await b.newPage({ viewport: { width: 1280, height: 800 } }); const errs = []; p.on('pageerror', e => errs.push(e.message));
   await p.goto('file://' + __dirname + '/../dist/strum-jam.html'); await p.waitForTimeout(800);
   await p.click('#btn-start', { force: true }); await p.waitForTimeout(800);
+  await p.click('#btn-play', { force: true }); await p.waitForTimeout(900);
   await p.click('text=Chord Drill: G, C, D'); await p.waitForTimeout(400); await p.evaluate(() => Settings.tuneFirst = false);
   await p.click('#btn-stage'); await p.waitForTimeout(4000);
   await p.evaluate(L => { G.hype = 0.9; G.setLevel(L); }, +LV);
