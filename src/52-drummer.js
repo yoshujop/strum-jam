@@ -272,11 +272,12 @@ const FunkDrummer = (() => {
     c.fillStyle = PURP; c.fill(LAPEL_L); c.fill(LAPEL_R);
     c.fillStyle = PURP_D; c.fill(JACKET_SH);
     c.fillStyle = PURP_L; c.globalAlpha = 0.9; c.fill(JACKET_HI); c.globalAlpha = 1;
-    // the shirt: a black lightning bolt down the chest, a thin double stripe under it
-    c.beginPath(); c.moveTo(-5, -58); c.lineTo(9, -58); c.lineTo(2, -40); c.lineTo(11, -40); c.lineTo(-6, -8); c.lineTo(-1, -30); c.lineTo(-9, -30); c.closePath();
-    c.fillStyle = INK; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
-    c.fillStyle = tw ? PINK : '#ff7ab8'; c.beginPath(); c.moveTo(-2, -54); c.lineTo(5, -54); c.lineTo(0, -44); c.closePath(); c.fill();
-    c.lineWidth = 2.5; for (const y of [2, 8]) { c.beginPath(); c.moveTo(-26, y); c.lineTo(26, y); c.stroke(); }
+    // the shirt: a fuzzy, airbrushed print of a black puppy sitting, with two grey smudges beside it
+    { const soft = (fn, col, blur) => { c.save(); c.fillStyle = col; if ('filter' in c) c.filter = `blur(${blur}px)`; c.beginPath(); fn(); c.fill(); c.restore(); };
+      soft(() => { c.ellipse(-20, -52, 5, 12, 0.35, 0, 7); c.ellipse(19, -46, 6, 9, -0.4, 0, 7); c.ellipse(4, -64, 9, 5, 0.1, 0, 7); }, '#7A7784', 1.6);
+      soft(() => { c.ellipse(0, -40, 7, 6, 0, 0, 7); c.ellipse(-6, -38, 3, 6, 0.3, 0, 7); c.ellipse(6, -38, 3, 6, -0.3, 0, 7);      // head + ears
+        c.ellipse(1, -24, 9, 11, 0, 0, 7); c.ellipse(-8, -12, 4, 3, 0, 0, 7); c.ellipse(9, -12, 4, 3, 0, 0, 7);                      // body + paws
+        c.ellipse(-12, -18, 6, 2, -0.4, 0, 7); }, '#1B1822', 0.8); }                                                                // tail
     c.fillStyle = SKIN; c.fill(VNECK); c.strokeStyle = INK; c.lineWidth = LI; c.stroke(VNECK);
     c.restore();
     c.strokeStyle = INK; c.lineWidth = LI; c.beginPath(); c.moveTo(-15, -103); c.lineTo(-21, -56); c.lineTo(-29, 4); c.moveTo(15, -103); c.lineTo(21, -56); c.lineTo(29, 4); c.stroke();

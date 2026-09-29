@@ -1269,24 +1269,20 @@ const TitleArt = {
     // (a soft ellipse that fades out all round, so it has no edge of its own)
     c.save(); c.translate(W / 2, top); c.scale(1, 0.32); const g = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.46); g.addColorStop(0, 'rgba(255,236,170,.5)'); g.addColorStop(1, 'rgba(255,236,170,0)');
     c.fillStyle = g; c.beginPath(); c.arc(0, 0, W * 0.46, 0, Math.PI * 2); c.fill(); c.restore();
-    // deck: a black-and-white checker floor in perspective, drawn like a pencil sketch (an empty, dreamlike stage)
-    const dx0 = x0 + W * 0.03, dx1 = x1 - W * 0.03, rows = 3, cols = 16;
-    const P = (u, v) => [dx0 + (x0 - dx0) * v + ((dx1 + (x1 - dx1) * v) - (dx0 + (x0 - dx0) * v)) * u, top + deck * v];
-    c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
-    c.fillStyle = '#F7F4EC'; c.fill();
-    c.save(); c.clip();
-    for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) { if ((r + k) % 2) continue;
-      const a = P(k / cols, r / rows), b2 = P((k + 1) / cols, r / rows), d = P((k + 1) / cols, (r + 1) / rows), e = P(k / cols, (r + 1) / rows);
-      c.beginPath(); c.moveTo(...a); c.lineTo(...b2); c.lineTo(...d); c.lineTo(...e); c.closePath(); c.fillStyle = '#2A2733'; c.fill();
-      // pencil hatching over each dark tile, so it reads as drawn rather than printed
-      c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; for (let q = 0.25; q < 1; q += 0.25) { const m1 = P((k + q) / cols, r / rows), m2 = P((k + q - 0.2) / cols, (r + 1) / rows); c.beginPath(); c.moveTo(...m1); c.lineTo(...m2); c.stroke(); } }
-    // loose pencil grid lines
-    c.strokeStyle = 'rgba(30,27,46,.55)'; c.lineWidth = 1.2;
-    for (let k = 0; k <= cols; k++) { const a = P(k / cols, 0), b2 = P(k / cols + 0.002, 1); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b2[0], b2[1]); c.stroke(); }
-    for (let r = 1; r < rows; r++) { const a = P(0, r / rows), b2 = P(1, r / rows); c.beginPath(); c.moveTo(a[0], a[1] + 0.6); c.lineTo(b2[0], b2[1] - 0.6); c.stroke(); }
+    // deck: the menu's own wave pattern (seigaiha), white on black, squashed into the deck's perspective
+    const dx0 = x0 + W * 0.03, dx1 = x1 - W * 0.03;
+    const deckPath = () => { c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath(); };
+    deckPath(); c.fillStyle = '#1E1B2E'; c.fill();
+    c.save(); deckPath(); c.clip();
+    const wstep = Math.max(24, deck * 2), sq = 0.42;          // waves shrink toward the back of the stage
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.6;
+    for (let row = 0, y = top + deck + wstep * sq; y > top - wstep * sq; row++, y -= wstep * sq * 0.5) {
+      const v = Math.max(0, Math.min(1, (y - top) / deck)), k = 0.75 + 0.25 * v, r0 = wstep * 0.9 * k;
+      for (let x = x0 - r0 * 2 + (row % 2) * r0; x < x1 + r0 * 2; x += r0 * 2) for (const f of [1, 0.66, 0.33]) {
+        c.beginPath(); c.ellipse(x, y, r0 * f, r0 * f * sq, 0, Math.PI, 0); c.stroke(); }
+    }
     c.restore();
-    c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
-    c.lineWidth = 1.4; c.save(); c.translate(1.5, -1); c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.stroke(); c.restore();   // a second, looser outline
+    deckPath(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
     // riser front: black with a gold trim and chase-light bulbs that run on the beat
     const fy = top + deck;
     c.fillStyle = COL.ink; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
