@@ -27,6 +27,7 @@ const UI = {
     Story.init();
     Suggest.init();
     MenuBG.apply();
+    ModeIcons.init();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -418,18 +419,8 @@ const UI = {
     Sfx.open();
     if (reduceMotion) { go(); return; }
     card.classList.remove('pressed'); void card.offsetWidth; card.classList.add('pressed');
-    const r = card.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    const set = kind === 'play' ? ['♪', '♫', '♬', '♩'] : kind === 'story' ? ['★', '✦', '★', '✧'] : ['🔥', '💥', '🔥', '⚡'];
-    const cols = kind === 'play' ? ['#FF5E7E', '#FFFFFF', '#FFCE3A'] : kind === 'story' ? ['#FFCE3A', '#FFF7E6', '#FF8FC7'] : ['#FF7A2E', '#FFCE3A', '#FF3B3B'];
-    for (let i = 0; i < 16; i++) {
-      const e = document.createElement('i'); e.className = 'mburst'; e.textContent = set[i % set.length];
-      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.3, d = 90 + Math.random() * 110;
-      e.style.left = cx + 'px'; e.style.top = cy + 'px'; e.style.color = cols[i % cols.length]; e.style.fontSize = (20 + Math.random() * 18) + 'px';
-      e.style.textShadow = '2px 2px 0 #1E1B2E';
-      e.style.setProperty('--dx', Math.cos(a) * d + 'px'); e.style.setProperty('--dy', (Math.sin(a) * d - (kind === 'battle' ? 60 : 20)) + 'px'); e.style.setProperty('--r', (Math.random() * 120 - 60) + 'deg');
-      document.body.appendChild(e); setTimeout(() => e.remove(), 800);
-    }
-    setTimeout(go, 260);
+    ModeIcons.kick(kind);
+    setTimeout(go, 420);
   },
   /* ---------- song menu ---------- */
   openSong(song, storyCtx){
@@ -1054,7 +1045,7 @@ const UI = {
       Mic.analyze((this.screen === 'game' && G.running && !G.paused && !G.tapMode) || this.openModal === 'm-mic');
       const now = AudioEngine.ctx ? AudioEngine.ctx.currentTime : performance.now() / 1000;
       if (this.screen === 'game') { G.frame(now); Stage.draw(G, now); }
-      else if (this.screen === 'title') TitleArt.draw(performance.now() / 1000);
+      else if (this.screen === 'title') { TitleArt.draw(performance.now() / 1000); ModeIcons.draw(performance.now() / 1000); }
       if (this.openModal === 'm-mic') this.micFrame();
       if (this.openModal === 'm-tune') this.tuneFrame();
       if (this.frameN % 30 === 0 && this.screen !== 'game') this.refreshMic();

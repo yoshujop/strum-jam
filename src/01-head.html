@@ -679,56 +679,27 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 #scr-title .beam{opacity:.28}
 /* ---------- mode buttons: hover and click effects ---------- */
 .mcard{isolation:isolate}
-.mcard .fx{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;border-radius:inherit}
-/* Play: notes float up out of the card, sound rings pulse from the guitar */
-.m-play .fx i{position:absolute;bottom:-30px;font-style:normal;font-size:26px;color:#fff;text-shadow:2px 2px 0 var(--ink);opacity:0}
-.m-play:hover .fx i,.m-play:focus-visible .fx i{animation:noteup 1.6s ease-out infinite}
-.m-play .fx i:nth-child(1){left:12%}.m-play .fx i:nth-child(2){left:34%;animation-delay:.4s!important}.m-play .fx i:nth-child(3){left:58%;animation-delay:.8s!important}.m-play .fx i:nth-child(4){left:80%;animation-delay:1.2s!important}
-@keyframes noteup{0%{transform:translateY(0) rotate(-10deg);opacity:0}15%{opacity:1}100%{transform:translateY(-150px) rotate(18deg);opacity:0}}
-.m-play:hover .mi{animation:strumrock .45s ease-in-out infinite alternate}
-@keyframes strumrock{from{transform:rotate(-6deg) scale(1.05)}to{transform:rotate(16deg) scale(1.12)}}
-.m-play .fx::after{content:'';position:absolute;right:30px;top:30px;width:20px;height:20px;border:4px solid #fff;border-radius:50%;opacity:0}
-.m-play:hover .fx::after{animation:ring 1s ease-out infinite}
-@keyframes ring{from{transform:scale(.4);opacity:.9}to{transform:scale(6);opacity:0}}
-/* Story: the three eras fan out, a spotlight sweeps and gold stars twinkle */
-.m-story:hover .mi{animation:spin 1.8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.m-story .fx::before{content:'';position:absolute;top:-40%;left:-60%;width:40%;height:180%;background:linear-gradient(90deg,rgba(255,206,58,0),rgba(255,206,58,.35),rgba(255,206,58,0));transform:rotate(18deg);opacity:0}
-.m-story:hover .fx::before{animation:sweep 1.4s ease-in-out infinite}
-@keyframes sweep{0%{left:-60%;opacity:0}20%{opacity:1}100%{left:130%;opacity:0}}
-.m-story .fx i{position:absolute;font-style:normal;color:var(--sun);font-size:18px;opacity:0}
-.m-story:hover .fx i{animation:twinkle 1.2s ease-in-out infinite}
-.m-story .fx i:nth-child(1){left:8%;top:18%}.m-story .fx i:nth-child(2){left:40%;top:10%;animation-delay:.3s!important}.m-story .fx i:nth-child(3){left:70%;top:62%;animation-delay:.6s!important}.m-story .fx i:nth-child(4){left:22%;top:66%;animation-delay:.9s!important}
-@keyframes twinkle{0%,100%{transform:scale(.3) rotate(0);opacity:0}50%{transform:scale(1.3) rotate(90deg);opacity:1}}
-/* Battle: the card catches fire, the swords clash */
-.m-battle .fx .flame{position:absolute;bottom:-40px;width:46px;height:70px;border-radius:50% 50% 45% 45%/60% 60% 40% 40%;background:radial-gradient(ellipse at 50% 80%,#FFF1A8 0 18%,#FFB020 36%,#FF5E3A 62%,rgba(255,60,40,0) 72%);opacity:0;filter:blur(.3px)}
-.m-battle:hover .fx .flame,.m-battle:focus-visible .fx .flame{animation:flame .7s ease-in-out infinite alternate}
-.m-battle .fx .flame:nth-child(1){left:-4%}.m-battle .fx .flame:nth-child(2){left:16%;animation-delay:.15s!important;height:90px}.m-battle .fx .flame:nth-child(3){left:36%;animation-delay:.3s!important}.m-battle .fx .flame:nth-child(4){left:56%;animation-delay:.1s!important;height:95px}.m-battle .fx .flame:nth-child(5){left:76%;animation-delay:.25s!important}.m-battle .fx .flame:nth-child(6){left:92%;animation-delay:.05s!important;height:80px}
-@keyframes flame{from{transform:translateY(8px) scaleY(.85) scaleX(1.05);opacity:.85}to{transform:translateY(-22px) scaleY(1.25) scaleX(.9);opacity:1}}
-.m-battle:hover{box-shadow:0 11px 0 var(--ink),0 0 26px 4px rgba(255,120,40,.65)}
-.m-battle:hover .mi{animation:clash .3s ease-in-out infinite alternate}
-@keyframes clash{from{transform:rotate(-4deg) scale(1.05)}to{transform:rotate(14deg) scale(1.18)}}
-/* click bursts (spawned by UI.modeBurst) */
-.mburst{position:fixed;z-index:60;pointer-events:none;font-style:normal;font-weight:800;animation:burst .7s cubic-bezier(.2,.8,.3,1) forwards}
-@keyframes burst{from{transform:translate(0,0) scale(.6) rotate(0);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(var(--r));opacity:0}}
 .mcard.pressed{animation:press .32s cubic-bezier(.3,1.8,.5,1)}
 @keyframes press{0%{transform:scale(1)}40%{transform:scale(.93) rotate(-1deg)}100%{transform:scale(1.04)}}
-@media (prefers-reduced-motion:reduce){#scr-title,#scr-play{animation:none}.mcard .fx *,.mcard .fx::before,.mcard .fx::after,.mcard:hover .mi{animation:none!important}.mburst{display:none}}
+@media (prefers-reduced-motion:reduce){#scr-title,#scr-play{animation:none}.tagbox::after,.tagbox span::after{animation:none}}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
 .hero-txt{display:grid;gap:10px;align-content:center}
-.tag{font-size:clamp(18px,2.2vw,24px);font-weight:600;max-width:30ch;margin:8px 0 0;line-height:1.25}
-.tag b{font-weight:800;color:var(--coral);text-shadow:1px 1px 0 var(--ink)}
-.feats{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:4px 0 0;padding:0}
-.feats li{padding:4px 12px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);font-weight:800;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.tagbox{position:relative;justify-self:start;max-width:25ch;margin:14px 0 0;padding:12px 20px 13px;border:4px solid var(--ink);border-radius:22px;background:#fff;box-shadow:6px 7px 0 var(--ink);transform:rotate(-2deg);font-size:clamp(18px,2vw,23px);font-weight:800;line-height:1.2;color:var(--ink)}
+.tagbox b{color:var(--coral);font-weight:800}
+.tagbox::before{content:'';position:absolute;right:-22px;top:26px;width:26px;height:22px;background:#fff;border:4px solid var(--ink);border-left:0;border-bottom:0;transform:skewY(28deg);border-radius:0 6px 0 0}
+.tagbox::after{content:'✦';position:absolute;left:-16px;top:-18px;font-size:26px;color:var(--teal);text-shadow:2px 2px 0 var(--ink);animation:twinkle2 2.4s ease-in-out infinite}
+.tagbox span::after{content:'✦';position:absolute;right:14px;bottom:-22px;font-size:20px;color:var(--sun);text-shadow:2px 2px 0 var(--ink);animation:twinkle2 2.4s 1.2s ease-in-out infinite}
+@keyframes twinkle2{0%,100%{transform:scale(.8) rotate(0)}50%{transform:scale(1.15) rotate(20deg)}}
 .title-art{justify-self:center;width:100%;max-width:calc((100dvh - 330px) * 1.2)}
 .modes3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
 .mcard{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;min-height:118px;padding:14px 14px 14px 12px;border:4px solid var(--ink);border-radius:22px;box-shadow:0 7px 0 var(--ink);cursor:pointer;text-align:left;color:var(--ink);overflow:hidden;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
 .mcard:hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 11px 0 var(--ink)}
 .mcard:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
-.mcard .mi{position:relative;z-index:1;display:block;width:clamp(56px,5.6vw,76px);aspect-ratio:1;filter:drop-shadow(3px 4px 0 rgba(30,27,46,.35))}
-.mcard .mi svg{display:block;overflow:visible}
+.mcard .mi{position:relative;z-index:1;display:block;width:clamp(76px,7.4vw,104px);aspect-ratio:1;border:3px solid var(--ink);border-radius:18px;background:rgba(255,255,255,.2);overflow:hidden}
+.mcard .mi canvas{display:block;width:100%;height:100%}
+.m-story .mi{background:#3A2F63}
 .mcard .mt{position:relative;z-index:1;display:grid;gap:6px;min-width:0}
 .mcard b{font-family:var(--display);font-weight:400;font-size:clamp(22px,2.4vw,31px);line-height:1.1;padding-bottom:2px;overflow-wrap:anywhere}
 .mcard .md{font-weight:700;font-size:clamp(12px,1.2vw,14px);line-height:1.25;opacity:.92}
@@ -745,12 +716,12 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
   .menu .topbar .grp .btn{padding:4px 8px;font-size:12px}
   .menu .logo{font-size:clamp(46px,14vw,70px)}
   .menu .hero{gap:4px}
-  .tag{font-size:16px;margin-top:4px}
-  .feats{display:none}
-  .title-art{max-width:calc((100dvh - 460px) * 1.2);min-width:240px}
+  .tagbox{font-size:15px;padding:8px 14px;margin-top:6px;border-width:3px;box-shadow:4px 5px 0 var(--ink)}
+  .tagbox::before{display:none}
+  .menu .title-art{max-width:calc((100dvh - 585px) * 1.2);min-width:200px}
   .modes3{gap:8px}
   .mcard{grid-template-columns:1fr;justify-items:center;text-align:center;gap:4px;min-height:0;padding:10px 6px;border-radius:18px}
-  .mcard .mi{width:52px}
+  .mcard .mi{width:min(76px,22vw)}
   .mcard b{font-size:clamp(17px,5vw,22px)}
   .mcard .md{display:none}
 }
@@ -895,15 +866,14 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
     <header class="hero">
       <div class="hero-txt">
         <h1 class="logo" id="logo" aria-label="Strum Jam"><span class="w1" aria-hidden="true"><span class="lt">S</span><span class="lt">t</span><span class="lt">r</span><span class="lt">u</span><span class="lt">m</span></span><br><span class="w2 l2" aria-hidden="true"><span class="lt">J</span><span class="lt">a</span><span class="lt">m</span></span></h1>
-        <p class="tag">Grab your guitar. <b>Play real songs.</b> The band follows you.</p>
-        <ul class="feats"><li>🎸 Any song, charted</li><li>👂 Listens as you play</li><li>🥁 A band that grooves along</li></ul>
+        <p class="tagbox"><span>Grab an instrument and play <b>any of your favorite songs!</b></span></p>
       </div>
       <div class="title-art"><canvas id="title-canvas" aria-hidden="true"></canvas></div>
     </header>
     <nav class="modes3" aria-label="Game modes">
-      <button class="mcard m-play" id="btn-play" type="button"><span class="fx" aria-hidden="true"><i>♪</i><i>♫</i><i>♪</i><i>♬</i></span><span class="mi" aria-hidden="true"></span><span class="mt"><b>Play &amp; Learn</b><span class="md">Search any song or pick from the library</span></span></button>
-      <button class="mcard m-story" id="btn-story" type="button"><span class="fx" aria-hidden="true"><i>★</i><i>★</i><i>★</i><i>★</i></span><span class="mi" aria-hidden="true"></span><span class="mt"><b>Story</b><span class="md">Live an artist's career, era by era</span></span><span hidden><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span></button>
-      <button class="mcard m-battle" id="btn-battle" type="button"><span class="fx" aria-hidden="true"><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span><span class="flame"></span></span><span class="mi" aria-hidden="true"></span><span class="mt"><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></span></button>
+      <button class="mcard m-play" id="btn-play" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Play &amp; Learn</b><span class="md">Search any song or pick from the library</span></span></button>
+      <button class="mcard m-story" id="btn-story" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Story</b><span class="md">Live an artist's career, era by era</span></span><span hidden><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span></button>
+      <button class="mcard m-battle" id="btn-battle" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></span></button>
     </nav>
     <div class="careers" id="careers-title" hidden></div>
   </div>

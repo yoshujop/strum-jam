@@ -87,7 +87,79 @@ const MenuBG = (() => {
     apply(){
       if (!url) url = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(tile()) + '")';
       document.documentElement.style.setProperty('--menu-bg', url);
-      for (const [id, k] of [['btn-play', 'play'], ['btn-story', 'story'], ['btn-battle', 'battle']]) { const m = document.querySelector('#' + id + ' .mi'); if (m) m.innerHTML = icon(k); }
     },
   };
 })();
+
+/* ---------- mode button icons: the band itself, live, on small canvases ----------
+   Play & Learn: Pip strumming (faster, with notes flying, on hover).
+   Story: the funk drummer (on hover he goes up to full hype with fills and crashes, under a spotlight).
+   Battle: Pip and Bo squaring up (on hover they lunge at each other and sparks fly).
+   A click gives each one a big moment before the screen changes. */
+const ModeIcons = {
+  list: [], hov: {}, hit: {}, dSt: null,
+  init(){
+    for (const [id, k] of [['btn-play', 'play'], ['btn-story', 'story'], ['btn-battle', 'battle']]) {
+      const card = document.getElementById(id), box = card && card.querySelector('.mi'); if (!box) continue;
+      box.textContent = ''; const cv = document.createElement('canvas'); box.appendChild(cv);
+      const on = () => { this.hov[k] = true; }, off = () => { this.hov[k] = false; };
+      card.addEventListener('pointerenter', on); card.addEventListener('pointerleave', off); card.addEventListener('focus', on); card.addEventListener('blur', off);
+      this.list.push({ k, cv, box, c: cv.getContext('2d'), h: 0 });
+    }
+  },
+  kick(k){ this.hit[k] = performance.now() / 1000; },
+  draw(t){
+    for (const it of this.list) {
+      const w = it.box.clientWidth, h = it.box.clientHeight; if (!w || !h) continue;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (it.cv.width !== Math.round(w * dpr)) { it.cv.width = Math.round(w * dpr); it.cv.height = Math.round(h * dpr); }
+      it.h += ((this.hov[it.k] ? 1 : 0) - it.h) * 0.15;                 // hover eases in and out
+      const age = t - (this.hit[it.k] || -9), c = it.c;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); c.lineJoin = 'round'; c.lineCap = 'round';
+      this[it.k](c, w, h, reduceMotion ? 0 : t, it.h, age);
+    }
+  },
+  notes(c, x, y, t, n, spread, col){
+    for (let i = 0; i < n; i++) {
+      const cyc = (t * 0.9 + i / n) % 1, nx = x + Math.sin(i * 2.3 + cyc * 4) * spread + (i - n / 2) * spread * 0.4, ny = y - cyc * spread * 2.4;
+      c.globalAlpha = Math.sin(cyc * Math.PI); c.fillStyle = col[i % col.length]; c.strokeStyle = COL.ink; c.lineWidth = 2.2;
+      c.beginPath(); c.moveTo(nx + 4, ny); c.lineTo(nx + 4, ny - 13); c.quadraticCurveTo(nx + 11, ny - 11, nx + 10, ny - 5); c.stroke();
+      c.beginPath(); c.ellipse(nx, ny + 1, 5, 4, -0.4, 0, 7); c.fill(); c.stroke();
+    }
+    c.globalAlpha = 1;
+  },
+  star(c, x, y, R, rot, fill){ c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + rot, q = i % 2 ? R * 0.45 : R; c.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); } c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); },
+  play(c, w, h, t, hv, age){
+    const bpm = 100 + hv * 60, ph = (t * bpm / 60) % 1, pop = age < 0.5 ? Math.sin(age / 0.5 * Math.PI) : 0;
+    const strum = hv > 0.1 || pop ? Math.abs(Math.sin(t * (6 + 6 * hv))) : (ph < 0.25 ? Math.sin(ph / 0.25 * Math.PI) : 0) * 0.6;
+    if (hv > 0.05 || pop) { c.save(); c.globalAlpha = Math.max(hv, pop); this.notes(c, w * 0.62, h * 0.5, t * (1 + hv), 4, w * 0.12, ['#FFFFFF', '#FFCE3A', '#2EC4B6']); c.restore(); }
+    drawPip(c, w * 0.46, h * 0.92, h * (0.6 + 0.08 * pop), { bounce: Math.abs(Math.sin(ph * Math.PI)) * (0.6 + hv), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: hv > 0.5 || pop ? 'great' : 'idle', lookX: 0.4, jump: pop });
+  },
+  story(c, w, h, t, hv, age){
+    // spotlight
+    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.25 + 0.45 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(w * 0.4, 0); c.lineTo(w * 0.6, 0); c.lineTo(w * 1.05, h); c.lineTo(-w * 0.05, h); c.closePath(); c.fill(); c.restore();
+    const bpm = 96 + 24 * hv, spb = 60 / bpm, beat = t / spb, b0 = Math.floor(beat), ev = [];
+    for (let bb = b0 - 3; bb <= b0 + 3; bb++) { const tt = bb * spb;
+      ev.push({ t: tt, kind: 'hat' }, { t: tt, kind: ((bb % 2) + 2) % 2 ? 'snare' : 'kick' });
+      if (hv > 0.3) ev.push({ t: tt + spb / 2, kind: 'hat' });
+      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 3) ev.push({ t: tt + spb / 2, kind: 'tom' }, { t: tt + spb * 0.75, kind: 'tom' });
+      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 0) ev.push({ t: tt, kind: 'crash' }); }
+    if (age < 0.4) ev.push({ t: t - age, kind: 'crash' }, { t: t - age, kind: 'kick' });
+    ev.sort((a, b) => a.t - b.t);
+    this.dSt = this.dSt || FunkDrummer.create();
+    FunkDrummer.draw(c, this.dSt, { x: w / 2, floorY: h * 1.02, h: h * 1.18, now: t, real: t, beat, spb, level: hv > 0.5 || age < 1 ? 3 : 1, events: ev, playing: true, missAgo: 9 });
+    if (hv > 0.3) for (let i = 0; i < 3; i++) { const cyc = (t * 0.7 + i / 3) % 1; c.globalAlpha = Math.sin(cyc * Math.PI) * hv; this.star(c, w * (0.14 + 0.36 * i), h * (0.22 + 0.12 * ((i + 1) % 2)), 5 + 3 * Math.sin(cyc * Math.PI), cyc * 2, '#FFCE3A'); }
+    c.globalAlpha = 1;
+  },
+  battle(c, w, h, t, hv, age){
+    const beat = t * 2, ph = beat % 1, pop = age < 0.6 ? Math.sin(age / 0.6 * Math.PI) : 0;
+    const lunge = Math.max(hv * (0.5 + 0.5 * Math.sin(t * 9)), pop), gap = w * (0.2 - 0.07 * lunge);
+    drawThrum(c, w / 2 + gap, h * 0.93, h * 0.5, beat, { lefty: true });
+    drawPip(c, w / 2 - gap, h * 0.93, h * 0.44, { bounce: Math.abs(Math.sin(ph * Math.PI)) * (0.5 + hv), squash: 0, strum: hv > 0.2 ? Math.abs(Math.sin(t * 10)) : 0, mood: hv > 0.3 || pop ? 'great' : 'focus', lookX: 1 });
+    // the clash: a spark between them, flashing with each lunge
+    const k = Math.max(hv * Math.max(0, Math.sin(t * 9)), pop);
+    if (k > 0.05) { c.save(); c.globalAlpha = Math.min(1, k * 1.4); this.star(c, w / 2, h * 0.42, 8 + 10 * k, t * 3, '#FFCE3A'); this.star(c, w / 2, h * 0.42, 4 + 5 * k, -t * 3, '#FFFFFF'); c.restore(); }
+    else { c.fillStyle = '#FFCE3A'; c.strokeStyle = COL.ink; c.lineWidth = 3; c.font = `${Math.round(h * 0.2)}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.strokeText('VS', w / 2, h * 0.3); c.fillText('VS', w / 2, h * 0.3); }
+  },
+};
