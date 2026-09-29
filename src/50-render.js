@@ -96,18 +96,28 @@ function hashStr(s){ let h = 2166136261; for (const ch of String(s)) { h ^= ch.c
 
 /* a vinyl record, seen at a slight tilt (rx x ry), spinning by angle `rot` */
 const VINYL = { disc: '#1d1a2b', groove: '#2c2842', shine: 'rgba(255,255,255,.13)' };
-/* The Strum Jam mark: a pink guitar pick (Pip's shape) with SJ on it in the title font, white letters over an ink
-   shadow, one ink outline round the pick. Centred on 0,0, about `h` tall. */
+/* The Strum Jam mark: SJ in chunky slab letters (square corners, notched), orange with a thick black outline, a
+   row of black leafy shrubs growing along their feet. Centred on 0,0, about `h` wide. */
 function drawSJ(c, h, col){
-  c.save(); c.lineJoin = 'round';
-  const w = h * 0.92, pick = () => { c.beginPath(); c.moveTo(0, h * 0.5);
-    c.bezierCurveTo(-w * 0.18, h * 0.38, -w * 0.5, h * 0.02, -w * 0.5, -h * 0.2); c.bezierCurveTo(-w * 0.5, -h * 0.46, -w * 0.2, -h * 0.5, 0, -h * 0.5);
-    c.bezierCurveTo(w * 0.2, -h * 0.5, w * 0.5, -h * 0.46, w * 0.5, -h * 0.2); c.bezierCurveTo(w * 0.5, h * 0.02, w * 0.18, h * 0.38, 0, h * 0.5); c.closePath(); };
-  c.save(); c.translate(h * 0.05, h * 0.06); pick(); c.fillStyle = COL.ink; c.fill(); c.restore();      // a hard drop shadow
-  pick(); c.fillStyle = col; c.fill(); c.lineWidth = Math.max(2, h * 0.06); c.strokeStyle = COL.ink; c.stroke();
-  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = h * 0.05; c.lineCap = 'round'; c.beginPath(); c.arc(-w * 0.18, -h * 0.2, h * 0.16, Math.PI * 1.1, Math.PI * 1.45); c.stroke();
-  c.font = `${Math.round(h * 0.5)}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.lineWidth = h * 0.09; c.strokeStyle = COL.ink; c.strokeText('SJ', 0, -h * 0.04); c.fillStyle = '#FFFFFF'; c.fillText('SJ', 0, -h * 0.04);
+  c.save();
+  const u = h / 11, H = u * 7, y0 = -H / 2 - u * 0.4;          // a grid of u: S is 5 wide, J is 4.4 wide, 7 tall
+  // each letter as rectangles on the grid (x, y, w, h)
+  const S = [[0, 0, 5, 1.5], [0, 0, 1.6, 4], [0, 2.75, 5, 1.5], [3.4, 2.75, 1.6, 4.25], [0, 5.5, 5, 1.5], [0, 4.6, 1.6, 2.4]].map(r => [r[0] - 5.4, ...r.slice(1)]);
+  S[5] = [-5.4, 5.2, 1.6, 1.8];                                     // bottom-left terminal
+  S.push([-2, 0, 1.6, 2.1]);                                        // top-right terminal (so it reads S, not 5)
+  const J = [[0.6, 0, 3.8, 1.5], [2.8, 0, 1.6, 7], [0, 5.5, 4.4, 1.5], [0, 4.2, 1.6, 2.8]].map(r => [r[0] + 0.6, ...r.slice(1)]);
+  const rects = [...S, ...J], R = ([x, y, w, hh], p) => c.fillRect(x * u - p, y0 + y * u - p, w * u + p * 2, hh * u + p * 2);
+  c.fillStyle = COL.ink; rects.forEach(r => R(r, u * 0.45));          // the outline: every block grown by the same amount
+  c.fillStyle = col; rects.forEach(r => R(r, 0));
+  // a notch cut into each letter, like the reference type
+  c.fillStyle = COL.ink; c.fillRect(-5.4 * u + 1.6 * u, y0 + 1.5 * u, u * 0.35, u * 1.25); c.fillRect(0.6 * u + 1.6 * u, y0 + 1.5 * u, u * 0.3, u * 1.2);
+  // shrubs along the bottom: overlapping black leaf blobs
+  const base = y0 + H + u * 0.5;
+  c.beginPath();
+  for (let i = 0; i < 12; i++) { const x = -5.8 * u + i * u * 0.98, r = u * (0.55 + ((i * 37) % 5) * 0.12), y = base - r * 0.35 - ((i * 53) % 3) * u * 0.18;
+    c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2);
+    c.moveTo(x + r * 0.9, y - r * 0.6); c.ellipse(x + r * 0.4, y - r * 0.8, r * 0.45, r * 0.25, -0.6, 0, Math.PI * 2); }
+  c.fillStyle = COL.ink; c.fill();
   c.restore();
 }
 function drawVinyl(c, cx, cy, rx, ry, rot){
@@ -128,10 +138,10 @@ function drawVinyl(c, cx, cy, rx, ry, rot){
   c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 2.5; c.lineCap = 'round';
   for (const [f, a] of [[0.58, 0.3], [0.74, 2.2], [0.86, 4.1], [0.46, 5.2]]) { c.beginPath(); c.arc(0, 0, R * f, a, a + 0.35); c.stroke(); }
   const LR = R * 0.3;
-  // the label: white with a black ring, and the SJ mark in the title's pink
+  // the label: white with a black ring, and the SJ mark in chunky orange slab letters
   c.beginPath(); c.arc(0, 0, LR, 0, Math.PI * 2); c.fillStyle = '#FFFFFF'; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
   c.beginPath(); c.arc(0, 0, LR * 0.84, 0, Math.PI * 2); c.lineWidth = 1.6; c.stroke();
-  drawSJ(c, LR * 1.45, COL.coral);
+  drawSJ(c, LR * 1.55, '#F7941D');
   c.restore();
   c.restore();
   c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.lineWidth = 4; c.strokeStyle = COL.ink; c.stroke();
