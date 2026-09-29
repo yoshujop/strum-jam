@@ -59,20 +59,26 @@ const MenuBG = (() => {
       const k = ORDER[r * cols + c], x = (c + 0.5 + (r % 2 ? 0.5 : 0)) * W / cols, y = (r + 0.5) * H / rows, sc = k === 'keytar' || k === 'boombox' ? 0.56 : 0.64, rot = [-14, 10, -6, 14, -10, 6][(r * cols + c) % 6];
       for (const wx of [0, x > W - 70 ? -W : null]) if (wx !== null) body += `<g transform="translate(${x + wx} ${y}) rotate(${rot}) scale(${sc})">${ITEMS[k](u++)}</g>`;
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#FFF4E6"/><g opacity=".38">${seigaiha(W, H, '#5FB7C9')}</g>${body}</svg>`;
+    // black-and-white sketches: every colour becomes paper, the ink stays, and the lines get a hand-drawn wobble
+    body = body.replace(/fill="(#[0-9A-Fa-f]{6}|rgba\([^)]*\))"/g, (m, c) => c.toUpperCase() === INK.toUpperCase() ? m : 'fill="#FFF4E6"')
+      .replace(/stroke="(#[0-9A-Fa-f]{6}|rgba\([^)]*\))"/g, (m, c) => c.toUpperCase() === INK.toUpperCase() ? m : 'stroke="#FFF4E6"');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><filter id="sk" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter></defs>
+      <rect width="${W}" height="${H}" fill="#FFF4E6"/><g opacity=".38">${seigaiha(W, H, '#5FB7C9')}</g><g filter="url(#sk)" opacity=".85">${body}</g></svg>`;
   }
   // the mode buttons' icons, in the same ink style
   const star = (x, y, R, r) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; d += (i ? 'L' : 'M') + (x + q * Math.cos(a)).toFixed(1) + ' ' + (y + q * Math.sin(a)).toFixed(1); } return d + 'Z'; };
+  // sticker-style: a thick white border round a bold, simple shape, so it reads on any card colour
+  const sticker = (shape, fill, extra) => `<path d="${shape}" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round"/><path d="${shape}" fill="${fill}" ${ink(4)}/>${extra || ''}`;
   const ICONS = {
-    // an electric guitar with a note flying off it
-    play: () => `<g transform="translate(-6 8) rotate(28) scale(.9)">${ITEMS.electric('i1')}</g><g transform="translate(30 -30) rotate(12) scale(.55)">${ITEMS.notes()}</g>`,
-    // a gold record with a star on the label: the career
-    story: () => `<circle r="40" fill="#FFCE3A" ${ink(4)}/><clipPath id="gr"><circle r="40"/></clipPath><g clip-path="url(#gr)"><circle cx="9" cy="8" r="40" fill="#E5AE14"/></g><circle r="40" fill="none" ${ink(4)}/>
-      ${[33, 27, 21].map(r => `<circle r="${r}" fill="none" stroke="#C78F0C" stroke-width="1.8"/>`).join('')}<path d="M-28 -22 A34 34 0 0 1 2 -34" fill="none" stroke="#FFF1A8" stroke-width="4" stroke-linecap="round"/>
-      <circle r="14" fill="#FF5E7E" ${ink(3)}/><path d="${star(0, 0, 9, 4)}" fill="#FFF7E6" ${ink(2)}/><path d="${star(34, -34, 9, 4)}" fill="#FFF7E6" ${ink(2.5)}/>`,
-    // two guitars crossed like swords, with a spark where they meet
-    battle: () => `<g transform="translate(18 16) rotate(-32) scale(.72)">${ITEMS.electric('b1')}</g><g transform="scale(-1 1) translate(18 16) rotate(-32) scale(.72)">${ITEMS.electric('b2').replace(/#FF5E7E/g, '#2EC4B6').replace(/#D93F61/g, '#23A396')}</g>
-      <path d="${star(0, -14, 15, 6.5)}" fill="#FFCE3A" ${ink(3)}/>`,
+    // a big guitar pick with a play button on it
+    play: () => sticker('M0 40 C-10 40 -42 -2 -38 -20 C-34 -38 34 -38 38 -20 C42 -2 10 40 0 40Z', '#FFCE3A',
+      `<path d="M8 36 C22 20 40 -4 36 -20 C34 -30 24 -34 14 -35 C30 -28 32 -12 8 36Z" fill="#E5AE14"/><path d="M0 40 C-10 40 -42 -2 -38 -20 C-34 -38 34 -38 38 -20 C42 -2 10 40 0 40Z" fill="none" ${ink(4)}/><path d="M-10 -14 L16 0 L-10 14Z" fill="${INK}" ${ink(3)}/><path d="M-22 -22 Q-12 -30 0 -30" fill="none" stroke="#FFF7C8" stroke-width="4" stroke-linecap="round"/>`),
+    // a microphone in front of a big star: your name in lights
+    story: () => `${sticker(star(0, -2, 44, 20), '#FFCE3A', `<path d="${star(6, 2, 44, 20)}" fill="#E5AE14" clip-path="url(#stc)"/>`)}<clipPath id="stc"><path d="${star(0, -2, 44, 20)}"/></clipPath><path d="${star(0, -2, 44, 20)}" fill="none" ${ink(4)}/>
+      <path d="M-6 6 L6 6 L3 34 H-3Z" fill="${INK}"/><circle cx="0" cy="-8" r="13" fill="#FF5E7E" ${ink(4)}/><path d="M-9 -12 H9 M-11 -6 H11" stroke="#FFF7E6" stroke-width="2.4" stroke-linecap="round"/><path d="M-8 -16 Q-4 -20 2 -20" fill="none" stroke="#FFF7E6" stroke-width="3" stroke-linecap="round"/>`,
+    // a VS burst: two sides clash
+    battle: () => { let d = ''; for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10, q = i % 2 ? 30 : 46; d += (i ? 'L' : 'M') + (q * Math.cos(a)).toFixed(1) + ' ' + (q * Math.sin(a) * 0.9).toFixed(1); } d += 'Z';
+      return sticker(d, '#FF5E3A', `<path d="${d}" transform="scale(.72)" fill="#FFCE3A"/><text x="0" y="12" text-anchor="middle" font-family="'Bagel Fat One','Arial Black',sans-serif" font-size="34" fill="#FFFFFF" stroke="${INK}" stroke-width="3.5" paint-order="stroke" transform="rotate(-8)">VS</text>`); },
   };
   const icon = k => `<svg viewBox="-50 -50 100 100" width="100%" height="100%" aria-hidden="true">${ICONS[k]()}</svg>`;
   let url = '';

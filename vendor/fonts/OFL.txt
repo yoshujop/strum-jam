@@ -1,3 +1,5 @@
 Bagel Fat One (c) The Bagel Fat One Project Authors; Baloo 2 (c) Ek Type.
 Both are licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
 Embedded into the Strum Jam build by build.py so the game's type works offline.
+
+The logo uses DejaVu Sans (subset to the letters of 'Strum Jam'), Bitstream Vera / DejaVu license, free to embed: https://dejavu-fonts.github.io/License.html
