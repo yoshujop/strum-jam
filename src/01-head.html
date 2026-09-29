@@ -644,6 +644,53 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .battle{background-color:#2A2150}
 .battle .page-h span{color:var(--grape)}
 #battle-body{display:grid;gap:14px}
+.online{background-color:#241C4A}
+.online .page-h span{color:var(--teal)}
+.on-card{display:grid;gap:10px;margin-bottom:16px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
+.on-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:clamp(24px,3vw,30px);line-height:1.05}
+.on-card h3{margin:4px 0 0;font-family:var(--display);font-weight:400;font-size:22px}
+.on-card h3 small{font-family:var(--ui,inherit);font-size:14px;font-weight:800;opacity:.7}
+.on-card p{margin:0}
+.on-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.on-grid .on-card{margin:0 0 16px;align-content:start}
+.on-card input[type=text],.on-card select{font:inherit;font-weight:800;font-size:17px;padding:6px 10px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);min-width:0}
+#on-code{width:8.5ch;text-transform:uppercase;letter-spacing:.12em}
+.on-l{display:grid;gap:6px}
+.on-inst{display:flex;flex-wrap:wrap;gap:8px}
+.on-inst button{font:inherit;font-weight:800;font-size:15px;padding:6px 12px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);cursor:pointer}
+.on-inst button.on{background:var(--sun);box-shadow:0 3px 0 var(--ink)}
+.on-inst button:disabled{opacity:.5;cursor:default}
+.on-inst small{font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.on-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.on-tabs h2{margin-right:auto}
+.on-tabs button{font:inherit;font-weight:800;font-size:14px;padding:4px 12px;border:3px solid var(--ink);border-radius:999px;background:#fff;color:var(--ink);cursor:pointer}
+.on-tabs button.on{background:var(--ink);color:var(--paper)}
+.on-feed,.on-takes{display:grid;gap:8px}
+.on-perf,.on-take{display:grid;grid-template-columns:34px minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 10px;border:3px solid var(--ink);border-radius:14px;background:#fff}
+.on-take{grid-template-columns:auto 30px minmax(0,1fr) auto auto auto;cursor:pointer}
+.on-take input{width:20px;height:20px;accent-color:var(--teal)}
+.on-perf .rk{font-family:var(--display);font-size:22px;text-align:center}
+.on-perf .pt,.on-take .tn{display:grid;min-width:0}
+.on-perf .pt b,.on-take .tn b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.on-perf small,.on-take small{font-weight:700;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.on-take .ti{font-size:22px;text-align:center}
+.on-take .gr{font-family:var(--display);font-size:22px}
+.on-perf .sc,.on-take .sc{font-weight:800;font-variant-numeric:tabular-nums}
+.on-jamhead{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start}
+.on-jamhead small{font-weight:800;opacity:.75}
+.on-code{display:grid;justify-items:center;gap:4px;padding:8px 12px;border:3px dashed var(--ink);border-radius:14px;background:#fff}
+.on-code b{font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:.12em;line-height:1}
+.on-msg{padding:6px 10px;border-radius:12px;background:var(--sun);font-weight:800}
+.on-acts{flex-wrap:wrap}
+.on-foot{margin-top:4px}
+@media (max-width:560px){
+  .on-perf{grid-template-columns:28px minmax(0,1fr) auto;row-gap:6px}
+  .on-perf .btn{grid-row:2}
+  .on-perf [data-play]{grid-column:2;justify-self:start}
+  .on-perf [data-jam]{grid-column:3}
+  .on-take{grid-template-columns:auto 26px minmax(0,1fr) auto auto;row-gap:4px}
+  .on-take .sc{display:none}
+}
 .bt-card{display:grid;gap:10px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
 .bt-card h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1}
 .bt-names{display:grid;gap:8px}
@@ -698,9 +745,10 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 .mcard:hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 11px 0 var(--ink)}
 .mcard:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
 .mcard .mi{position:relative;z-index:1;display:block;width:clamp(76px,7.4vw,104px);aspect-ratio:1;border:3px solid var(--ink);border-radius:18px;background:#3A2F63;overflow:hidden}
+.m-play .mi{background:#5E2240}
+.m-battle .mi{background:#241C4A}
 .mcard .mi canvas{display:block;width:100%;height:100%}
 .mcard .mi:empty{display:none}
-.mcard:not(.m-story){grid-template-columns:minmax(0,1fr)}
 .mcard .mt{position:relative;z-index:1;display:grid;gap:6px;min-width:0}
 .mcard b{font-family:var(--display);font-weight:400;font-size:clamp(22px,2.4vw,31px);line-height:1.1;padding-bottom:2px;overflow-wrap:anywhere}
 .mcard .md{font-weight:700;font-size:clamp(12px,1.2vw,14px);line-height:1.25;opacity:.92}
@@ -872,9 +920,9 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <div class="title-art"><canvas id="title-canvas" aria-hidden="true"></canvas></div>
     </header>
     <nav class="modes3" aria-label="Game modes">
-      <button class="mcard m-play" id="btn-play" type="button"><span class="mt"><b>Play &amp; Learn</b><span class="md">Search any song or pick from the library</span></span></button>
+      <button class="mcard m-play" id="btn-play" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Play &amp; Learn</b><span class="md">Search any song or pick from the library</span></span></button>
       <button class="mcard m-story" id="btn-story" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Story</b><span class="md">Live an artist's career, era by era</span></span><span hidden><img id="sp-a1" alt=""><img id="sp-a2" alt=""><img id="sp-a3" alt=""></span></button>
-      <button class="mcard m-battle" id="btn-battle" type="button"><span class="mt"><b>Battle</b><span class="md">Take turns with friends on the same song. Online soon</span></span></button>
+      <button class="mcard m-battle" id="btn-battle" type="button"><span class="mi" aria-hidden="true"></span><span class="mt"><b>Online</b><span class="md">Jam with friends: record your part, play it back together, post it</span></span></button>
     </nav>
     <div class="careers" id="careers-title" hidden></div>
   </div>
@@ -886,6 +934,14 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
     <div class="topbar"><button class="btn btn-sm" id="btn-battle-home" type="button" data-sfx="back">← Home</button></div>
     <h1 class="page-h">Battle <span>mode</span></h1>
     <div id="battle-body"></div>
+  </div>
+</section>
+
+<section id="scr-online" class="screen dots online" hidden>
+  <div class="wrap">
+    <div class="topbar"><button class="btn btn-sm" id="btn-online-home" type="button" data-sfx="back">← Home</button></div>
+    <h1 class="page-h">Online <span>jam</span></h1>
+    <div id="online-body"></div>
   </div>
 </section>
 
