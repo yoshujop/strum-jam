@@ -1253,8 +1253,7 @@ const TitleArt = {
       // the pool of light where it lands
       c.save(); c.translate(tx, ty); c.scale(1, 0.22); const pg = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.12); pg.addColorStop(0, `rgba(${col},${0.5 * pulse})`); pg.addColorStop(1, `rgba(${col},0)`);
       c.fillStyle = pg; c.beginPath(); c.arc(0, 0, W * 0.12, 0, Math.PI * 2); c.fill(); c.restore();
-      // the lamp: a black can on a yoke, hanging from a short rod
-      c.lineWidth = 3; c.strokeStyle = COL.ink; c.beginPath(); c.moveTo(lx, ly - 30); c.lineTo(lx, ly - 14); c.stroke();
+      // the lamp: a black can on a yoke
       c.save(); c.translate(lx, ly); c.rotate(ang - Math.PI / 2); c.lineWidth = 3; c.strokeStyle = COL.ink; c.lineJoin = 'round';
       c.beginPath(); c.moveTo(-15, -2); c.lineTo(-15, -14); c.lineTo(15, -14); c.lineTo(15, -2); c.stroke();
       c.fillStyle = COL.ink; rr(c, -11, -18, 22, 22, 5); c.fill(); c.stroke();
