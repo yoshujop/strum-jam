@@ -420,7 +420,7 @@ const UI = {
     if (reduceMotion) { go(); return; }
     card.classList.remove('pressed'); void card.offsetWidth; card.classList.add('pressed');
     ModeIcons.kick(kind);
-    setTimeout(go, 420);
+    setTimeout(go, 360);
   },
   /* ---------- song menu ---------- */
   openSong(song, storyCtx){
