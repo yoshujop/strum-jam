@@ -67,8 +67,9 @@ const G = {
         countIn, firstBar: this.fromBar, endBar: this.endBar,
         sectionStarts: new Set(chart.sections.map(s => s.startBar)),
         fillBars: new Set(chart.sections.map(s => s.startBar + s.bars - 1).filter(b => b < this.endBar - 1)),
-        bassAt: k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
-        onEnd: () => {} });
+        // the player's own instrument drops out of the band: no bass line in Bass, no kit in Drums
+        bassAt: opts.inst === 'bass' ? null : k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
+        noKit: opts.inst === 'drums', onEnd: () => {} });
       const cfg = Groove.cfg;
       this.list.forEach((e, i) => {
         e.t = cfg.startTime + e.beat * cfg.beatDur;
@@ -80,6 +81,11 @@ const G = {
       this.lastSeq = Mic.anSeq;
       this.lead = Math.min(0.7, Math.max(0.35, cfg.beatDur));
       this.shownEv = null;
+      // another instrument: Parts judges it (the band, hype and fail state stay here)
+      if (opts.inst && opts.inst !== 'guitar') {
+        if (!Parts.begin(this, chart, opts, cfg)) { this.stop(); this.running = false; return false; }
+        this.tapMode = false; UI.hudUpdate(); return true;
+      }
       this.showStageChord(AudioEngine.now());
     }
     Mic.onsetListeners.clear();
@@ -87,7 +93,7 @@ const G = {
     UI.hudUpdate();
     return true;
   },
-  stop(){ this.running = false; Groove.stop(); Mic.onsetListeners.clear(); },
+  stop(){ this.running = false; Groove.stop(); Mic.onsetListeners.clear(); if (Parts.active) Parts.end(); },
   bassFor(ev){
     if (!ev || !ev.shape) return null;
     const cap = this.chart.capo;
@@ -122,10 +128,12 @@ const G = {
     Sfx.fail && Sfx.fail(); Sfx.boo && Sfx.boo();
     const chart = this.chart, acc = this.judgedN ? this.accSum / (100 * this.judgedN) : 0;
     const done = this.list.filter(e => e.final).length;
+    const progress = Parts.active ? Parts.progress() : this.list.length ? done / this.list.length : 0, inst = Parts.active ? Parts.inst : undefined;
     // the stage falls apart for a moment, then the results
     setTimeout(() => UI.showResults({ mode: 'stage', failed: true, chart, score: this.score, acc, grade: 'F', title: 'Booed Off!', counts: this.counts,
       maxCombo: this.maxCombo, noteAcc: 0, tough: [], tap: this.tapMode, tempo: this.opts.tempo, topLevel: this.topLevel,
-      progress: this.list.length ? done / this.list.length : 0, newBest: false }), 2200);
+      progress, newBest: false, inst }), 2200);
+    if (Parts.active) setTimeout(() => Parts.end(), 2150);
   },
   setLevel(n){
     const up = n > this.level;
@@ -527,6 +535,7 @@ const G = {
     }
     // stage: restart from the bar we paused in, keeping earlier results
     const bar = Math.max(this.fromBar, Math.floor(this.pausedBeat / chart.beats));
+    if (Parts.active) { Groove.start({ ...Groove.cfg, firstBar: bar, countIn: chart.beats <= 2 ? chart.beats * 2 : chart.beats, startTime: undefined }); Parts.resumeAt(this, bar * chart.beats, Groove.cfg); return; }
     const keep = this.list.filter(e => e.final);
     const section = chart.sections.findIndex(s => bar >= s.startBar && bar < s.startBar + s.bars);
     const o2 = { ...opts, keepScore: true };
@@ -579,6 +588,7 @@ const G = {
       this.addHype(-dt * (waited > 8 ? 0.07 : waited > 4 ? 0.035 : 0.01));
       if (waited > 8 && this.streak) { this.streak = 0; UI.hudUpdate(); }
     }
+    else if (Parts.active) Parts.frame(this, now);
     else this.updateStage(now);
   },
 };

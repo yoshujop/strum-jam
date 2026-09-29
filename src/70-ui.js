@@ -486,7 +486,8 @@ const UI = {
       row.innerHTML = `<b>${esc(sec.name)}${conf && conf !== 'high' ? `<small>${conf === 'low' ? 'unsure' : 'mostly sure'}</small>` : ''}</b><div class="bars">${evs.map(e => `<span class="bar" title="${esc(e.rest ? 'Rest' : e.label)} · ${e.len} beats" style="background:${e.rest ? '#fff' : cardColor(e.label)};color:${e.rest ? COL.ink : textOn(cardColor(e.label))}">${e.rest ? '·' : esc(e.label)}</span>`).join('')}</div>`;
       map.appendChild(row);
     });
-    const best = Store.get('best', {})[s.id];
+    if (this.renderInst) this.renderInst();
+    const best = Store.get('best', {})[s.id + (this.inst() !== 'guitar' ? ':' + this.inst() : '')];
     $('best-score').textContent = best ? `Best: ${best.score.toLocaleString()} (${best.grade})` : '';
   },
   host(u){ try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } },
@@ -504,6 +505,7 @@ const UI = {
 
   async startGame(mode, skipTune){
     AudioEngine.ensure();
+    if (!this.partReady(mode)) return;
     if (!skipTune && Settings.tuneFirst && !this.tunedThisSession) { this.openTune(mode); return; }
     if (!Mic.on && Mic.available() && Mic.failed !== 'blocked') await Mic.start();
     this.refreshMic();
@@ -513,10 +515,14 @@ const UI = {
     // Story levels fix the rules and paint the era's stage
     const t = Story.tier(), L = Story.level();
     Stage.scene = t && L ? L.scene : null;
-    const ok = G.start(this.chart, mode, t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
+    const o = t && mode === 'stage' ? { section: 0, loop: false, tempo: t.tempo, strict: t.strict }
       : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
-      : mode === 'stage' && this.battleOpts ? this.battleOpts
-      : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
+      : mode === 'stage' && this.battleOpts ? { ...this.battleOpts }
+      : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo };
+    // another instrument (Stage only): its part comes along
+    const inst = o.inst || (t ? 'guitar' : this.inst());
+    if (mode === 'stage' && inst !== 'guitar') { o.inst = inst; if (inst === 'vocals') o.vox = this.vox; }
+    const ok = G.start(this.chart, mode, o);
     if (!ok) { this.show('song'); if (Online.rec) Online.cancel(); return; }
     if (Online.rec && mode === 'stage') Online.beginRecording();
   },
@@ -587,13 +593,14 @@ const UI = {
     if (r.mode === 'stage') {
       $('res-grade').textContent = r.grade; $('res-grade').classList.toggle('fail', !!r.failed);
       $('res-title').textContent = r.title;
-      $('res-sub').textContent = `${ch.song.title} · ${this.storyCtx ? 'Story level ' + (this.storyCtx.li + 1) : 'Stage'}${r.tempo !== 100 ? ' at ' + r.tempo + '% tempo' : ''}${r.tap ? ' · tap mode (timing only)' : ''}${r.newBest ? ' · New best!' : ''}`;
+      $('res-sub').textContent = `${ch.song.title} · ${this.storyCtx ? 'Story level ' + (this.storyCtx.li + 1) : 'Stage'}${r.inst && r.inst !== 'guitar' ? ' · ' + INST_NAMES[r.inst] + (r.guide ? ' (chord guide)' : '') : ''}${r.tempo !== 100 ? ' at ' + r.tempo + '% tempo' : ''}${r.tap ? ' · tap mode (timing only)' : ''}${r.newBest ? ' · New best!' : ''}`;
       const c = r.counts;
-      const stats = [['Score', r.score], ['Accuracy', Math.round(r.acc * 100) + '%'], ...(r.tap ? [] : [['Notes heard', Math.round(r.noteAcc * 100) + '%']]),
+      const stats = [['Score', r.score], ['Accuracy', Math.round(r.acc * 100) + '%'], ...(r.tap ? [] : [[r.inst === 'vocals' ? 'In tune' : 'Notes heard', Math.round(r.noteAcc * 100) + '%']]),
         ['Best combo', r.maxCombo], ['Top hype', LEVEL_NAMES[r.topLevel || 0]], ['Perfect', c.perfect], ['Great', c.great], ['Good', c.good + c.ok], ['Missed', c.miss]];
       $('res-stats').innerHTML = stats.map(([l, v]) => `<div class="stat"><b class="${/^[\d,.%]+$/.test(String(v)) ? '' : 'txt'}">${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
       if (r.failed) $('res-sub').textContent = `${ch.song.title} · the crowd walked out ${Math.round((r.progress || 0) * 100)}% of the way through`;
-      $('res-tough').innerHTML = r.failed ? `<div class="tip"><b>Too many misses in a row.</b> Learn the tough changes in Practice (it waits for every chord), or slow the tempo down, then take the stage again.</div>` : r.tough.length ? `<div class="tip"><b>Work on:</b> ${r.tough.map(t => `${esc(t.label)} (${Math.round(t.frac * 100)}% of notes heard)`).join(' · ')}. Try them in Practice.</div>` : '';
+      $('res-tough').innerHTML = r.failed && r.inst === 'vocals' ? `<div class="tip"><b>Too many misses in a row.</b> Slow the tempo down, sing along with the song a few times, and wear headphones so the band doesn’t drown you out.</div>` : r.failed ? `<div class="tip"><b>Too many misses in a row.</b> Learn the tough changes in Practice (it waits for every chord), or slow the tempo down, then take the stage again.</div>` : r.tough.length && r.inst === 'vocals' ? `<div class="tip"><b>Tough lines:</b> ${r.tough.map(t => `“${esc(t.label)}”`).join(' · ')}. Hum them with the song a few times, then try again${r.guide ? '. Adding the song file gives you the real melody to follow' : ''}.</div>`
+        : r.tough.length ? `<div class="tip"><b>Work on:</b> ${r.tough.map(t => `${esc(t.label)} (${Math.round(t.frac * 100)}% of notes heard)`).join(' · ')}. Try them in Practice.</div>` : '';
     } else {
       $('res-grade').textContent = r.skipped ? 'OK!' : 'YES!'; $('res-grade').classList.remove('fail');
       $('res-title').textContent = 'Practice complete';
@@ -990,9 +997,12 @@ const UI = {
       if (G.running) G.tapMode = !Mic.on;
     };
     $('sel-device').onchange = async e => { Settings.deviceId = e.target.value; saveSettings(); Mic.stop(); await Mic.start(); this.refreshMic(); this.openMicMsg(); };
+    $('sel-chan').value = String(Mic.chan());
+    $('sel-chan').onchange = async e => { Settings.inChannel = +e.target.value; saveSettings(); if (Mic.on) { Mic.stop(); await Mic.start(); } this.refreshMic(); this.openMicMsg(); };
     $('sens').oninput = e => { Settings.sens = +e.target.value; saveSettings(); };
     $('lat').oninput = e => { Settings.latency = +e.target.value; $('lat-val').textContent = Settings.latency; saveSettings(); };
     $('btn-calib').onclick = () => this.calibrate();
+    $('btn-mic-ears').onclick = () => this.openCalib(this.inst ? this.inst() : 'guitar');
     $('btn-tune-song').onclick = () => this.openTune(null);
     $('btn-tune-go').onclick = () => this.tuneDone(true);
     $('btn-tune-skip').onclick = () => this.tuneDone(true);
@@ -1052,6 +1062,7 @@ const UI = {
       if (this.screen === 'game') { G.frame(now); Stage.draw(G, now); }
       else if (this.screen === 'title') { TitleArt.draw(performance.now() / 1000); ModeIcons.draw(performance.now() / 1000); }
       if (this.openModal === 'm-mic') this.micFrame();
+      if (this.openModal === 'm-cal') { Mic.analyze(true); const m = $('cal-meter'); if (m) m.style.width = Math.min(100, Math.sqrt(Mic.level) * 260) + '%'; }
       if (this.openModal === 'm-tune') this.tuneFrame();
       if (this.frameN % 30 === 0 && this.screen !== 'game') this.refreshMic();
     } catch (err) { if (this.frameN % 120 === 0) console.error(err); }

@@ -13,9 +13,10 @@ const SUPABASE_URL = 'https://mlkpttzklcdlupwldjii.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_r9u0XWsis6x68biG9MtKVQ_kueS07Ks';   // the project's publishable (public) key
 const INSTRUMENTS = [
   { id: 'guitar', name: 'Guitar', icon: '🎸', ready: true },
-  { id: 'bass', name: 'Bass', icon: '🎸', ready: false },
-  { id: 'piano', name: 'Piano', icon: '🎹', ready: false },
-  { id: 'drums', name: 'Drums', icon: '🥁', ready: false },
+  { id: 'vocals', name: 'Vocals', icon: '🎤', ready: true },
+  { id: 'bass', name: 'Bass', icon: '🎸', ready: true },
+  { id: 'piano', name: 'Piano', icon: '🎹', ready: true },
+  { id: 'drums', name: 'Drums', icon: '🥁', ready: true },
 ];
 
 const Sb = {
@@ -157,17 +158,28 @@ const Online = {
       const who = this.who(); if (!who) return;
       if (typeof MediaRecorder === 'undefined') { $('on-msg').textContent = 'This browser can’t record audio.'; return; }
       if (!Mic.on) await Mic.start();
-      if (!Mic.on || !Mic.stream) { $('on-msg').textContent = 'Recording a take needs the microphone. Allow it and try again.'; UI.refreshMic(); return; }
+      if ((!Mic.on || !Mic.stream) && who.instrument !== 'drums' && !Midi.name) { $('on-msg').textContent = 'Recording a take needs the microphone. Allow it and try again.'; UI.refreshMic(); return; }
+      UI.storyCtx = null; UI.song = j.song; UI.recompile();
+      // vocals: the lyrics (and any song file this device has lined up) come along
+      if (who.instrument === 'vocals') { $('on-msg').textContent = 'Getting the lyrics…'; await UI.loadVox(); if (!UI.vox) { $('on-msg').textContent = 'No lyrics found for this song, so vocals can’t be recorded on it yet.'; return; } }
       this.rec = { jam: j, ...who };
-      UI.storyCtx = null; UI.battleOpts = { section: 0, loop: false, tempo: 100 }; UI.song = j.song; UI.recompile();
+      UI.battleOpts = { section: 0, loop: false, tempo: 100, inst: who.instrument };
       UI.startGame('stage');
     };
   },
   // called by UI.startGame once the Stage run has started: record the mic, note where beat 0 falls
   beginRecording(){
-    const r = this.rec; if (!r || !Mic.stream) return;
+    const r = this.rec; if (!r) return;
     const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
-    try { r.mr = new MediaRecorder(Mic.stream, type ? { mimeType: type, audioBitsPerSecond: 96000 } : undefined); } catch (e) { r.mr = null; return; }
+    // drums, or keys/bass over MIDI: the game makes the sound, so the take records the player's bus (plus the mic, if on)
+    let stream = Mic.stream;
+    if (r.instrument === 'drums' || ((r.instrument === 'piano' || r.instrument === 'bass') && Midi.name)) {
+      const ctx = AudioEngine.ctx; r.dest = ctx.createMediaStreamDestination(); AudioEngine.playerBus.connect(r.dest);
+      if (Mic.on && Mic.inNode && !(r.instrument !== 'drums' && Midi.name)) Mic.inNode.connect(r.dest);
+      stream = r.dest.stream;
+    }
+    if (!stream) return;
+    try { r.mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 96000 } : undefined); } catch (e) { r.mr = null; return; }
     r.chunks = []; r.type = (r.mr.mimeType || type || 'audio/webm').split(';')[0];
     r.mr.ondataavailable = e => { if (e.data && e.data.size) r.chunks.push(e.data); };
     r.mr.start(1000);
@@ -176,7 +188,8 @@ const Online = {
   },
   stopRecording(r){
     r = r || this.rec; if (!r || !r.mr) return Promise.resolve(null);
-    return new Promise(res => { r.mr.onstop = () => res(new Blob(r.chunks, { type: r.type })); try { r.mr.stop(); } catch (e) { res(null); } });
+    const unhook = () => { if (r.dest) { try { AudioEngine.playerBus.disconnect(r.dest); Mic.inNode && Mic.inNode.disconnect(r.dest); } catch (e) {} r.dest = null; } };
+    return new Promise(res => { r.mr.onstop = () => { unhook(); res(new Blob(r.chunks, { type: r.type })); }; try { r.mr.stop(); } catch (e) { unhook(); res(null); } });
   },
   // a finished Stage run while recording: upload the take, then back to the jam
   record(r){
@@ -201,7 +214,7 @@ const Online = {
   // quit or restarted mid-take: drop the recording (a paused take can't line up with the others)
   cancel(){ const r = this.rec; if (r && r.mr) { r.mr.ondataavailable = null; try { r.mr.stop(); } catch (e) {} } this.rec = null; UI.battleOpts = null; },
   restart(){ const r = this.rec; if (!r) return; if (r.mr) { r.mr.ondataavailable = null; try { r.mr.stop(); } catch (e) {} }
-    this.rec = { jam: r.jam, name: r.name, instrument: r.instrument }; UI.battleOpts = { section: 0, loop: false, tempo: 100 }; UI.startGame('stage', true); },
+    this.rec = { jam: r.jam, name: r.name, instrument: r.instrument }; UI.battleOpts = { section: 0, loop: false, tempo: 100, inst: r.instrument }; UI.startGame('stage', true); },
   after(){ if (this.jam) this.openJam(this.jam.id); else this.open(); },
 
   // every chosen take at once, each shifted so their first beats land together

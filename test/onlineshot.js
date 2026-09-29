@@ -50,9 +50,16 @@ const SB = 'https://test.supabase.co';
     if (who === 'Josh') await p.screenshot({ path: `${out}/results.png` });
     await p.click('[data-online="jam"]', { force: true }); await p.waitForTimeout(900);
   }
+  // a drums take played on the pads: the take records the player's bus
+  await p.click('#btn-on-rec', { force: true }); await p.waitForTimeout(300);
+  await p.fill('#on-name', 'Kai'); await p.click('[data-inst="drums"]', { force: true }); await p.click('#btn-on-go', { force: true }); await p.waitForTimeout(3000);
+  await p.evaluate(() => new Promise(res => { const iv = setInterval(() => { for (const t of Parts.targets) if (!t.result && !t.sent && AudioEngine.now() >= t.t0) { t.sent = 1; Parts.drumHit(t.lane, t.t0 + 0.02, 'pad'); } }, 10); setTimeout(() => { clearInterval(iv); res(); }, 4000); }));
+  await p.evaluate(() => { Parts.finish(G); }); await p.waitForTimeout(2500);
+  console.log('Kai (drums) | results:', await p.evaluate(() => $('on-up') && $('on-up').textContent));
+  await p.click('[data-online="jam"]', { force: true }); await p.waitForTimeout(900);
   await p.screenshot({ path: `${out}/jam.png` });
   await p.click('#btn-on-play', { force: true }); await p.waitForTimeout(1500);
-  console.log('play button:', await p.textContent('#btn-on-play'), '| sources:', await p.evaluate(() => Online.player ? Online.player.srcs.length : 0));
+  console.log('play button:', await p.textContent('#btn-on-play'), '| sources:', await p.evaluate(() => Online.player ? Online.player.srcs.length : 0), '| sizes', Object.values(files).map(f => f.length).join(','));
   p.once('dialog', d => d.accept('Our first jam'));
   await p.click('#btn-on-post', { force: true }); await p.waitForTimeout(800);
   await p.click('#btn-on-home', { force: true }); await p.waitForTimeout(900);
