@@ -5,7 +5,8 @@ test harness, and the TODO list in priority order.
 
 ## Standing rules from Joshua
 - Progress updates while working: **bare percentages only** (e.g. "35%"), nothing else. Be efficient.
-- No song lyrics anywhere. Original characters only (never copy characters from existing games).
+- Lyrics: Joshua wants real lyrics and melodies in Vocals mode. They're fetched at runtime (LRCLIB) or pasted by the
+  player, cached per device, never committed to the repo. Original characters only (never copy characters from existing games).
 - Keep the thick-ink cartoon look (Rhythm Heaven Groove / WarioWare: Move It! style: one continuous
   ink silhouette per character, flat colours + one shadow tone, pose-to-pose motion, smears).
 - He judges results at in-game size, so always check renders at real stage/menu size before shipping.
@@ -42,6 +43,16 @@ test harness, and the TODO list in priority order.
 
 - `node test/cardshot.js <outdir>`: the mode buttons at 9 screen sizes; flags anything cut off and a menu that scrolls.
 - `node test/menushot.js <outdir>`: menu backdrop close-up, each mode button's hover effect, a click burst.
+
+## Instruments
+- The song screen's instrument row (`src/71-inst.js`) picks Guitar / Vocals (Bass, Piano, Drums: soon). Non-guitar Stage runs
+  go through `Parts` (`src/62-parts.js`): G still runs the band, hype and fail state and hands each frame to Parts, which
+  judges the part and draws its lane on the rail (`Stage.draw` asks `Parts.tallRail()` / `Parts.drawRail`).
+- Vocals (`src/61-lyrics.js`): LRCLIB synced lyrics -> a time map to chart beats (fitted to the bars, or from the player's
+  song file via `Analyze.run` alignment), melody = Basic Pitch top voice from that file, else the chord's notes as a guide.
+  Voice pitch: McLeod on the small analyser. The singer on stage is Lulu (`drawSinger` in 50-render.js).
+- `node test/voxshot.js <outdir>`: Vocals end to end with a mocked LRCLIB, a synthetic song file (`test/mkvoxwav.js`) and a
+  simulated voice; checks the lyric fit, the melody + time map from the file, pause/resume, results.
 
 ## Online mode
 `src/69-online.js` talks to Supabase over plain REST (project `mlkpttzklcdlupwldjii`, publishable key at the top of the file;

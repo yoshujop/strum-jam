@@ -268,6 +268,7 @@ const Analyze = {
     res.sort((a, b) => b.score - a.score);
     const best = res[0];
     out.offset = best.t; out.fit = best.fit; out.free = this.freeFit(bc);
+    out.path = best.path; out.beatFrames = beats;        // per tracked beat: which chord token it sat on (Vocals' time map)
     out.margin = best.score - res[1].score; out.offsets = res.map(r => ({ t: r.t, score: +r.score.toFixed(4) }));
     // where in the chart the preview sits, and how many beats each chord lasted there
     out.visits = best.segs.map((g, k) => ({ i: g.i, name: toks[g.i].name, sec: toks[g.i].sec, beats: g.e - g.s, cut: k === 0 || k === best.segs.length - 1 }));

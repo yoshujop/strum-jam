@@ -57,7 +57,7 @@ const Battle = {
     const st = this.st; st.playing = true;
     UI.storyCtx = null; UI.song = st.song; UI.recompile();
     // same rules for everyone: the song's first section only for a short battle, full tempo, the player's note check
-    UI.battleOpts = { section: 0, loop: st.section === 'first', tempo: 100 };
+    UI.battleOpts = { section: 0, loop: st.section === 'first', tempo: 100, inst: 'guitar' };
     UI.startGame('stage');
   },
   // a finished Stage run during a battle

@@ -644,6 +644,34 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .battle{background-color:#2A2150}
 .battle .page-h span{color:var(--grape)}
 #battle-body{display:grid;gap:14px}
+.inst-row{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.inst-row .inst{display:inline-flex;align-items:center;gap:6px;font:inherit;font-weight:800;font-size:15px;padding:7px 14px;border:3px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.inst-row .inst.on{background:var(--ink);color:var(--paper);transform:translateY(-1px)}
+.inst-row .inst:disabled{opacity:.5;cursor:default;box-shadow:none}
+.inst-row .inst small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:.8}
+.inst-row .inst i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--ink);background:var(--coral)}
+.inst-row .i-vocals i{background:var(--teal)}.inst-row .i-bass i{background:var(--grape)}.inst-row .i-piano i{background:#fff}.inst-row .i-drums i{background:var(--sun)}
+.mode.off{opacity:.45;cursor:default}
+.vox-card{display:grid;gap:8px;margin:0 0 14px;padding:12px 14px;border:4px solid var(--ink);border-radius:18px;background:var(--paper);box-shadow:0 5px 0 var(--ink)}
+.vox-card h3{margin:0;font-family:var(--display);font-weight:400;font-size:24px}
+.vox-card h3 small{font-family:inherit;font-size:13px;font-weight:700;opacity:.7}
+.vox-card p{margin:0}
+.vox-peek{display:grid;gap:2px;padding:8px 10px;border-radius:12px;background:#fff;border:2px dashed rgba(30,27,46,.3);font-weight:700}
+.vox-peek .more{opacity:.5}
+.vox-acts{flex-wrap:wrap;align-items:center}
+.vox-file{cursor:pointer}
+.vox-nudge{display:inline-flex;align-items:center;gap:6px}
+.vox-nudge b{min-width:70px;text-align:center;font-size:14px}
+.vox-paste summary{cursor:pointer;font-weight:800}
+.vox-paste textarea{width:100%;margin:8px 0;font:inherit;padding:8px;border:3px solid var(--ink);border-radius:12px}
+.board.vox .cmd-row,.board.vox .cmd-sub,.board.vox .fb-card{display:none}
+.vox-panel{position:relative;display:grid;gap:6px;align-content:center;min-height:130px;padding:14px 18px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink);text-align:center}
+.vox-cur{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.1;color:rgba(30,27,46,.35)}
+.vox-cur.on{color:var(--ink)}
+.vox-cur span{display:inline-block;transition:color .08s,transform .12s}
+.vox-cur span.sung{color:var(--coral);transform:translateY(-2px)}
+.vox-next{font-weight:800;font-size:clamp(15px,2vw,20px);opacity:.55}
+.vox-count{position:absolute;top:8px;left:0;right:0;font-size:14px;letter-spacing:.4em;color:var(--coral)}
 .online{background-color:#241C4A}
 .online .page-h span{color:var(--teal)}
 .on-card{display:grid;gap:10px;margin-bottom:16px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
@@ -1012,22 +1040,24 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
     </div>
     <div class="story-strip gig" id="song-story" hidden></div>
     <div class="tip" id="song-note" hidden></div>
+    <div class="inst-row" id="inst-row" aria-label="Instrument"></div>
     <div class="modes">
       <button class="mode practice" id="btn-practice" type="button"><b>Practice</b><span>Waits for you on every chord.</span></button>
       <button class="mode stage" id="btn-stage" type="button"><b>Stage</b><span>In time with the band, scored.</span><em id="best-score"></em></button>
     </div>
+    <div id="vox-setup" hidden></div>
     <div class="opts dd">
-      <label class="o sf"><b>Chord shapes</b><select id="seg-easy"><option value="easy">Easy</option><option value="standard">Standard</option><option value="neck">Whole neck</option></select><span class="small muted" id="easy-note"></span></label>
+      <label class="o sf gtr"><b>Chord shapes</b><select id="seg-easy"><option value="easy">Easy</option><option value="standard">Standard</option><option value="neck">Whole neck</option></select><span class="small muted" id="easy-note"></span></label>
       <label class="o sf"><b>Tempo <span id="tempo-val" hidden>100%</span></b><select id="tempo" aria-label="Tempo percent"><option value="100">100%</option><option value="95">95%</option><option value="90">90%</option><option value="85">85%</option><option value="80">80%</option><option value="75">75%</option><option value="70">70%</option><option value="65">65%</option><option value="60">60%</option><option value="55">55%</option><option value="50">50%</option></select><span class="small muted" id="tempo-bpm"></span></label>
-      <label class="o sf"><b>Note check</b><select id="seg-strict"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="strict">Strict</option></select><span class="small muted" id="strict-note"></span></label>
-      <label class="o"><b>Fretboard view</b><select id="seg-view"><option value="down">Looking down</option><option value="tab">Tab style</option></select><span class="small muted" id="view-note"></span></label>
-      <label class="o"><b>Fretting hand</b><select id="seg-hand"><option value="0">Right-handed</option><option value="1">Left-handed</option></select></label>
+      <label class="o sf gtr"><b>Note check</b><select id="seg-strict"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="strict">Strict</option></select><span class="small muted" id="strict-note"></span></label>
+      <label class="o gtr"><b>Fretboard view</b><select id="seg-view"><option value="down">Looking down</option><option value="tab">Tab style</option></select><span class="small muted" id="view-note"></span></label>
+      <label class="o gtr"><b>Fretting hand</b><select id="seg-hand"><option value="0">Right-handed</option><option value="1">Left-handed</option></select></label>
       <div class="o sf"><b>Start from</b>
         <select id="sel-section" aria-label="Section to start from"></select>
         <label class="toggle small"><input type="checkbox" id="chk-loop"> Loop this section only</label>
       </div>
     </div>
-    <h2 class="sec-h">Chords you'll need <small id="chord-count"></small></h2>
+    <h2 class="sec-h" id="chord-h">Chords you'll need <small id="chord-count"></small></h2>
     <div class="chord-list" id="chord-list"></div>
     <h2 class="sec-h">Song map</h2>
     <div class="map" id="song-map"></div>
@@ -1062,6 +1092,7 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <div class="sc"><b id="hud-score">0</b><span id="hud-score-l">score</span></div>
       <div class="hype" title="Crowd hype: play chords quickly and cleanly to fire up the band"><div class="hype-bar"><i id="hype-fill"></i><em></em><em></em><em></em><em></em></div><span id="hype-label">Warming up</span></div>
     </div>
+    <div class="vox-panel" id="vox-panel" hidden><span class="vox-count" id="vox-count"></span><div class="vox-cur" id="vox-cur"></div><div class="vox-next" id="vox-next"></div></div>
     <div hidden><span id="fb-view-label"></span><div id="str-chips"></div><div id="hint"></div><ol id="steps"></ol></div>
   </div>
 </section>

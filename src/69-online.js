@@ -13,6 +13,7 @@ const SUPABASE_URL = 'https://mlkpttzklcdlupwldjii.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_r9u0XWsis6x68biG9MtKVQ_kueS07Ks';   // the project's publishable (public) key
 const INSTRUMENTS = [
   { id: 'guitar', name: 'Guitar', icon: '🎸', ready: true },
+  { id: 'vocals', name: 'Vocals', icon: '🎤', ready: true },
   { id: 'bass', name: 'Bass', icon: '🎸', ready: false },
   { id: 'piano', name: 'Piano', icon: '🎹', ready: false },
   { id: 'drums', name: 'Drums', icon: '🥁', ready: false },
@@ -158,8 +159,11 @@ const Online = {
       if (typeof MediaRecorder === 'undefined') { $('on-msg').textContent = 'This browser can’t record audio.'; return; }
       if (!Mic.on) await Mic.start();
       if (!Mic.on || !Mic.stream) { $('on-msg').textContent = 'Recording a take needs the microphone. Allow it and try again.'; UI.refreshMic(); return; }
+      UI.storyCtx = null; UI.song = j.song; UI.recompile();
+      // vocals: the lyrics (and any song file this device has lined up) come along
+      if (who.instrument === 'vocals') { $('on-msg').textContent = 'Getting the lyrics…'; await UI.loadVox(); if (!UI.vox) { $('on-msg').textContent = 'No lyrics found for this song, so vocals can’t be recorded on it yet.'; return; } }
       this.rec = { jam: j, ...who };
-      UI.storyCtx = null; UI.battleOpts = { section: 0, loop: false, tempo: 100 }; UI.song = j.song; UI.recompile();
+      UI.battleOpts = { section: 0, loop: false, tempo: 100, inst: who.instrument };
       UI.startGame('stage');
     };
   },
@@ -201,7 +205,7 @@ const Online = {
   // quit or restarted mid-take: drop the recording (a paused take can't line up with the others)
   cancel(){ const r = this.rec; if (r && r.mr) { r.mr.ondataavailable = null; try { r.mr.stop(); } catch (e) {} } this.rec = null; UI.battleOpts = null; },
   restart(){ const r = this.rec; if (!r) return; if (r.mr) { r.mr.ondataavailable = null; try { r.mr.stop(); } catch (e) {} }
-    this.rec = { jam: r.jam, name: r.name, instrument: r.instrument }; UI.battleOpts = { section: 0, loop: false, tempo: 100 }; UI.startGame('stage', true); },
+    this.rec = { jam: r.jam, name: r.name, instrument: r.instrument }; UI.battleOpts = { section: 0, loop: false, tempo: 100, inst: r.instrument }; UI.startGame('stage', true); },
   after(){ if (this.jam) this.openJam(this.jam.id); else this.open(); },
 
   // every chosen take at once, each shifted so their first beats land together
