@@ -63,6 +63,15 @@ test harness, and the TODO list in priority order.
 - `node test/voxshot.js <outdir>`: Vocals end to end with a mocked LRCLIB, a synthetic song file (`test/mkvoxwav.js`) and a
   simulated voice; checks the lyric fit, the melody + time map from the file, pause/resume, results.
 
+## Story intros
+- `src/73-intro.js`: before the first Stage run of each Story song (per session; Settings toggle; "▶ Backstage" replays it),
+  a backstage scene: the artist as a band-style bean (`drawStar`, look from a hash of the name + the era palette) says a few
+  lines, typed out with a burbly made-up voice (`Intro.blip`). Lines come from Claude when a key / the claude.ai viewer is
+  available (prompt: first person, real public history of that song and era, no lyrics), cached per song; otherwise a
+  built-in script by career stage (debut, rise, peak, legacy) with the song, album and year.
+- `node test/introshot.js <outdir>` (needs /tmp/career.json): the scene with a mocked Claude line and the built-in script,
+  desktop + phone, and the real flow (Take the stage -> intro -> run).
+
 ## Online mode
 `src/69-online.js` talks to Supabase over plain REST (project `mlkpttzklcdlupwldjii`, publishable key at the top of the file;
 the schema is
