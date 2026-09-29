@@ -506,6 +506,7 @@ const UI = {
   async startGame(mode, skipTune){
     AudioEngine.ensure();
     if (!this.partReady(mode)) return;
+    await this.storyIntro(mode);                  // Story: the backstage scene before the first Stage run of a song
     if (!skipTune && Settings.tuneFirst && !this.tunedThisSession) { this.openTune(mode); return; }
     if (!Mic.on && Mic.available() && Mic.failed !== 'blocked') await Mic.start();
     this.refreshMic();
@@ -938,7 +939,7 @@ const UI = {
     $('btn-mic-setup').onclick = $('btn-mic-setup2').onclick = () => this.openMic();
     $('btn-mic-setup3').onclick = () => { $('m-pause').hidden = true; this.openModal = null; this.openMic(); };
     $('mic-chip').style.cursor = 'pointer'; $('mic-chip').onclick = () => this.openMic();
-    $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
+    $('btn-settings').onclick = () => { this.open('m-settings'); $('chk-intros').checked = Settings.storyIntros !== false; $('chk-music').checked = Settings.musicOn; $('vol-music').value = Math.round(Settings.musicVol * 100); $('chk-sfx').checked = Settings.sfxOn; $('chk-notes').checked = Settings.showNotes; $('vol-drums').value = Math.round(Settings.drumVol * 100); $('chk-click').checked = Settings.click; $('chk-lefty').checked = Settings.lefty; $('api-key').value = Settings.apiKey; $('api-model').value = Settings.apiModel; };
     $('btn-paste').onclick = () => this.openCode('paste');
     $('btn-code-link').onclick = () => this.codeAction(true);
     $('btn-career-share').onclick = () => { if (Story.cur) this.openCode('career-show'); };
@@ -1015,6 +1016,7 @@ const UI = {
     $('chk-music').onchange = e => { Settings.musicOn = e.target.checked; saveSettings(); this.musicBtn(); Music.setVolume(); };
     $('vol-music').oninput = e => { Settings.musicVol = +e.target.value / 100; saveSettings(); Music.setVolume(); };
     $('chk-sfx').onchange = e => { Settings.sfxOn = e.target.checked; saveSettings(); };
+    $('chk-intros').onchange = e => { Settings.storyIntros = e.target.checked; saveSettings(); };
     $('btn-music').onclick = () => { Settings.musicOn = !Settings.musicOn; saveSettings(); this.musicBtn(); Music.setVolume(); };
     this.musicBtn();
     // a click sound for every button (cards and closers have their own)

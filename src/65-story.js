@@ -818,10 +818,12 @@ const Story = {
         <div class="gig-go">
           <button class="btn btn-go btn-big" type="button" id="btn-gig-stage">🎤 Take the stage</button>
           <button class="btn" type="button" id="btn-gig-practice">Practice first <small>(doesn’t count)</small></button>
+          <button class="btn btn-sm" type="button" id="btn-gig-intro">▶ Backstage</button>
         </div>
       </div>`;
     $('btn-gig-stage').onclick = () => UI.startGame('stage');
     $('btn-gig-practice').onclick = () => UI.startGame('practice');
+    $('btn-gig-intro').onclick = () => Intro.show(UI.storyCtx);     // watch the backstage scene again
   },
   // called with a finished Stage run while a story song is open
   record(r){
