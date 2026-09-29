@@ -8,8 +8,9 @@
    ahead so the stick lands on it. Coordinates are the 500 x 650 design box (floor at y = 522).          */
 const FunkDrummer = (() => {
   const INK = '#2b1a12', SKIN = '#a8683f', SKIN_D = '#87502b', SKIN_L = '#c98a5c', HAIR = '#2a1712', HAIR_L = '#5a3424',
-    GOLD = '#ffd23f', GOLD_D = '#d6a21e', PINK = '#ff4fa0', LIP = '#e2566f', MOUTH = '#5a0f1e', TONGUE = '#ff6f8e',
-    PURP = '#6EC3D4', PURP_D = '#4A9BB0', PURP_L = '#A6DEE8', SHIRT = '#1f1630', RED = '#e8344e', RED_D = '#b8243b',
+    GOLD = '#ffffff', GOLD_D = '#c9c5d4',     // (once gold: his trim, chains and teeth are white now)
+     PINK = '#ff4fa0', LIP = '#e2566f', MOUTH = '#5a0f1e', TONGUE = '#ff6f8e',
+    PURP = '#2A2633', PURP_D = '#17141F', PURP_L = '#443F52', SHIRT = '#F6F4FA', RED = '#9A96A6', RED_D = '#74707F',   // black suit, white shirt, grey drums
     CREAM = '#fff4d6', WOOD = '#f6dca8', CYM = '#ffc93c', CYM_D = '#e5a92a', CYM_L = '#fff3b0', CHROME = '#d9dde6', CHROME_D = '#b7bcc8', CYAN = '#8ff0ff';
   const LW = 6, LI = 3.5, STICK = 60, BUTT = 20, W_UP = 31, W_FO = 26;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t;
@@ -271,7 +272,11 @@ const FunkDrummer = (() => {
     c.fillStyle = PURP; c.fill(LAPEL_L); c.fill(LAPEL_R);
     c.fillStyle = PURP_D; c.fill(JACKET_SH);
     c.fillStyle = PURP_L; c.globalAlpha = 0.9; c.fill(JACKET_HI); c.globalAlpha = 1;
-    c.fillStyle = tw ? '#fff' : CYAN; for (const [x, y] of [[-14, -48], [12, -40], [-6, -30], [8, -18], [-12, -10], [16, -28]]) { c.beginPath(); c.arc(x, y, 2.6, 0, 7); c.fill(); }
+    // the shirt: a black lightning bolt down the chest, a thin double stripe under it
+    c.beginPath(); c.moveTo(-5, -58); c.lineTo(9, -58); c.lineTo(2, -40); c.lineTo(11, -40); c.lineTo(-6, -8); c.lineTo(-1, -30); c.lineTo(-9, -30); c.closePath();
+    c.fillStyle = INK; c.fill(); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+    c.fillStyle = tw ? PINK : '#ff7ab8'; c.beginPath(); c.moveTo(-2, -54); c.lineTo(5, -54); c.lineTo(0, -44); c.closePath(); c.fill();
+    c.lineWidth = 2.5; for (const y of [2, 8]) { c.beginPath(); c.moveTo(-26, y); c.lineTo(26, y); c.stroke(); }
     c.fillStyle = SKIN; c.fill(VNECK); c.strokeStyle = INK; c.lineWidth = LI; c.stroke(VNECK);
     c.restore();
     c.strokeStyle = INK; c.lineWidth = LI; c.beginPath(); c.moveTo(-15, -103); c.lineTo(-21, -56); c.lineTo(-29, 4); c.moveTo(15, -103); c.lineTo(21, -56); c.lineTo(29, 4); c.stroke();
