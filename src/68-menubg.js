@@ -117,9 +117,70 @@ const ModeIcons = {
     }
   },
   star(c, x, y, R, rot, fill){ c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + rot, q = i % 2 ? R * 0.45 : R; c.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); } c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); },
+  // Story's icon: the drummer on tour. The backdrop swaps every couple of seconds with a quick wipe, city to city.
+  TOUR: ['TOKYO', 'RIO', 'NASHVILLE', 'OSLO', 'LONDON', 'PARIS', 'STADIUM'],
+  tourScene(c, w, h, i, t){
+    const ink = COL.ink, sky = (a, b) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, a); g.addColorStop(1, b); c.fillStyle = g; c.fillRect(0, 0, w, h); };
+    const blob = (pts, fill) => { c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x * w, y * h) : c.moveTo(x * w, y * h)); c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2; c.strokeStyle = ink; c.stroke(); };
+    c.lineJoin = 'round';
+    if (i === 0) {        // neon towers under a pink moon
+      sky('#1B1A4A', '#5B2A7A'); c.fillStyle = '#FF8FB8'; c.beginPath(); c.arc(w * 0.78, h * 0.2, h * 0.09, 0, Math.PI * 2); c.fill();
+      [[0.02, 0.42, 0.16], [0.2, 0.3, 0.14], [0.36, 0.48, 0.12], [0.62, 0.34, 0.16], [0.8, 0.46, 0.18]].forEach(([x, y, bw], k) => { c.fillStyle = '#2B2350'; c.fillRect(x * w, y * h, bw * w, h); c.lineWidth = 2; c.strokeStyle = ink; c.strokeRect(x * w, y * h, bw * w, h);
+        for (let yy = y + 0.05; yy < 0.7; yy += 0.07) for (let xx = x + 0.02; xx < x + bw - 0.03; xx += 0.045) if ((Math.floor(xx * 97 + yy * 53 + k) + Math.floor(t * 2)) % 3) { c.fillStyle = k % 2 ? '#FFE37A' : '#7FE7FF'; c.fillRect(xx * w, yy * h, w * 0.02, h * 0.025); } });
+    } else if (i === 1) { // beach sunset, a palm
+      sky('#FF9A5A', '#FF5E7E'); c.fillStyle = '#FFE37A'; c.beginPath(); c.arc(w * 0.5, h * 0.55, h * 0.18, Math.PI, 0); c.fill();
+      c.fillStyle = '#2EC4B6'; c.fillRect(0, h * 0.55, w, h); c.fillStyle = 'rgba(255,255,255,.5)'; for (let k = 0; k < 3; k++) c.fillRect(w * (0.1 + k * 0.3), h * (0.6 + k * 0.04), w * 0.18, 2);
+      c.strokeStyle = ink; c.lineWidth = 4; c.beginPath(); c.moveTo(w * 0.12, h * 0.75); c.quadraticCurveTo(w * 0.16, h * 0.45, w * 0.1, h * 0.25); c.stroke();
+      for (const a of [-2.6, -2, -1.2, -0.5]) { c.beginPath(); c.ellipse(w * 0.1 + Math.cos(a) * w * 0.08, h * 0.25 + Math.sin(a) * h * 0.04, w * 0.09, h * 0.025, a, 0, Math.PI * 2); c.fillStyle = '#2B8A5A'; c.fill(); c.lineWidth = 2; c.stroke(); }
+    } else if (i === 2) { // desert mesas and a cactus
+      sky('#FFD37A', '#FFB060'); c.fillStyle = '#FFF4C0'; c.beginPath(); c.arc(w * 0.22, h * 0.22, h * 0.08, 0, Math.PI * 2); c.fill();
+      blob([[0.45, 0.62], [0.52, 0.36], [0.8, 0.36], [0.88, 0.62]], '#D9774E'); blob([[0, 0.62], [0.05, 0.44], [0.22, 0.44], [0.28, 0.62]], '#C4623E');
+      c.fillStyle = '#E8A15E'; c.fillRect(0, h * 0.62, w, h);
+      c.fillStyle = '#3E9A5A'; c.strokeStyle = ink; c.lineWidth = 2; rr(c, w * 0.83, h * 0.3, w * 0.07, h * 0.4, w * 0.035); c.fill(); c.stroke(); rr(c, w * 0.76, h * 0.4, w * 0.05, h * 0.14, w * 0.025); c.fill(); c.stroke();
+    } else if (i === 3) { // snowy peaks, falling snow
+      sky('#9FD8FF', '#E8F6FF'); blob([[0, 0.7], [0.25, 0.25], [0.5, 0.7]], '#7A8FB8'); blob([[0.35, 0.7], [0.68, 0.18], [1, 0.7]], '#6A7FA8');
+      blob([[0.2, 0.34], [0.25, 0.25], [0.31, 0.35], [0.26, 0.32]], '#fff'); blob([[0.6, 0.29], [0.68, 0.18], [0.76, 0.3], [0.68, 0.26]], '#fff');
+      c.fillStyle = '#fff'; for (let k = 0; k < 12; k++) { const x = ((k * 0.37 + t * 0.05) % 1) * w, y = ((k * 0.61 + t * 0.25) % 1) * h; c.beginPath(); c.arc(x, y, 1.6, 0, Math.PI * 2); c.fill(); }
+    } else if (i === 4) { // the big clock tower at dusk, a double-decker red
+      sky('#3A3F8F', '#C77DBA'); c.fillStyle = '#2B2350'; c.strokeStyle = ink; c.lineWidth = 2;
+      c.fillRect(w * 0.14, h * 0.18, w * 0.16, h); c.strokeRect(w * 0.14, h * 0.18, w * 0.16, h); blob([[0.14, 0.18], [0.22, 0.04], [0.3, 0.18]], '#2B2350');
+      c.fillStyle = '#FFE37A'; c.beginPath(); c.arc(w * 0.22, h * 0.3, w * 0.05, 0, Math.PI * 2); c.fill(); c.stroke();
+      [[0.4, 0.44, 0.2], [0.64, 0.36, 0.14], [0.8, 0.5, 0.2]].forEach(([x, y, bw]) => { c.fillStyle = '#3D3470'; c.fillRect(x * w, y * h, bw * w, h); c.strokeRect(x * w, y * h, bw * w, h); });
+    } else if (i === 5) { // the iron tower, string lights
+      sky('#FFB3C6', '#8C7BE0'); c.strokeStyle = ink; c.lineWidth = 2.5;
+      c.beginPath(); c.moveTo(w * 0.5, h * 0.06); c.lineTo(w * 0.36, h * 0.72); c.moveTo(w * 0.5, h * 0.06); c.lineTo(w * 0.64, h * 0.72); c.moveTo(w * 0.41, h * 0.45); c.lineTo(w * 0.59, h * 0.45); c.moveTo(w * 0.45, h * 0.26); c.lineTo(w * 0.55, h * 0.26); c.stroke();
+      c.beginPath(); c.moveTo(w * 0.36, h * 0.72); c.quadraticCurveTo(w * 0.5, h * 0.5, w * 0.64, h * 0.72); c.stroke();
+      for (let k = 0; k < 9; k++) { const x = k / 8 * w, y = h * (0.12 + 0.06 * Math.sin(k / 8 * Math.PI)); c.fillStyle = (k + Math.floor(t * 3)) % 2 ? '#FFE37A' : '#fff'; c.beginPath(); c.arc(x, y, 2.4, 0, Math.PI * 2); c.fill(); }
+    } else {              // a stadium: light towers and a sea of phone lights
+      sky('#140F2E', '#3A2F63');
+      for (const x of [0.12, 0.88]) { c.strokeStyle = ink; c.lineWidth = 3; c.beginPath(); c.moveTo(x * w, h); c.lineTo(x * w, h * 0.22); c.stroke(); c.fillStyle = '#fff'; rr(c, x * w - w * 0.07, h * 0.12, w * 0.14, h * 0.1, 3); c.fill(); c.stroke();
+        c.fillStyle = 'rgba(255,255,230,.18)'; c.beginPath(); c.moveTo(x * w, h * 0.2); c.lineTo(w * 0.5 + (x - 0.5) * w * 0.3, h * 0.9); c.lineTo(w * 0.5 + (x - 0.5) * w * 0.9, h * 0.9); c.closePath(); c.fill(); }
+      for (let k = 0; k < 20; k++) { const x = (k * 0.137 % 1) * w, y = h * (0.5 + (k * 0.29 % 0.2)); c.fillStyle = `rgba(255,236,160,${0.5 + 0.5 * Math.sin(t * 4 + k)})`; c.fillRect(x, y, 2, 3); }
+    }
+    // the stage floor he plays on
+    c.fillStyle = '#2A2140'; c.fillRect(0, h * 0.8, w, h); c.strokeStyle = ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, h * 0.8); c.lineTo(w, h * 0.8); c.stroke();
+  },
   story(c, w, h, t, hv, age){
+    // on tour: a new city every 2.4 s (quicker on hover), the next one wiping in from the right
+    { const per = hv > 0.5 ? 1.5 : 2.4, n = this.TOUR.length, k = Math.floor(t / per), f = t / per - k, i = ((k % n) + n) % n, j = (i + n - 1) % n;
+      const wipe = reduceMotion ? 1 : Math.min(1, f / 0.16), e = 1 - Math.pow(1 - wipe, 3);
+      this.tourScene(c, w, h, j, t);
+      if (e > 0) { c.save(); c.beginPath(); const x = w * (1 - e) - h * 0.2; c.moveTo(x, 0); c.lineTo(w + 2, 0); c.lineTo(w + 2, h); c.lineTo(x + h * 0.2, h); c.closePath(); c.clip(); this.tourScene(c, w, h, i, t); c.restore();
+        if (e < 1) { c.strokeStyle = COL.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(w * (1 - e) - h * 0.2, 0); c.lineTo(w * (1 - e), h); c.stroke(); } }
+      this._tag = { i, f };
+    }
+    this.storyBand(c, w, h, t, hv, age);
+    // the city's name on a tour-pass tag, popping in with the new backdrop (over the band)
+    { const { i, f } = this._tag;
+      const pop = reduceMotion ? 1 : Math.min(1, Math.max(0, (f - 0.1) / 0.15)), sc = pop < 1 ? 0.6 + 0.4 * Math.sin(pop * Math.PI / 2) * 1.1 : 1;
+      c.save(); c.translate(w * 0.05, h * 0.05); c.scale(sc, sc); c.font = `400 ${Math.round(h * 0.1)}px ${DISPLAY_FONT}`;
+      const label = this.TOUR[i], tw = c.measureText(label).width + h * 0.1;
+      c.fillStyle = COL.sun; rr(c, 0, 0, tw, h * 0.16, h * 0.04); c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
+      c.fillStyle = COL.ink; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(label, h * 0.05, h * 0.085); c.restore(); }
+  },
+  storyBand(c, w, h, t, hv, age){
     // spotlight
-    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.25 + 0.45 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
+    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.1 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
     c.fillStyle = g; c.beginPath(); c.moveTo(w * 0.4, 0); c.lineTo(w * 0.6, 0); c.lineTo(w * 1.05, h); c.lineTo(-w * 0.05, h); c.closePath(); c.fill(); c.restore();
     const bpm = 96 + 24 * hv, spb = 60 / bpm, beat = t / spb, b0 = Math.floor(beat), ev = [];
     for (let bb = b0 - 3; bb <= b0 + 3; bb++) { const tt = bb * spb;

@@ -776,24 +776,29 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 #scr-title .beam{opacity:.28}
 /* ---------- mode buttons: hover and click effects ---------- */
 .mcard{isolation:isolate}
-.mcard.pressed{animation:press .32s cubic-bezier(.3,1.8,.5,1)}
-@keyframes press{0%{transform:scale(1)}40%{transform:scale(.93) rotate(-1deg)}100%{transform:scale(1.04)}}
-@media (prefers-reduced-motion:reduce){#scr-title,#scr-play{animation:none}.tagbox::after,.tagbox span::after,.mcard .mi{animation:none!important}}
+.mcard.pressed{transform:translateY(5px);box-shadow:0 2px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.mcard::after{content:'';position:absolute;inset:-20% auto -20% -60%;width:40%;z-index:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);pointer-events:none;opacity:0}
+.mcard:hover::after{animation:sweep .7s ease-out}
+@keyframes sweep{0%{left:-60%;opacity:1}100%{left:130%;opacity:1}}
+@media (prefers-reduced-motion:reduce){#scr-title,#scr-play{animation:none}.tagbox,.mcard:hover::after,.tagbox::after,.tagbox span::after,.mcard .mi{animation:none!important}}
 /* ---------- main menu ---------- */
 .menu{display:flex;flex-direction:column;min-height:calc(100dvh - 48px)}
 .menu .hero{flex:1;margin-block:0 10px}
 .hero-txt{display:grid;gap:10px;align-content:center}
-.tagbox{position:relative;justify-self:start;max-width:25ch;margin:14px 0 0;padding:12px 20px 13px;border:4px solid var(--ink);border-radius:22px;background:#fff;box-shadow:6px 7px 0 var(--ink);transform:rotate(-2deg);font-size:clamp(18px,2vw,23px);font-weight:800;line-height:1.2;color:var(--ink)}
+.tagbox{position:relative;justify-self:start;max-width:25ch;margin:30px 0 0;padding:12px 20px 13px;border:4px solid var(--ink);border-radius:22px;background:#fff;box-shadow:6px 7px 0 var(--ink);transform:rotate(-2deg);animation:bubfloat 3.4s ease-in-out infinite;font-size:clamp(18px,2vw,23px);font-weight:800;line-height:1.2;color:var(--ink)}
 .tagbox b{color:var(--coral);font-weight:800}
-.tagbox::before{content:'';position:absolute;right:-22px;top:26px;width:26px;height:22px;background:#fff;border:4px solid var(--ink);border-left:0;border-bottom:0;transform:skewY(28deg);border-radius:0 6px 0 0}
+.tagbox::before{content:'';position:absolute;right:38px;bottom:-15px;width:24px;height:24px;background:#fff;border:4px solid var(--ink);border-top:0;border-left:0;border-radius:0 0 6px 0;transform:rotate(45deg) skew(8deg,8deg);box-shadow:5px 5px 0 var(--ink)}
+.tagbox>span{position:relative;z-index:1}
+@keyframes bubfloat{0%,100%{transform:rotate(-2deg) translateY(0)}50%{transform:rotate(-1deg) translateY(-7px)}}
 .tagbox::after{content:'✦';position:absolute;left:-16px;top:-18px;font-size:26px;color:var(--teal);text-shadow:2px 2px 0 var(--ink);animation:twinkle2 2.4s ease-in-out infinite}
 .tagbox span::after{content:'✦';position:absolute;right:14px;bottom:-22px;font-size:20px;color:var(--sun);text-shadow:2px 2px 0 var(--ink);animation:twinkle2 2.4s 1.2s ease-in-out infinite}
 @keyframes twinkle2{0%,100%{transform:scale(.8) rotate(0)}50%{transform:scale(1.15) rotate(20deg)}}
 .title-art{justify-self:center;width:100%;max-width:calc((100dvh - 330px) * 1.2)}
 .modes3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
 .mcard{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;min-height:118px;padding:14px 14px 14px 12px;border:4px solid var(--ink);border-radius:22px;box-shadow:0 7px 0 var(--ink);cursor:pointer;text-align:left;color:var(--ink);overflow:hidden;transition:transform .25s cubic-bezier(.3,1.8,.5,1),box-shadow .15s}
-.mcard:hover{transform:translateY(-4px) rotate(-.6deg);box-shadow:0 11px 0 var(--ink)}
-.mcard:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
+.mcard{transition:transform .22s cubic-bezier(.2,.8,.3,1),box-shadow .22s}
+.mcard:hover{transform:translateY(-5px);box-shadow:0 12px 0 var(--ink)}
+.mcard:active{transform:translateY(5px);box-shadow:0 2px 0 var(--ink);transition-duration:.06s}
 .mcard .mi{position:relative;z-index:1;display:block;width:clamp(76px,7.4vw,104px);aspect-ratio:1;border:3px solid var(--ink);border-radius:18px;background:#3A2F63;overflow:hidden}
 .m-play .mi{background:#5E2240}
 .m-battle .mi{background:#241C4A}
@@ -815,9 +820,9 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
   .menu .topbar .grp .btn{padding:4px 8px;font-size:12px}
   .menu .logo{font-size:clamp(46px,14vw,70px)}
   .menu .hero{gap:4px}
-  .tagbox{font-size:15px;padding:8px 14px;margin-top:6px;border-width:3px;box-shadow:4px 5px 0 var(--ink)}
-  .tagbox::before{display:none}
-  .menu .title-art{max-width:calc((100dvh - 585px) * 1.2);min-width:200px}
+  .tagbox{font-size:15px;padding:8px 14px;margin-top:16px;border-width:3px;box-shadow:4px 5px 0 var(--ink)}
+  .tagbox::before{width:18px;height:18px;bottom:-11px;right:30px;border-width:3px;box-shadow:4px 4px 0 var(--ink)}
+  .menu .title-art{max-width:calc((100dvh - 600px) * 1.2);min-width:200px}
   .modes3{gap:8px}
   .mcard{grid-template-columns:1fr;justify-items:center;text-align:center;gap:4px;min-height:0;padding:10px 6px;border-radius:18px}
   .mcard .mi{width:min(76px,22vw)}
