@@ -1183,17 +1183,7 @@ const TitleArt = {
     const fv = reduceMotion ? 0 : Math.sin(t * 1.25) * H * 0.012, fs = reduceMotion ? 0 : Math.sin(t * 1.05 + 1.3) * H * 0.008;
     const R = Math.min(W * 0.45, H * 0.4), vx = W * 0.5, vy = H * 0.42 + fv;
     drawVinyl(c, vx, vy, R, R, reduceMotion ? 0.4 : t * Math.PI * 2 * 0.555);
-    // floating chord cards: black-and-white sketches, like the backdrop's doodles
-    ['G', 'C', 'D', 'Em'].forEach((name, i) => {
-      const x = W * (0.2 + i * 0.2), y = H * 0.1 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6);
-      c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
-      c.fillStyle = '#FFF4E6'; rr(c, -26, -18, 52, 36, 10); c.fill();
-      c.strokeStyle = COL.ink; c.lineJoin = 'round'; c.lineCap = 'round';
-      c.lineWidth = 3; rr(c, -26, -18, 52, 36, 10); c.stroke();
-      c.lineWidth = 1.4; c.save(); c.translate(1.6, -1.2); c.rotate(0.02); rr(c, -26, -18, 52, 36, 10); c.stroke(); c.restore();     // a second, looser pencil line
-      c.globalAlpha = 0.35; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-18 + k * 5, 14); c.lineTo(-24 + k * 5, 8); c.stroke(); } c.globalAlpha = 1;   // hatching in a corner
-      c.fillStyle = COL.ink; c.font = `22px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, 0, 2); c.restore();
-    });
+
     // the band sized and spaced so Pip (guitar neck out to the left) and the kit never overlap
     const floorY = H * 0.64;
     let s = Math.min(H * 0.32, W * 0.3);
@@ -1221,6 +1211,28 @@ const TitleArt = {
     }
     drawPip(c, pipX, floorY, s, { bounce: Math.abs(Math.sin(ph * Math.PI)), squash: Math.cos(ph * Math.PI * 2) * 0.5, strum, mood: Math.floor(beat) % 8 === 7 ? 'great' : 'idle', lookX: 0.6, lefty: Settings.lefty });
     c.restore();
+    // floating chord cards: black-and-white sketches, like the backdrop's doodles, with real chord names (minor, flat, sharp, seventh)
+    // (drawn in front of the band, so they float over it)
+    ['Am', 'E♭', 'F♯m', 'B♭7'].forEach((name, i) => {
+      const x = W * (0.18 + i * 0.15), y = H * 0.075 + (reduceMotion ? 0 : Math.sin(t * 2 + i) * 6), cw = name.length > 2 ? 62 : 54, ch = 38;
+      c.save(); c.translate(x, y); c.rotate((i - 1.5) * 0.08);
+      c.fillStyle = '#FFF4E6'; rr(c, -cw / 2, -ch / 2, cw, ch, 10); c.fill();
+      c.strokeStyle = COL.ink; c.lineJoin = 'round'; c.lineCap = 'round';
+      c.lineWidth = 3; rr(c, -cw / 2, -ch / 2, cw, ch, 10); c.stroke();
+      c.lineWidth = 1.4; c.save(); c.translate(1.6, -1.2); c.rotate(0.02); rr(c, -cw / 2, -ch / 2, cw, ch, 10); c.stroke(); c.restore();     // a second, looser pencil line
+      c.globalAlpha = 0.35; c.lineWidth = 1.2; for (let k = 0; k < 3; k++) { c.beginPath(); c.moveTo(-cw / 2 + 8 + k * 5, ch / 2 - 4); c.lineTo(-cw / 2 + 2 + k * 5, ch / 2 - 10); c.stroke(); } c.globalAlpha = 1;   // hatching in a corner
+      // the letter in the title font; the flat / sharp drawn by hand (the font has no ♭ or ♯), then the rest a size down
+      const root = name[0], acc = name[1] === '♭' || name[1] === '♯' ? name[1] : '', rest = name.slice(acc ? 2 : 1);
+      c.fillStyle = COL.ink; c.textBaseline = 'middle'; c.textAlign = 'left';
+      c.font = `22px ${DISPLAY_FONT}`; const rw = c.measureText(root).width; c.font = `16px ${DISPLAY_FONT}`; const sw = c.measureText(rest).width;
+      const aw = acc ? 9 : 0, x0 = -(rw + aw + sw) / 2;
+      c.font = `22px ${DISPLAY_FONT}`; c.fillText(root, x0, 2);
+      if (acc) { const ax = x0 + rw + 4.5; c.lineWidth = 2; c.beginPath();
+        if (acc === '♭') { c.moveTo(ax - 2, -9); c.lineTo(ax - 2, 3); c.stroke(); c.beginPath(); c.moveTo(ax - 2, 3); c.bezierCurveTo(ax + 5, 0, ax + 4, -5, ax - 2, -2); c.stroke(); }
+        else { c.moveTo(ax - 1.5, -9); c.lineTo(ax - 1.5, 4); c.moveTo(ax + 1.5, -10); c.lineTo(ax + 1.5, 3); c.moveTo(ax - 4, -4); c.lineTo(ax + 4, -6); c.moveTo(ax - 4, 0); c.lineTo(ax + 4, -2); c.stroke(); } }
+      c.font = `16px ${DISPLAY_FONT}`; c.fillText(rest, x0 + rw + aw, 4);
+      c.restore();
+    });
     // the crowd in front of the stage, whole: their round bodies sit above the bottom edge
     const crowdH = H * 0.17;
     c.save(); c.translate(0, H - crowdH * 1.02); const k = crowdH / 80; c.scale(k, k);
@@ -1230,7 +1242,7 @@ const TitleArt = {
   drawLights(c, W, H, floorY, t, ph){
     const pulse = reduceMotion ? 0.5 : 0.55 + 0.45 * Math.pow(1 - ph, 2);
     for (const [k, col] of [[-1, '255,236,170'], [1, '255,190,220']]) {
-      const lx = W * (0.5 + k * 0.22), ly = H * 0.015, sw = reduceMotion ? 0 : Math.sin(t * 0.7 + (k > 0 ? 2 : 0)) * 0.16;
+      const lx = W * (0.5 + k * 0.42), ly = Math.max(38, H * 0.08), sw = reduceMotion ? 0 : Math.sin(t * 0.7 + (k > 0 ? 2 : 0)) * 0.16;
       const tx = W * 0.5 + k * W * 0.08 + Math.sin(sw) * H, ty = floorY, ang = Math.atan2(ty - ly, tx - lx), len = Math.hypot(tx - lx, ty - ly) * 1.05, spread = 0.2;
       c.save(); c.translate(lx, ly); c.rotate(ang);
       const g = c.createLinearGradient(0, 0, len, 0); g.addColorStop(0, `rgba(${col},${0.75 * pulse})`); g.addColorStop(0.7, `rgba(${col},${0.28 * pulse})`); g.addColorStop(1, `rgba(${col},0)`);
@@ -1239,8 +1251,10 @@ const TitleArt = {
       // the pool of light where it lands
       c.save(); c.translate(tx, ty); c.scale(1, 0.22); const pg = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.12); pg.addColorStop(0, `rgba(${col},${0.5 * pulse})`); pg.addColorStop(1, `rgba(${col},0)`);
       c.fillStyle = pg; c.beginPath(); c.arc(0, 0, W * 0.12, 0, Math.PI * 2); c.fill(); c.restore();
-      // the lamp: a black can on a bracket
+      // the lamp: a black can on a yoke, hanging from a short rod
+      c.lineWidth = 3; c.strokeStyle = COL.ink; c.beginPath(); c.moveTo(lx, ly - 30); c.lineTo(lx, ly - 14); c.stroke();
       c.save(); c.translate(lx, ly); c.rotate(ang - Math.PI / 2); c.lineWidth = 3; c.strokeStyle = COL.ink; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(-15, -2); c.lineTo(-15, -14); c.lineTo(15, -14); c.lineTo(15, -2); c.stroke();
       c.fillStyle = COL.ink; rr(c, -11, -18, 22, 22, 5); c.fill(); c.stroke();
       c.fillStyle = `rgba(${col},${0.7 + 0.3 * pulse})`; c.beginPath(); c.ellipse(0, 4, 10, 4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
       c.restore();

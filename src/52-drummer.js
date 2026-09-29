@@ -391,17 +391,23 @@ const FunkDrummer = (() => {
     const brows = () => { const wig = f.wiggle && !rm ? Math.sin(real * 16) * 4 : 0;
       for (const [x0, x1, sg] of [[200, 244, -1], [256, 300, 1]]) { c.save(); c.translate((x0 + x1) / 2, 147 + f.browUp + (sg > 0 ? wig : -wig)); c.rotate(f.browAng * sg); c.beginPath(); c.moveTo(x0 - (x0 + x1) / 2, 6); c.quadraticCurveTo(0, -11, x1 - (x0 + x1) / 2, 6); c.lineWidth = 10; c.strokeStyle = INK; c.stroke(); c.restore(); } };
     if (shY > -30) brows();
-    // the open mouths (oh, yell, laugh) ease open and closed instead of snapping, and the tongue rolls out with them
-    { const isOpen = ['oh', 'yell', 'laugh'].includes(f.mouth), dt = Math.min(0.1, Math.max(0, real - (st.moT == null ? real : st.moT))); st.moT = real;
-      if (isOpen) st.moShape = f.mouth;
-      st.mo = st.mo == null ? 0 : st.mo + ((isOpen ? 1 : 0) - st.mo) * Math.min(1, dt * (isOpen ? 16 : 10));
-      if (rm) st.mo = isOpen ? 1 : 0;
-      if (st.mo > 0.06 && st.moShape) {
-        if (!isOpen && st.mo < 0.5) drawMouth(c, f.mouth, real, rm, 0);
-        const k = st.mo < 1 ? 1 - Math.pow(1 - st.mo, 3) : 1;
-        c.save(); c.translate(250, 232); c.scale(0.7 + 0.3 * k, Math.max(0.05, k)); c.translate(-250, -232);
-        drawMouth(c, st.moShape, real, rm, k); c.restore();
-      } else drawMouth(c, f.mouth, real, rm, 0); }
+    // One mouth at a time. A new mouth has to last a moment before it replaces the old one (no flicker between faces);
+    // the open mouths (oh, yell, laugh) ease open from nothing and ease shut again before the next mouth appears.
+    { const dt = Math.min(0.1, Math.max(0, real - (st.moT == null ? real : st.moT))); st.moT = real;
+      if (st.mCur == null) { st.mCur = f.mouth; st.mSince = real; }
+      if (f.mouth === st.mCur) st.mNext = null; else if (real - st.mSince > 0.16) st.mNext = f.mouth;
+      const OPEN = ['oh', 'yell', 'laugh'], curOpen = OPEN.includes(st.mCur);
+      st.mo = st.mo == null ? (curOpen ? 1 : 0) : st.mo;
+      if (st.mNext && st.mNext !== st.mCur) {
+        // leaving an open mouth: close it first; otherwise swap straight away
+        if (curOpen && !rm) { st.mo = Math.max(0, st.mo - dt * 9); if (st.mo <= 0.02) { st.mCur = st.mNext; st.mSince = real; st.mNext = null; st.mo = 0; } }
+        else { st.mCur = st.mNext; st.mSince = real; st.mNext = null; st.mo = 0; }
+      } else if (OPEN.includes(st.mCur)) st.mo = rm ? 1 : Math.min(1, st.mo + dt * 12);
+      if (OPEN.includes(st.mCur)) {
+        const k = 1 - Math.pow(1 - st.mo, 3);
+        c.save(); c.translate(250, 232); c.scale(0.75 + 0.25 * k, Math.max(0.08, k)); c.translate(-250, -232);
+        drawMouth(c, st.mCur, real, rm, k); c.restore();
+      } else drawMouth(c, st.mCur, real, rm, 0); }
     c.save(); c.translate(250, 226); c.scale(1, 1 - 0.12 * Math.exp(-Math.min(dSn, dK) * 14)); c.translate(-250, -226);
     c.lineWidth = 12; c.strokeStyle = INK; c.stroke(STACHE_L); c.stroke(STACHE_R); c.lineWidth = 6; c.strokeStyle = HAIR; c.stroke(STACHE_L); c.stroke(STACHE_R); c.restore();
     c.beginPath(); c.ellipse(250, 216, 19, 14, 0, 0, 7); c.fillStyle = '#96582f'; c.fill(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke();
