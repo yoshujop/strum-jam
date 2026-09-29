@@ -96,6 +96,25 @@ function hashStr(s){ let h = 2166136261; for (const ch of String(s)) { h ^= ch.c
 
 /* a vinyl record, seen at a slight tilt (rx x ry), spinning by angle `rot` */
 const VINYL = { disc: '#1d1a2b', groove: '#2c2842', shine: 'rgba(255,255,255,.13)' };
+/* The Strum Jam mark: an S whose tail runs into a J drawn as an eighth note (the J's hook is the note head, a flag
+   on top of its stem), so it reads SJ and ♪ at once. Centred on 0,0, about `h` tall. */
+function drawSJ(c, h, col){
+  c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+  const sx = -h * 0.2, u = h / 2;
+  // the S: two joined arcs, a fat pink stroke over a thin ink one
+  const S = () => { c.beginPath(); c.moveTo(sx + u * 0.32, -u * 0.6);
+    c.bezierCurveTo(sx + u * 0.12, -u * 0.86, sx - u * 0.44, -u * 0.8, sx - u * 0.38, -u * 0.4);
+    c.bezierCurveTo(sx - u * 0.32, -u * 0.06, sx + u * 0.38, -u * 0.08, sx + u * 0.36, u * 0.3);
+    c.bezierCurveTo(sx + u * 0.34, u * 0.74, sx - u * 0.22, u * 0.82, sx - u * 0.4, u * 0.48); };
+  // the J: a stem down to a round head at bottom-left, a flag off the top
+  const jx = h * 0.26, J = () => { c.beginPath(); c.moveTo(jx, -u * 0.8); c.lineTo(jx, u * 0.42); };
+  c.strokeStyle = COL.ink; c.lineWidth = h * 0.2; S(); c.stroke(); J(); c.stroke();
+  c.strokeStyle = col; c.lineWidth = h * 0.12; S(); c.stroke(); J(); c.stroke();
+  c.save(); c.translate(jx - h * 0.1, u * 0.5); c.rotate(-0.4); c.beginPath(); c.ellipse(0, 0, h * 0.14, h * 0.1, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.lineWidth = h * 0.04; c.strokeStyle = COL.ink; c.stroke(); c.restore();
+  c.beginPath(); c.moveTo(jx, -u * 0.8); c.quadraticCurveTo(jx + h * 0.24, -u * 0.62, jx + h * 0.2, -u * 0.22); c.quadraticCurveTo(jx + h * 0.14, -u * 0.46, jx, -u * 0.46); c.closePath();
+  c.fillStyle = col; c.fill(); c.lineWidth = h * 0.04; c.strokeStyle = COL.ink; c.stroke();
+  c.restore();
+}
 function drawVinyl(c, cx, cy, rx, ry, rot){
   const R = rx, k = ry / rx;
   c.save(); c.translate(cx, cy); c.scale(1, k);
@@ -114,12 +133,12 @@ function drawVinyl(c, cx, cy, rx, ry, rot){
   c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = 2.5; c.lineCap = 'round';
   for (const [f, a] of [[0.58, 0.3], [0.74, 2.2], [0.86, 4.1], [0.46, 5.2]]) { c.beginPath(); c.arc(0, 0, R * f, a, a + 0.35); c.stroke(); }
   const LR = R * 0.3;
-  c.beginPath(); c.arc(0, 0, LR, 0, Math.PI * 2); c.fillStyle = COL.coral; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
-  c.beginPath(); c.arc(0, 0, LR * 0.82, 0, Math.PI * 2); c.strokeStyle = COL.sun; c.lineWidth = 3; c.stroke();
-  c.fillStyle = COL.sun; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? LR * 0.2 : LR * 0.46; c.lineTo(Math.cos(a) * q, Math.sin(a) * q - LR * 0.08); } c.closePath(); c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke();
-  c.fillStyle = COL.paper; c.font = `${Math.round(LR * 0.2)}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('STRUM JAM', 0, LR * 0.56);
+  // the label: white with a black ring, and the SJ mark in the title's pink
+  c.beginPath(); c.arc(0, 0, LR, 0, Math.PI * 2); c.fillStyle = '#FFFFFF'; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
+  c.beginPath(); c.arc(0, 0, LR * 0.84, 0, Math.PI * 2); c.lineWidth = 1.6; c.stroke();
+  drawSJ(c, LR * 0.95, COL.coral);
   c.restore();
-  c.beginPath(); c.arc(0, 0, R * 0.035, 0, Math.PI * 2); c.fillStyle = COL.paper; c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
+  c.beginPath(); c.arc(0, 0, R * 0.018, 0, Math.PI * 2); c.fillStyle = COL.paper; c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
   c.restore();
   c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.lineWidth = 4; c.strokeStyle = COL.ink; c.stroke();
 }

@@ -9,7 +9,7 @@
 const FunkDrummer = (() => {
   const INK = '#2b1a12', SKIN = '#a8683f', SKIN_D = '#87502b', SKIN_L = '#c98a5c', HAIR = '#2a1712', HAIR_L = '#5a3424',
     GOLD = '#ffd23f', GOLD_D = '#d6a21e', PINK = '#ff4fa0', LIP = '#e2566f', MOUTH = '#5a0f1e', TONGUE = '#ff6f8e',
-    PURP = '#6a1fc8', PURP_D = '#4c1399', PURP_L = '#8a4be8', SHIRT = '#1f1630', RED = '#e8344e', RED_D = '#b8243b',
+    PURP = '#6EC3D4', PURP_D = '#4A9BB0', PURP_L = '#A6DEE8', SHIRT = '#1f1630', RED = '#e8344e', RED_D = '#b8243b',
     CREAM = '#fff4d6', WOOD = '#f6dca8', CYM = '#ffc93c', CYM_D = '#e5a92a', CYM_L = '#fff3b0', CHROME = '#d9dde6', CHROME_D = '#b7bcc8', CYAN = '#8ff0ff';
   const LW = 6, LI = 3.5, STICK = 60, BUTT = 20, W_UP = 31, W_FO = 26;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t;
@@ -257,8 +257,8 @@ const FunkDrummer = (() => {
     shadeIn(c, legL, 8, -4, PURP_D, 1); shadeIn(c, legR, 8, -4, PURP_D, 1);
     const shoe = (x0, flip, ang) => {
       c.save(); c.translate(x0, 522); c.scale(flip, 1); c.rotate(ang);
-      inked(c, [SHOE], GOLD, 2.8); c.fillStyle = PINK; c.fillRect(-74, -12, 74, 12); c.lineWidth = 4; c.strokeStyle = INK; c.strokeRect(-74, -12, 74, 12);
-      c.strokeStyle = '#fff6c2'; c.lineWidth = 3; c.beginPath(); c.moveTo(-64, -30); c.lineTo(-14, -30); c.stroke();
+      inked(c, [SHOE], '#26222F', 2.8); c.fillStyle = '#3A3546'; c.fillRect(-74, -12, 74, 12); c.lineWidth = 4; c.strokeStyle = INK; c.strokeRect(-74, -12, 74, 12);   // black shoes
+      c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-64, -30); c.lineTo(-14, -30); c.stroke();
       c.fillStyle = '#fff'; for (const x of [-60, -43, -26]) { c.beginPath(); c.arc(x, -6, 2.5, 0, 7); c.fill(); }
       c.restore();
     };
@@ -489,8 +489,6 @@ const FunkDrummer = (() => {
       c.beginPath(); c.arc(0, 0, R, 0, 7); c.lineWidth = 7; c.stroke();
       for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; c.save(); c.translate(Math.cos(a) * R * 0.87, Math.sin(a) * R * 0.87); c.fillStyle = CHROME; c.fillRect(-5, -5, 10, 10); c.lineWidth = 3; c.strokeRect(-5, -5, 10, 10); c.restore(); }
       c.beginPath(); c.arc(0, 0, R * 0.75, 0, 7); c.fillStyle = CREAM; c.fill(); c.lineWidth = 5; c.stroke();
-      star(c, 0, -2, 46 * (1 + 0.08 * q), 20, 0); c.fillStyle = '#7b2fe0'; c.fill(); c.stroke();
-      star(c, 0, -2, 24, 11, 0); c.fillStyle = GOLD; c.fill(); c.lineWidth = 3; c.stroke();
       c.restore(); }
   }
   return { create, draw, plan, handAt, HIT, KIT };
