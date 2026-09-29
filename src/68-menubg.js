@@ -87,7 +87,135 @@ const MenuBG = (() => {
     apply(){
       if (!url) url = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(tile()) + '")';
       document.documentElement.style.setProperty('--menu-bg', url);
-      for (const [id, k] of [['btn-play', 'play'], ['btn-story', 'story'], ['btn-battle', 'battle']]) { const m = document.querySelector('#' + id + ' .mi'); if (m) m.innerHTML = icon(k); }
     },
   };
 })();
+
+/* ---------- the Story button's icon: the funk drummer, live, on a small canvas ----------
+   On hover he goes up to full hype with fills and crashes under a spotlight; a click gives him a crash. */
+const ModeIcons = {
+  list: [], hov: {}, hit: {}, dSt: null,
+  init(){
+    for (const [id, k] of [['btn-play', 'play'], ['btn-story', 'story'], ['btn-battle', 'online']]) {
+      const card = document.getElementById(id), box = card && card.querySelector('.mi'); if (!box) continue;
+      box.textContent = ''; const cv = document.createElement('canvas'); box.appendChild(cv);
+      const on = () => { this.hov[k] = true; }, off = () => { this.hov[k] = false; };
+      card.addEventListener('pointerenter', on); card.addEventListener('pointerleave', off); card.addEventListener('focus', on); card.addEventListener('blur', off);
+      this.list.push({ k, cv, box, c: cv.getContext('2d'), h: 0 });
+    }
+  },
+  kick(k){ this.hit[k] = performance.now() / 1000; },
+  draw(t){
+    for (const it of this.list) {
+      const w = it.box.clientWidth, h = it.box.clientHeight; if (!w || !h) continue;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (it.cv.width !== Math.round(w * dpr)) { it.cv.width = Math.round(w * dpr); it.cv.height = Math.round(h * dpr); }
+      it.h += ((this.hov[it.k] ? 1 : 0) - it.h) * 0.15;                 // hover eases in and out
+      const age = t - (this.hit[it.k] || -9), c = it.c;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); c.lineJoin = 'round'; c.lineCap = 'round';
+      this[it.k](c, w, h, reduceMotion ? 0 : t, it.h, age);
+    }
+  },
+  star(c, x, y, R, rot, fill){ c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + rot, q = i % 2 ? R * 0.45 : R; c.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); } c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); },
+  story(c, w, h, t, hv, age){
+    // spotlight
+    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.25 + 0.45 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(w * 0.4, 0); c.lineTo(w * 0.6, 0); c.lineTo(w * 1.05, h); c.lineTo(-w * 0.05, h); c.closePath(); c.fill(); c.restore();
+    const bpm = 96 + 24 * hv, spb = 60 / bpm, beat = t / spb, b0 = Math.floor(beat), ev = [];
+    for (let bb = b0 - 3; bb <= b0 + 3; bb++) { const tt = bb * spb;
+      ev.push({ t: tt, kind: 'hat' }, { t: tt, kind: ((bb % 2) + 2) % 2 ? 'snare' : 'kick' });
+      if (hv > 0.3) ev.push({ t: tt + spb / 2, kind: 'hat' });
+      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 3) ev.push({ t: tt + spb / 2, kind: 'tom' }, { t: tt + spb * 0.75, kind: 'tom' });
+      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 0) ev.push({ t: tt, kind: 'crash' }); }
+    if (age < 0.4) ev.push({ t: t - age, kind: 'crash' }, { t: t - age, kind: 'kick' });
+    ev.sort((a, b) => a.t - b.t);
+    this.dSt = this.dSt || FunkDrummer.create();
+    FunkDrummer.draw(c, this.dSt, { x: w / 2, floorY: h * 1.02, h: h * 1.18, now: t, real: t, beat, spb, level: hv > 0.5 || age < 1 ? 3 : 1, events: ev, playing: true, missAgo: 9 });
+    if (hv > 0.3) for (let i = 0; i < 3; i++) { const cyc = (t * 0.7 + i / 3) % 1; c.globalAlpha = Math.sin(cyc * Math.PI) * hv; this.star(c, w * (0.14 + 0.36 * i), h * (0.22 + 0.12 * ((i + 1) % 2)), 5 + 3 * Math.sin(cyc * Math.PI), cyc * 2, '#FFCE3A'); }
+    c.globalAlpha = 1;
+  },
+  // Play & Learn: an acoustic guitar under a spotlight, strummed on the beat; the strings shiver, notes float off
+  play(c, w, h, t, hv, age){
+    const s = Math.min(w, h), bpm = 92 + 36 * hv, spb = 60 / bpm, beat = t / spb, ph = beat % 1;
+    const sa = Math.min(ph * spb, age), amp = Math.exp(-sa * 7) * (age < 0.5 ? 1.8 : 1);   // string shake since the last strum
+    c.save(); const g = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, s * 0.7); g.addColorStop(0, `rgba(255,206,58,${0.22 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,206,58,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
+    // floating notes behind the guitar
+    for (let i = 0; i < 3 + Math.round(2 * hv); i++) { const cyc = (t * (0.35 + 0.25 * hv) + i * 0.27) % 1, x = w * (0.2 + ((i * 0.37) % 0.7)) + Math.sin(cyc * 6 + i) * 4, y = h * (0.95 - cyc * 0.9);
+      c.globalAlpha = Math.sin(cyc * Math.PI); this.note(c, x, y, s * 0.075, i % 2 ? '#FFCE3A' : '#FFF7E6'); }
+    c.globalAlpha = 1;
+    const bob = Math.pow(1 - ph, 3) * 0.05 + (age < 0.4 ? Math.sin(age * 30) * 0.08 * (1 - age / 0.4) : 0);
+    c.save(); c.translate(w * 0.56, h * 0.62); c.rotate(-0.72 + bob); c.scale(s / 128, s / 128);
+    const R1 = 23, R2 = 17, NL = 58;   // body: lower bout, upper bout; neck length
+    const body = pad => { c.beginPath(); c.arc(0, 12, R1 + pad, 0, Math.PI * 2); c.moveTo(R2 + pad, -14); c.arc(0, -14, R2 + pad, 0, Math.PI * 2); },
+      neck = pad => { rr(c, -5.5 - pad, -14 - NL - pad, 11 + pad * 2, NL + pad * 2, 3); }, head = pad => { rr(c, -8 - pad, -14 - NL - 16 - pad, 16 + pad * 2, 18 + pad * 2, 5); };
+    // one ink silhouette first, then the colours on top
+    c.fillStyle = COL.ink; body(4); c.fill(); neck(4); c.fill(); head(4); c.fill();
+    c.fillStyle = '#FFB020'; body(0); c.fill();
+    c.save(); body(0); c.clip(); c.fillStyle = '#E0831A'; c.beginPath(); c.arc(9, 18, R1 + 2, 0, Math.PI * 2); c.arc(-40, 30, 10, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#FFB020'; c.beginPath(); c.arc(4, 13, R1 - 1, 0, Math.PI * 2); c.arc(0, -14, R2, 0, Math.PI * 2); c.fill(); c.restore();
+    c.fillStyle = '#8A5A3B'; neck(0); c.fill(); c.fillStyle = '#5E3A26'; head(0); c.fill();
+    c.fillStyle = 'rgba(30,27,46,.45)'; for (let k = 1; k < 6; k++) c.fillRect(-5.5, -14 - k * 10, 11, 1.6);   // frets
+    c.fillStyle = COL.ink; c.beginPath(); c.arc(0, -2, 8.5, 0, Math.PI * 2); c.fill();            // sound hole
+    c.fillStyle = COL.ink; rr(c, -9, 22, 18, 5, 2); c.fill();                                        // bridge
+    c.fillStyle = '#FFF7E6'; for (const y of [-80, -74]) for (const x of [-10.5, 10.5]) { c.beginPath(); c.arc(x, y, 2.4, 0, Math.PI * 2); c.fill(); c.lineWidth = 1.6; c.strokeStyle = COL.ink; c.stroke(); }
+    // the strings shiver after each strum
+    c.strokeStyle = '#FFF7E6'; c.lineWidth = 1.3;
+    for (let k = 0; k < 4; k++) { const x = -3.6 + k * 2.4; c.beginPath(); c.moveTo(x, -14 - NL - 2);
+      for (let y = -14 - NL; y <= 23; y += 3) { const u = (y + 14 + NL) / (NL + 37); c.lineTo(x + Math.sin(u * Math.PI) * Math.sin(t * 90 + k * 1.7 + y * 0.02) * amp * 1.9, y); } c.stroke(); }
+    // the pick sweeps across the strings on the beat, with a smear
+    const sw = Math.min(1, ph * spb / 0.09), px = -16 + 32 * (1 - Math.pow(1 - sw, 2));
+    if (sw < 1 || age < 0.15) { c.fillStyle = 'rgba(255,247,230,.55)'; c.beginPath(); c.moveTo(-16, 4); c.quadraticCurveTo(px * 0.5 - 4, 16, px, 6); c.lineTo(px, 1); c.quadraticCurveTo(px * 0.5 - 4, 10, -16, 4); c.fill(); }
+    c.restore();
+    const pk = (sw < 1 || age < 0.15) ? px : 16 - 3 * Math.sin(ph * Math.PI);
+    c.save(); c.translate(w * 0.56, h * 0.62); c.rotate(-0.72 + bob); c.scale(s / 128, s / 128); c.translate(pk, 6 - 14); c.rotate(0.5);
+    c.beginPath(); c.moveTo(-6, -5); c.quadraticCurveTo(0, -9, 6, -5); c.quadraticCurveTo(4, 5, 0, 8); c.quadraticCurveTo(-4, 5, -6, -5); c.closePath();
+    c.fillStyle = COL.coral; c.fill(); c.lineWidth = 2.6; c.strokeStyle = COL.ink; c.stroke(); c.restore();
+    if (age < 0.5 || hv > 0.3) { const a = age < 0.5 ? 1 - age / 0.5 : hv * Math.pow(1 - ph, 2); c.globalAlpha = a;
+      for (let i = 0; i < 5; i++) { const an = -Math.PI * (0.15 + i * 0.17), r0 = s * 0.36, r1 = r0 + s * (0.08 + 0.06 * (1 - a));
+        c.beginPath(); c.moveTo(w * 0.52 + Math.cos(an) * r0, h * 0.5 + Math.sin(an) * r0); c.lineTo(w * 0.52 + Math.cos(an) * r1, h * 0.5 + Math.sin(an) * r1); c.lineWidth = 3; c.strokeStyle = '#FFCE3A'; c.stroke(); }
+      c.globalAlpha = 1; }
+  },
+  note(c, x, y, r, fill){
+    c.lineWidth = 2; c.strokeStyle = COL.ink; c.fillStyle = fill;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.75, -0.4, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(x + r * 0.85, y - r * 0.2); c.lineTo(x + r * 0.85, y - r * 2.6); c.quadraticCurveTo(x + r * 1.9, y - r * 2.2, x + r * 1.9, y - r * 1.3); c.lineWidth = 2.4; c.stroke();
+  },
+  // Online: three players' takes stacked like tracks, lining up under one playhead; a REC light blinks
+  online(c, w, h, t, hv, age){
+    const s = Math.min(w, h), spb = 60 / (100 + 30 * hv), beat = t / spb, ph = beat % 1, cols = ['#FF5E7E', '#2EC4B6', '#FFCE3A'];
+    const x0 = w * 0.12, x1 = w * 0.9, tw = x1 - x0, th = h * 0.16, gap = h * 0.05, top = h * 0.36;
+    const hit = age < 0.6 ? 1 - age / 0.6 : 0;
+    for (let k = 0; k < 3; k++) {
+      // tracks slide in from alternate sides, then lock together on the beat
+      const slide = (1 - hv) * Math.sin(t * 1.3 + k * 2.1) * w * 0.035 * (1 - hit), y = top + k * (th + gap);
+      c.save(); c.translate(slide, 0);
+      c.fillStyle = COL.ink; rr(c, x0 - 3, y - 3, tw + 6, th + 6, 9); c.fill();
+      c.fillStyle = '#2A2350'; rr(c, x0, y, tw, th, 7); c.fill();
+      c.save(); rr(c, x0, y, tw, th, 7); c.clip();
+      const n = 16, bw = tw / n;
+      for (let i = 0; i < n; i++) { const bx = x0 + i * bw, pos = (i / n) * 4 - beat * 0.5, local = ((pos % 1) + 1) % 1;
+        const v = 0.25 + 0.55 * Math.abs(Math.sin(i * 1.7 + k * 3.1 + Math.floor(beat * 2 + i * 0.13) * 0.9)) * (0.5 + 0.5 * Math.pow(1 - local, 2));
+        const bh = Math.min(th - 4, th * v * (0.8 + 0.4 * hv + 0.5 * hit)); c.fillStyle = cols[k]; rr(c, bx + 1.2, y + (th - bh) / 2, bw - 2.4, bh, 2); c.fill(); }
+      c.restore();
+      // the player's badge
+      const bx = x0 + 2, by = y + th / 2; c.beginPath(); c.arc(bx, by, th * 0.42, 0, Math.PI * 2); c.fillStyle = cols[k]; c.fill(); c.lineWidth = 2.4; c.strokeStyle = COL.ink; c.stroke();
+      c.fillStyle = COL.ink; c.beginPath(); c.arc(bx, by - th * 0.08, th * 0.12, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(bx, by + th * 0.3, th * 0.2, Math.PI, 0); c.fill();
+      c.restore();
+    }
+    // the playhead sweeps across all three
+    const px = x0 + tw * (((t * 0.22) % 1)), yb = top + 3 * th + 2 * gap;
+    c.fillStyle = COL.ink; rr(c, px - 3.5, top - 6, 7, yb - top + 12, 3); c.fill(); c.fillStyle = '#FFF7E6'; rr(c, px - 1.5, top - 4, 3, yb - top + 8, 1.5); c.fill();
+    // REC light + label
+    const on = (t % 1) < 0.6 || hv > 0.5, rx = x0 + 4, ry = h * 0.17;
+    c.beginPath(); c.arc(rx, ry, s * 0.055 * (1 + 0.25 * hit), 0, Math.PI * 2); c.fillStyle = on ? '#FF3B5C' : '#6A2A3A'; c.fill(); c.lineWidth = 2.2; c.strokeStyle = COL.ink; c.stroke();
+    if (on) { c.save(); c.globalAlpha = 0.35 + 0.3 * hv; c.beginPath(); c.arc(rx, ry, s * 0.1, 0, Math.PI * 2); c.fillStyle = '#FF3B5C'; c.fill(); c.restore(); }
+    c.font = `400 ${Math.round(s * 0.13)}px ${DISPLAY_FONT}`; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = COL.ink; c.fillStyle = '#FFF7E6';
+    c.strokeText('REC', rx + s * 0.09, ry + 1); c.fillText('REC', rx + s * 0.09, ry + 1);
+    // signal arcs: this jam is going out
+    c.lineWidth = 2.6; c.strokeStyle = '#FFF7E6';
+    for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(((t * (1 + hv) - i * 0.18) % 1) * Math.PI)) * (0.4 + 0.6 * Math.max(hv, hit)); c.globalAlpha = a;
+      c.beginPath(); c.arc(x1 - s * 0.06, ry + s * 0.04, s * (0.05 + i * 0.05), -Math.PI * 0.85, -Math.PI * 0.15); c.stroke(); }
+    c.globalAlpha = 1;
+    c.beginPath(); c.arc(x1 - s * 0.06, ry + s * 0.04, s * 0.028, 0, Math.PI * 2); c.fillStyle = '#FFF7E6'; c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
+  },
+};

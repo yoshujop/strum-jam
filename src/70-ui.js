@@ -27,6 +27,7 @@ const UI = {
     Story.init();
     Suggest.init();
     MenuBG.apply();
+    ModeIcons.init();
     this.renderLists();
     this.refreshEnv();
     this.refreshMic();
@@ -42,7 +43,7 @@ const UI = {
   show(name, instant){
     const swap = () => {
       this.screen = name;
-      for (const s of ['title', 'play', 'battle', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
+      for (const s of ['title', 'play', 'battle', 'online', 'song', 'game', 'results', 'story']) $('scr-' + s).hidden = s !== name;
       if (name === 'title') Story.renderChips();
       if (name === 'game') requestAnimationFrame(() => Stage.resize());
       if (name === 'title') TitleArt.resize();
@@ -418,18 +419,8 @@ const UI = {
     Sfx.open();
     if (reduceMotion) { go(); return; }
     card.classList.remove('pressed'); void card.offsetWidth; card.classList.add('pressed');
-    const r = card.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    const set = kind === 'play' ? ['♪', '♫', '♬', '♩'] : kind === 'story' ? ['★', '✦', '★', '✧'] : ['🔥', '💥', '🔥', '⚡'];
-    const cols = kind === 'play' ? ['#FF5E7E', '#FFFFFF', '#FFCE3A'] : kind === 'story' ? ['#FFCE3A', '#FFF7E6', '#FF8FC7'] : ['#FF7A2E', '#FFCE3A', '#FF3B3B'];
-    for (let i = 0; i < 16; i++) {
-      const e = document.createElement('i'); e.className = 'mburst'; e.textContent = set[i % set.length];
-      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.3, d = 90 + Math.random() * 110;
-      e.style.left = cx + 'px'; e.style.top = cy + 'px'; e.style.color = cols[i % cols.length]; e.style.fontSize = (20 + Math.random() * 18) + 'px';
-      e.style.textShadow = '2px 2px 0 #1E1B2E';
-      e.style.setProperty('--dx', Math.cos(a) * d + 'px'); e.style.setProperty('--dy', (Math.sin(a) * d - (kind === 'battle' ? 60 : 20)) + 'px'); e.style.setProperty('--r', (Math.random() * 120 - 60) + 'deg');
-      document.body.appendChild(e); setTimeout(() => e.remove(), 800);
-    }
-    setTimeout(go, 260);
+    ModeIcons.kick(kind);
+    setTimeout(go, 360);
   },
   /* ---------- song menu ---------- */
   openSong(song, storyCtx){
@@ -526,7 +517,8 @@ const UI = {
       : t ? { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo, strict: t.strict }
       : mode === 'stage' && this.battleOpts ? this.battleOpts
       : { section: +$('sel-section').value || 0, loop: $('chk-loop').checked, tempo: Settings.tempo });
-    if (!ok) { this.show('song'); }
+    if (!ok) { this.show('song'); if (Online.rec) Online.cancel(); return; }
+    if (Online.rec && mode === 'stage') Online.beginRecording();
   },
   hudUpdate(){
     $('hud-title').textContent = this.song ? this.song.title : '';
@@ -614,10 +606,11 @@ const UI = {
     // story mode: record the run, say what it means for the career
     const so = this.storyCtx ? Story.record(r) : null, rs = $('res-story');
     this.resStory = so;
-    const br = Battle.record(r), cr = !this.storyCtx && !br ? Challenge.record(r) : null;
-    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : br || cr;
+    const or = Online.record(r), br = or ? null : Battle.record(r), cr = !this.storyCtx && !br && !or ? Challenge.record(r) : null;
+    const sr = so ? Story.resultsHtml(so) : this.storyCtx && r.mode === 'practice' ? { html: '<span>Practice doesn’t count toward the career. Take the Stage to clear this song.</span>' } : or || br || cr;
     rs.hidden = !sr; rs.className = 'res-story' + (sr && sr.big ? ' big' : ''); rs.innerHTML = sr ? sr.html : '';
     rs.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => Battle.after());
+    rs.querySelectorAll('[data-online]').forEach(b => b.onclick = () => Online.after());
     $('btn-res-home').hidden = !!this.storyCtx; $('btn-res-career').hidden = !this.storyCtx;
     Music.fanfareNext();
     this.show('results').then(() => {
@@ -641,13 +634,14 @@ const UI = {
   },
 
   /* ---------- modals ---------- */
-  open(id){ this.closeModal(true); const m = $(id); m.hidden = false; this.openModal = id; Sfx.modalOpen(); const sh = m.querySelector('.sheet'); if (sh && !reduceMotion) sh.style.animation = 'rise .38s cubic-bezier(.2,1.4,.4,1) both'; const f = m.querySelector('button,input,textarea,select'); f && f.focus(); },
+  open(id){ this.closeModal(true); const m = $(id); if (id === 'm-pause') $('btn-resume').textContent = Online.rec ? 'Restart take' : 'Resume'; m.hidden = false; this.openModal = id; Sfx.modalOpen(); const sh = m.querySelector('.sheet'); if (sh && !reduceMotion) sh.style.animation = 'rise .38s cubic-bezier(.2,1.4,.4,1) both'; const f = m.querySelector('button,input,textarea,select'); f && f.focus(); },
   closeModal(quiet){
     if (!this.openModal) return;
     if (!quiet) Sfx.modalClose();
     const id = this.openModal; $(id).hidden = true; this.openModal = null;
     if (id === 'm-confirm' && this._cfResolve) this._cfResolve();
-    if (id === 'm-pause' && G.paused) G.resume();
+    if (id === 'm-pause' && G.paused && Online.rec) { G.stop(); Online.restart(); }
+    else if (id === 'm-pause' && G.paused) G.resume();
     if (id === 'm-mic' && this.screen === 'game' && G.paused) this.open('m-pause');
   },
   openMic(){
@@ -851,11 +845,12 @@ const UI = {
   },
   // a shared link: #song=SJ1… or #career=SJC1…
   async openShared(){
-    const m = /^#(song|career)=(.+)$/.exec(location.hash || ''); if (!m) return;
+    const m = /^#(song|career|jam)=(.+)$/.exec(location.hash || ''); if (!m) return;
     history.replaceState(null, '', location.href.split('#')[0]);
     try {
       const code = decodeURIComponent(m[2]);
-      if (m[1] === 'career') { const c = await careerFromCode(code); Story.openCareer(c.id); }
+      if (m[1] === 'jam') Online.open().then(() => Online.openJam(code));
+      else if (m[1] === 'career') { const c = await careerFromCode(code); Story.openCareer(c.id); }
       else { const song = songFromCode(code); this.saveMine(song); this.renderLists(); this.openSong(song); }
     } catch (e) { alert(e.message || 'That shared link didn’t work.'); }
   },
@@ -959,8 +954,8 @@ const UI = {
     $('tempo').addEventListener('change', e => { Settings.tempo = +e.target.value; saveSettings(); this.tempoLabel(); });
     $('btn-pause').onclick = () => { G.pause(); this.open('m-pause'); };
     $('btn-resume').onclick = () => this.closeModal();
-    $('btn-restart').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); this.startGame(G.mode, true); };
-    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); if (Battle.active()) { Battle.st.playing = false; this.battleOpts = null; Battle.renderTurn(); return; } this.show('song'); this.renderSong(); };
+    $('btn-restart').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); if (Online.rec) { Online.restart(); return; } this.startGame(G.mode, true); };
+    $('btn-quit').onclick = () => { $('m-pause').hidden = true; this.openModal = null; G.paused = false; G.stop(); if (Online.rec) { Online.cancel(); Online.after(); return; } if (Battle.active()) { Battle.st.playing = false; this.battleOpts = null; Battle.renderTurn(); return; } this.show('song'); this.renderSong(); };
     $('btn-hear').onclick = () => { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev && ev.notes) { const how = AudioEngine.playChord(ev.notes, 'now:' + ev.label + '|' + ev.v.frets.join(',')); const b = $('btn-hear'); b.dataset.next = how === 'strum' ? 'arpeggio' : 'strum'; b.querySelector('small') && (b.querySelector('small').textContent = how === 'strum' ? 'tap again: arpeggio' : 'tap again: strum'); } };
     $('btn-skip').onclick = () => G.skip();
     // redraw the fretboard when the layout switches between phone and wide (e.g. rotating the phone)
@@ -976,10 +971,11 @@ const UI = {
     $('btn-res-home').onclick = () => this.show('play');
     $('btn-play').onclick = () => this.modeBurst($('btn-play'), 'play', () => this.show('play').then(() => $('search-input').focus()));
     $('btn-play-home').onclick = () => this.show('title');
+    $('btn-online-home').onclick = () => { Online.stopPlayback(); this.show('title'); };
     $('btn-battle-home').onclick = () => { Battle.st = null; this.show('title'); };
     $('btn-tune-play').onclick = () => $('btn-tune-title').click();
     $('btn-mic-play').onclick = () => $('btn-mic-setup').click();
-    $('btn-battle').onclick = () => this.modeBurst($('btn-battle'), 'battle', () => Battle.open());
+    $('btn-battle').onclick = () => this.modeBurst($('btn-battle'), 'online', () => Online.open());
     $('btn-res-career').onclick = () => { const x = this.storyCtx; if (!x) { this.show('title'); return; } const so = this.resStory; Story.openCareer(x.careerId, so && so.levelClear && x.li + 1 < ((Story.get(x.careerId) || {}).levels || []).length ? x.li + 1 : -1); };
     // stage taps (no mic)
     $('stage').addEventListener('pointerdown', e => { e.preventDefault(); if (G.running && G.tapMode) G.onStrum(AudioEngine.now() - AudioEngine.outputLatency(), 'tap'); });
@@ -1046,7 +1042,7 @@ const UI = {
   loop(){
     this.frameN++;
     try {
-      Music.update(!Splash.on && ['title', 'play', 'battle', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
+      Music.update(!Splash.on && ['title', 'play', 'battle', 'online', 'song', 'results', 'story'].includes(this.screen) && !['m-mic', 'm-tune'].includes(this.openModal));
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
@@ -1054,7 +1050,7 @@ const UI = {
       Mic.analyze((this.screen === 'game' && G.running && !G.paused && !G.tapMode) || this.openModal === 'm-mic');
       const now = AudioEngine.ctx ? AudioEngine.ctx.currentTime : performance.now() / 1000;
       if (this.screen === 'game') { G.frame(now); Stage.draw(G, now); }
-      else if (this.screen === 'title') TitleArt.draw(performance.now() / 1000);
+      else if (this.screen === 'title') { TitleArt.draw(performance.now() / 1000); ModeIcons.draw(performance.now() / 1000); }
       if (this.openModal === 'm-mic') this.micFrame();
       if (this.openModal === 'm-tune') this.tuneFrame();
       if (this.frameN % 30 === 0 && this.screen !== 'game') this.refreshMic();

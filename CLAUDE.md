@@ -34,11 +34,20 @@ test harness, and the TODO list in priority order.
 - `node test/drumsheet.js out.png <level>`: drummer frames of the real in-game groove; `node test/drumgame.js`
   checks his clock is smooth in a real run.
 
+- `node test/onlineshot.js <outdir>`: Online mode end to end against a mocked Supabase with Chromium's fake mic (start a jam,
+  record two takes, play them together, post). `node test/battleshot.js` reaches the local battle from the Online home.
+
 - `node test/suggestshot.js`, `node test/battleshot.js`, `node test/curatedshot.js` (needs /tmp/career.json):
   song suggestions, a two-player battle end to end, ready-made careers + career share links.
 
 - `node test/cardshot.js <outdir>`: the mode buttons at 9 screen sizes; flags anything cut off and a menu that scrolls.
 - `node test/menushot.js <outdir>`: menu backdrop close-up, each mode button's hover effect, a click burst.
+
+## Online mode
+`src/69-online.js` talks to Supabase over plain REST (project `mlkpttzklcdlupwldjii`, publishable key at the top of the file;
+the schema is
+`supabase/setup.sql`, already run). With the constants empty, the Online button offers the local battle instead.
+Only guitar is playable; bass, piano and drums show "soon" (planned).
 
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`

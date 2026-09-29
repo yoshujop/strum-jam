@@ -13,7 +13,7 @@ const out = process.argv[2] || '/tmp/menu'; require('fs').mkdirSync(out, { recur
     await p.screenshot({ path: `${out}/hover-${id}.png`, clip: r });
   }
   // a click burst, caught mid-flight
-  await p.evaluate(() => { UI.modeBurst(document.getElementById('btn-battle'), 'battle', () => {}); }); await p.waitForTimeout(180);
+  await p.evaluate(() => { UI.modeBurst(document.getElementById('btn-battle'), 'online', () => {}); }); await p.waitForTimeout(180);
   await p.screenshot({ path: `${out}/burst-battle.png`, clip: { x: 700, y: 380, width: 560, height: 420 } });
   console.log(errs.join(';') || 'no page errors'); await b.close();
 })();
