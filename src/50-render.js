@@ -96,23 +96,18 @@ function hashStr(s){ let h = 2166136261; for (const ch of String(s)) { h ^= ch.c
 
 /* a vinyl record, seen at a slight tilt (rx x ry), spinning by angle `rot` */
 const VINYL = { disc: '#1d1a2b', groove: '#2c2842', shine: 'rgba(255,255,255,.13)' };
-/* The Strum Jam mark: an S whose tail runs into a J drawn as an eighth note (the J's hook is the note head, a flag
-   on top of its stem), so it reads SJ and ♪ at once. Centred on 0,0, about `h` tall. */
+/* The Strum Jam mark: a pink guitar pick (Pip's shape) with SJ on it in the title font, white letters over an ink
+   shadow, one ink outline round the pick. Centred on 0,0, about `h` tall. */
 function drawSJ(c, h, col){
-  c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
-  const sx = -h * 0.2, u = h / 2;
-  // the S: two joined arcs, a fat pink stroke over a thin ink one
-  const S = () => { c.beginPath(); c.moveTo(sx + u * 0.32, -u * 0.6);
-    c.bezierCurveTo(sx + u * 0.12, -u * 0.86, sx - u * 0.44, -u * 0.8, sx - u * 0.38, -u * 0.4);
-    c.bezierCurveTo(sx - u * 0.32, -u * 0.06, sx + u * 0.38, -u * 0.08, sx + u * 0.36, u * 0.3);
-    c.bezierCurveTo(sx + u * 0.34, u * 0.74, sx - u * 0.22, u * 0.82, sx - u * 0.4, u * 0.48); };
-  // the J: a stem down to a round head at bottom-left, a flag off the top
-  const jx = h * 0.26, J = () => { c.beginPath(); c.moveTo(jx, -u * 0.8); c.lineTo(jx, u * 0.42); };
-  c.strokeStyle = COL.ink; c.lineWidth = h * 0.2; S(); c.stroke(); J(); c.stroke();
-  c.strokeStyle = col; c.lineWidth = h * 0.12; S(); c.stroke(); J(); c.stroke();
-  c.save(); c.translate(jx - h * 0.1, u * 0.5); c.rotate(-0.4); c.beginPath(); c.ellipse(0, 0, h * 0.14, h * 0.1, 0, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.lineWidth = h * 0.04; c.strokeStyle = COL.ink; c.stroke(); c.restore();
-  c.beginPath(); c.moveTo(jx, -u * 0.8); c.quadraticCurveTo(jx + h * 0.24, -u * 0.62, jx + h * 0.2, -u * 0.22); c.quadraticCurveTo(jx + h * 0.14, -u * 0.46, jx, -u * 0.46); c.closePath();
-  c.fillStyle = col; c.fill(); c.lineWidth = h * 0.04; c.strokeStyle = COL.ink; c.stroke();
+  c.save(); c.lineJoin = 'round';
+  const w = h * 0.92, pick = () => { c.beginPath(); c.moveTo(0, h * 0.5);
+    c.bezierCurveTo(-w * 0.18, h * 0.38, -w * 0.5, h * 0.02, -w * 0.5, -h * 0.2); c.bezierCurveTo(-w * 0.5, -h * 0.46, -w * 0.2, -h * 0.5, 0, -h * 0.5);
+    c.bezierCurveTo(w * 0.2, -h * 0.5, w * 0.5, -h * 0.46, w * 0.5, -h * 0.2); c.bezierCurveTo(w * 0.5, h * 0.02, w * 0.18, h * 0.38, 0, h * 0.5); c.closePath(); };
+  c.save(); c.translate(h * 0.05, h * 0.06); pick(); c.fillStyle = COL.ink; c.fill(); c.restore();      // a hard drop shadow
+  pick(); c.fillStyle = col; c.fill(); c.lineWidth = Math.max(2, h * 0.06); c.strokeStyle = COL.ink; c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = h * 0.05; c.lineCap = 'round'; c.beginPath(); c.arc(-w * 0.18, -h * 0.2, h * 0.16, Math.PI * 1.1, Math.PI * 1.45); c.stroke();
+  c.font = `${Math.round(h * 0.5)}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = h * 0.09; c.strokeStyle = COL.ink; c.strokeText('SJ', 0, -h * 0.04); c.fillStyle = '#FFFFFF'; c.fillText('SJ', 0, -h * 0.04);
   c.restore();
 }
 function drawVinyl(c, cx, cy, rx, ry, rot){
@@ -136,9 +131,8 @@ function drawVinyl(c, cx, cy, rx, ry, rot){
   // the label: white with a black ring, and the SJ mark in the title's pink
   c.beginPath(); c.arc(0, 0, LR, 0, Math.PI * 2); c.fillStyle = '#FFFFFF'; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
   c.beginPath(); c.arc(0, 0, LR * 0.84, 0, Math.PI * 2); c.lineWidth = 1.6; c.stroke();
-  drawSJ(c, LR * 0.95, COL.coral);
+  drawSJ(c, LR * 1.45, COL.coral);
   c.restore();
-  c.beginPath(); c.arc(0, 0, R * 0.018, 0, Math.PI * 2); c.fillStyle = COL.paper; c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
   c.restore();
   c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.lineWidth = 4; c.strokeStyle = COL.ink; c.stroke();
 }

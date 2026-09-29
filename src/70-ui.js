@@ -1269,18 +1269,29 @@ const TitleArt = {
     // (a soft ellipse that fades out all round, so it has no edge of its own)
     c.save(); c.translate(W / 2, top); c.scale(1, 0.32); const g = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.46); g.addColorStop(0, 'rgba(255,236,170,.5)'); g.addColorStop(1, 'rgba(255,236,170,0)');
     c.fillStyle = g; c.beginPath(); c.arc(0, 0, W * 0.46, 0, Math.PI * 2); c.fill(); c.restore();
-    // deck: warm planks in perspective
-    c.beginPath(); c.moveTo(x0 + W * 0.03, top); c.lineTo(x1 - W * 0.03, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
-    const dg = c.createLinearGradient(0, top, 0, top + deck); dg.addColorStop(0, '#F2C27A'); dg.addColorStop(1, '#D9954E');
-    c.fillStyle = dg; c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
-    c.save(); c.clip(); c.strokeStyle = 'rgba(122,62,20,.45)'; c.lineWidth = 1.5;
-    for (let i = 1; i < 14; i++) { const u = i / 14, xa = x0 + W * 0.03 + (x1 - x0 - W * 0.06) * u, xb = x0 + (x1 - x0) * u; c.beginPath(); c.moveTo(xa, top); c.lineTo(xb, top + deck); c.stroke(); }
-    c.beginPath(); c.moveTo(x0, top + deck * 0.5); c.lineTo(x1, top + deck * 0.5); c.stroke(); c.restore();
+    // deck: a black-and-white checker floor in perspective, drawn like a pencil sketch (an empty, dreamlike stage)
+    const dx0 = x0 + W * 0.03, dx1 = x1 - W * 0.03, rows = 3, cols = 16;
+    const P = (u, v) => [dx0 + (x0 - dx0) * v + ((dx1 + (x1 - dx1) * v) - (dx0 + (x0 - dx0) * v)) * u, top + deck * v];
+    c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath();
+    c.fillStyle = '#F7F4EC'; c.fill();
+    c.save(); c.clip();
+    for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) { if ((r + k) % 2) continue;
+      const a = P(k / cols, r / rows), b2 = P((k + 1) / cols, r / rows), d = P((k + 1) / cols, (r + 1) / rows), e = P(k / cols, (r + 1) / rows);
+      c.beginPath(); c.moveTo(...a); c.lineTo(...b2); c.lineTo(...d); c.lineTo(...e); c.closePath(); c.fillStyle = '#2A2733'; c.fill();
+      // pencil hatching over each dark tile, so it reads as drawn rather than printed
+      c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 1; for (let q = 0.25; q < 1; q += 0.25) { const m1 = P((k + q) / cols, r / rows), m2 = P((k + q - 0.2) / cols, (r + 1) / rows); c.beginPath(); c.moveTo(...m1); c.lineTo(...m2); c.stroke(); } }
+    // loose pencil grid lines
+    c.strokeStyle = 'rgba(30,27,46,.55)'; c.lineWidth = 1.2;
+    for (let k = 0; k <= cols; k++) { const a = P(k / cols, 0), b2 = P(k / cols + 0.002, 1); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b2[0], b2[1]); c.stroke(); }
+    for (let r = 1; r < rows; r++) { const a = P(0, r / rows), b2 = P(1, r / rows); c.beginPath(); c.moveTo(a[0], a[1] + 0.6); c.lineTo(b2[0], b2[1] - 0.6); c.stroke(); }
+    c.restore();
+    c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
+    c.lineWidth = 1.4; c.save(); c.translate(1.5, -1); c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.stroke(); c.restore();   // a second, looser outline
     // riser front: black with a gold trim and chase-light bulbs that run on the beat
     const fy = top + deck;
     c.fillStyle = COL.ink; rr(c, x0, fy, x1 - x0, face, 10); c.fill(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
     c.fillStyle = '#2E2A40'; c.fillRect(x0 + 4, fy + face * 0.62, x1 - x0 - 8, face * 0.3);
-    c.fillStyle = COL.sun; c.fillRect(x0 + 2, fy + 1, x1 - x0 - 4, 4);
+    c.fillStyle = '#F7F4EC'; c.fillRect(x0 + 2, fy + 1, x1 - x0 - 4, 3);
     const n = Math.max(8, Math.round((x1 - x0) / 30)), step = Math.floor(beat * 2);
     for (let i = 0; i < n; i++) {
       const x = x0 + (i + 0.5) * (x1 - x0) / n, y = fy + face * 0.34, on = reduceMotion ? i % 2 === 0 : (i + step) % 3 === 0;
