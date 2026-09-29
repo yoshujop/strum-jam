@@ -10,7 +10,7 @@
    be public: row-level security only allows reading and adding.
    ===================================================================== */
 const SUPABASE_URL = '';        // https://<project>.supabase.co
-const SUPABASE_ANON_KEY = '';   // the project's anon (public) key
+const SUPABASE_ANON_KEY = 'sb_publishable_r9u0XWsis6x68biG9MtKVQ_kueS07Ks';   // the project's publishable (public) key
 const INSTRUMENTS = [
   { id: 'guitar', name: 'Guitar', icon: '🎸', ready: true },
   { id: 'bass', name: 'Bass', icon: '🎸', ready: false },
@@ -21,7 +21,8 @@ const INSTRUMENTS = [
 const Sb = {
   url: SUPABASE_URL, key: SUPABASE_ANON_KEY,
   on(){ return /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(this.url) && this.key.length > 20; },
-  head(extra){ return { apikey: this.key, Authorization: 'Bearer ' + this.key, ...(extra || {}) }; },
+  // publishable keys (sb_publishable_…) go in apikey only; the older anon JWT keys also go in Authorization
+  head(extra){ return { apikey: this.key, ...(this.key.startsWith('eyJ') ? { Authorization: 'Bearer ' + this.key } : {}), ...(extra || {}) }; },
   async req(path, opts){
     opts = opts || {};
     const r = await fetch(this.url + path, { method: opts.method || 'GET', headers: this.head(opts.headers), body: opts.body, signal: opts.signal });
