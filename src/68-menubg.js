@@ -117,91 +117,80 @@ const ModeIcons = {
     }
   },
   star(c, x, y, R, rot, fill){ c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5 + rot, q = i % 2 ? R * 0.45 : R; c.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); } c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); },
-  // Story's icon: the drummer on tour. The backdrop swaps every couple of seconds with a quick wipe, city to city.
-  TOUR: ['TOKYO', 'RIO', 'NASHVILLE', 'OSLO', 'LONDON', 'PARIS', 'STADIUM'],
+  // Story's icon: the drummer on tour. Every couple of seconds the stage behind him swings to the next stop: a poster-flat
+  // backdrop (a sky gradient and two layers of silhouettes in the sky's own darker tones, no outlines, so he stays the star).
+  TOUR_N: 5,
   tourScene(c, w, h, i, t){
-    const ink = COL.ink, sky = (a, b) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, a); g.addColorStop(1, b); c.fillStyle = g; c.fillRect(0, 0, w, h); };
-    const blob = (pts, fill) => { c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x * w, y * h) : c.moveTo(x * w, y * h)); c.closePath(); c.fillStyle = fill; c.fill(); c.lineWidth = 2; c.strokeStyle = ink; c.stroke(); };
-    c.lineJoin = 'round';
-    if (i === 0) {        // neon towers under a pink moon
-      sky('#1B1A4A', '#5B2A7A'); c.fillStyle = '#FF8FB8'; c.beginPath(); c.arc(w * 0.78, h * 0.2, h * 0.09, 0, Math.PI * 2); c.fill();
-      [[0.02, 0.42, 0.16], [0.2, 0.3, 0.14], [0.36, 0.48, 0.12], [0.62, 0.34, 0.16], [0.8, 0.46, 0.18]].forEach(([x, y, bw], k) => { c.fillStyle = '#2B2350'; c.fillRect(x * w, y * h, bw * w, h); c.lineWidth = 2; c.strokeStyle = ink; c.strokeRect(x * w, y * h, bw * w, h);
-        for (let yy = y + 0.05; yy < 0.7; yy += 0.07) for (let xx = x + 0.02; xx < x + bw - 0.03; xx += 0.045) if ((Math.floor(xx * 97 + yy * 53 + k) + Math.floor(t * 2)) % 3) { c.fillStyle = k % 2 ? '#FFE37A' : '#7FE7FF'; c.fillRect(xx * w, yy * h, w * 0.02, h * 0.025); } });
-    } else if (i === 1) { // beach sunset, a palm
-      sky('#FF9A5A', '#FF5E7E'); c.fillStyle = '#FFE37A'; c.beginPath(); c.arc(w * 0.5, h * 0.55, h * 0.18, Math.PI, 0); c.fill();
-      c.fillStyle = '#2EC4B6'; c.fillRect(0, h * 0.55, w, h); c.fillStyle = 'rgba(255,255,255,.5)'; for (let k = 0; k < 3; k++) c.fillRect(w * (0.1 + k * 0.3), h * (0.6 + k * 0.04), w * 0.18, 2);
-      c.strokeStyle = ink; c.lineWidth = 4; c.beginPath(); c.moveTo(w * 0.12, h * 0.75); c.quadraticCurveTo(w * 0.16, h * 0.45, w * 0.1, h * 0.25); c.stroke();
-      for (const a of [-2.6, -2, -1.2, -0.5]) { c.beginPath(); c.ellipse(w * 0.1 + Math.cos(a) * w * 0.08, h * 0.25 + Math.sin(a) * h * 0.04, w * 0.09, h * 0.025, a, 0, Math.PI * 2); c.fillStyle = '#2B8A5A'; c.fill(); c.lineWidth = 2; c.stroke(); }
-    } else if (i === 2) { // desert mesas and a cactus
-      sky('#FFD37A', '#FFB060'); c.fillStyle = '#FFF4C0'; c.beginPath(); c.arc(w * 0.22, h * 0.22, h * 0.08, 0, Math.PI * 2); c.fill();
-      blob([[0.45, 0.62], [0.52, 0.36], [0.8, 0.36], [0.88, 0.62]], '#D9774E'); blob([[0, 0.62], [0.05, 0.44], [0.22, 0.44], [0.28, 0.62]], '#C4623E');
-      c.fillStyle = '#E8A15E'; c.fillRect(0, h * 0.62, w, h);
-      c.fillStyle = '#3E9A5A'; c.strokeStyle = ink; c.lineWidth = 2; rr(c, w * 0.83, h * 0.3, w * 0.07, h * 0.4, w * 0.035); c.fill(); c.stroke(); rr(c, w * 0.76, h * 0.4, w * 0.05, h * 0.14, w * 0.025); c.fill(); c.stroke();
-    } else if (i === 3) { // snowy peaks, falling snow
-      sky('#9FD8FF', '#E8F6FF'); blob([[0, 0.7], [0.25, 0.25], [0.5, 0.7]], '#7A8FB8'); blob([[0.35, 0.7], [0.68, 0.18], [1, 0.7]], '#6A7FA8');
-      blob([[0.2, 0.34], [0.25, 0.25], [0.31, 0.35], [0.26, 0.32]], '#fff'); blob([[0.6, 0.29], [0.68, 0.18], [0.76, 0.3], [0.68, 0.26]], '#fff');
-      c.fillStyle = '#fff'; for (let k = 0; k < 12; k++) { const x = ((k * 0.37 + t * 0.05) % 1) * w, y = ((k * 0.61 + t * 0.25) % 1) * h; c.beginPath(); c.arc(x, y, 1.6, 0, Math.PI * 2); c.fill(); }
-    } else if (i === 4) { // the big clock tower at dusk, a double-decker red
-      sky('#3A3F8F', '#C77DBA'); c.fillStyle = '#2B2350'; c.strokeStyle = ink; c.lineWidth = 2;
-      c.fillRect(w * 0.14, h * 0.18, w * 0.16, h); c.strokeRect(w * 0.14, h * 0.18, w * 0.16, h); blob([[0.14, 0.18], [0.22, 0.04], [0.3, 0.18]], '#2B2350');
-      c.fillStyle = '#FFE37A'; c.beginPath(); c.arc(w * 0.22, h * 0.3, w * 0.05, 0, Math.PI * 2); c.fill(); c.stroke();
-      [[0.4, 0.44, 0.2], [0.64, 0.36, 0.14], [0.8, 0.5, 0.2]].forEach(([x, y, bw]) => { c.fillStyle = '#3D3470'; c.fillRect(x * w, y * h, bw * w, h); c.strokeRect(x * w, y * h, bw * w, h); });
-    } else if (i === 5) { // the iron tower, string lights
-      sky('#FFB3C6', '#8C7BE0'); c.strokeStyle = ink; c.lineWidth = 2.5;
-      c.beginPath(); c.moveTo(w * 0.5, h * 0.06); c.lineTo(w * 0.36, h * 0.72); c.moveTo(w * 0.5, h * 0.06); c.lineTo(w * 0.64, h * 0.72); c.moveTo(w * 0.41, h * 0.45); c.lineTo(w * 0.59, h * 0.45); c.moveTo(w * 0.45, h * 0.26); c.lineTo(w * 0.55, h * 0.26); c.stroke();
-      c.beginPath(); c.moveTo(w * 0.36, h * 0.72); c.quadraticCurveTo(w * 0.5, h * 0.5, w * 0.64, h * 0.72); c.stroke();
-      for (let k = 0; k < 9; k++) { const x = k / 8 * w, y = h * (0.12 + 0.06 * Math.sin(k / 8 * Math.PI)); c.fillStyle = (k + Math.floor(t * 3)) % 2 ? '#FFE37A' : '#fff'; c.beginPath(); c.arc(x, y, 2.4, 0, Math.PI * 2); c.fill(); }
-    } else {              // a stadium: light towers and a sea of phone lights
-      sky('#140F2E', '#3A2F63');
-      for (const x of [0.12, 0.88]) { c.strokeStyle = ink; c.lineWidth = 3; c.beginPath(); c.moveTo(x * w, h); c.lineTo(x * w, h * 0.22); c.stroke(); c.fillStyle = '#fff'; rr(c, x * w - w * 0.07, h * 0.12, w * 0.14, h * 0.1, 3); c.fill(); c.stroke();
-        c.fillStyle = 'rgba(255,255,230,.18)'; c.beginPath(); c.moveTo(x * w, h * 0.2); c.lineTo(w * 0.5 + (x - 0.5) * w * 0.3, h * 0.9); c.lineTo(w * 0.5 + (x - 0.5) * w * 0.9, h * 0.9); c.closePath(); c.fill(); }
-      for (let k = 0; k < 20; k++) { const x = (k * 0.137 % 1) * w, y = h * (0.5 + (k * 0.29 % 0.2)); c.fillStyle = `rgba(255,236,160,${0.5 + 0.5 * Math.sin(t * 4 + k)})`; c.fillRect(x, y, 2, 3); }
+    const sky = stops => { const g = c.createLinearGradient(0, 0, 0, h); stops.forEach((col, k) => g.addColorStop(k / (stops.length - 1), col)); c.fillStyle = g; c.fillRect(0, 0, w, h); };
+    const poly = (pts, fill) => { c.beginPath(); pts.forEach(([x, y], k) => k ? c.lineTo(x * w, y * h) : c.moveTo(x * w, y * h)); c.lineTo(w, h); c.lineTo(0, h); c.closePath(); c.fillStyle = fill; c.fill(); };
+    const glow = (x, y, r, col) => { const g = c.createRadialGradient(x * w, y * h, 0, x * w, y * h, r * h); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); };
+    if (i === 0) {        // city at night
+      sky(['#15123A', '#34276E', '#6A3F8F']); glow(0.74, 0.22, 0.32, 'rgba(255,214,150,.45)');
+      c.fillStyle = '#FFE9B8'; c.beginPath(); c.arc(w * 0.74, h * 0.22, h * 0.1, 0, Math.PI * 2); c.fill();
+      poly([[0, 0.52], [0.1, 0.52], [0.1, 0.4], [0.2, 0.4], [0.2, 0.47], [0.34, 0.47], [0.34, 0.33], [0.44, 0.33], [0.44, 0.5], [0.6, 0.5], [0.6, 0.38], [0.7, 0.38], [0.7, 0.46], [0.86, 0.46], [0.86, 0.36], [0.96, 0.36], [0.96, 0.5], [1, 0.5]], '#3F2F7A');
+      poly([[0, 0.62], [0.16, 0.62], [0.16, 0.55], [0.3, 0.55], [0.3, 0.6], [0.5, 0.6], [0.5, 0.52], [0.62, 0.52], [0.62, 0.61], [0.8, 0.61], [0.8, 0.56], [1, 0.56]], '#261D55');
+      c.fillStyle = '#FFD86B'; [[0.37, 0.38], [0.4, 0.44], [0.63, 0.42], [0.89, 0.41], [0.92, 0.46], [0.13, 0.45]].forEach(([x, y], k) => { if ((k + Math.floor(t * 1.5)) % 4) c.fillRect(x * w, y * h, w * 0.025, h * 0.03); });
+    } else if (i === 1) { // desert sunset, a striped retro sun
+      sky(['#FF7A59', '#FF9E6B', '#FFD08A']);
+      c.save(); c.beginPath(); c.arc(w * 0.5, h * 0.5, h * 0.24, Math.PI, 0); c.clip(); c.fillStyle = '#FFE36E'; c.fillRect(0, 0, w, h);
+      c.fillStyle = '#FF9E6B'; for (let k = 0; k < 4; k++) c.fillRect(0, h * (0.36 + k * 0.035), w, h * (0.008 + k * 0.004)); c.restore();
+      poly([[0, 0.56], [0.08, 0.44], [0.24, 0.44], [0.3, 0.56], [0.6, 0.56], [0.66, 0.4], [0.9, 0.4], [0.96, 0.56], [1, 0.56]], '#C8566A');
+      poly([[0, 0.64], [0.4, 0.6], [1, 0.64]], '#9C3F62');
+    } else if (i === 2) { // beach, palms against the evening sea
+      sky(['#3FC6C8', '#8FE0CF', '#FFD6A8']); glow(0.3, 0.42, 0.3, 'rgba(255,240,190,.6)');
+      c.fillStyle = '#FFF2C4'; c.beginPath(); c.arc(w * 0.3, h * 0.42, h * 0.09, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#1F9AA8'; c.fillRect(0, h * 0.5, w, h); c.fillStyle = 'rgba(255,255,255,.35)'; for (let k = 0; k < 3; k++) c.fillRect(w * (0.15 + k * 0.28 + Math.sin(t + k) * 0.02), h * (0.54 + k * 0.03), w * 0.14, 2);
+      for (const [x, lean] of [[0.84, -0.18], [0.94, 0.12]]) { c.strokeStyle = '#16606E'; c.lineWidth = w * 0.028; c.lineCap = 'round'; c.beginPath(); c.moveTo(x * w, h * 0.66); c.quadraticCurveTo((x + lean * 0.3) * w, h * 0.4, (x + lean) * w, h * 0.22); c.stroke();
+        c.fillStyle = '#16606E'; for (let a = 0; a < 5; a++) { const an = Math.PI * (0.9 + a * 0.3); c.beginPath(); c.ellipse((x + lean) * w + Math.cos(an) * w * 0.07, h * 0.22 + Math.sin(an) * h * 0.035 + h * 0.02, w * 0.08, h * 0.02, an + Math.PI / 2 * 0.2, 0, Math.PI * 2); c.fill(); } }
+    } else if (i === 3) { // mountains under the northern lights
+      sky(['#0E1838', '#1C2F5E', '#2F4F7F']);
+      for (let k = 0; k < 2; k++) { c.strokeStyle = k ? 'rgba(160,120,255,.35)' : 'rgba(120,255,190,.45)'; c.lineWidth = h * 0.07; c.lineCap = 'round'; c.beginPath();
+        for (let x = 0; x <= 1.001; x += 0.05) { const y = 0.2 + k * 0.08 + Math.sin(x * 5 + t * 0.9 + k) * 0.05; x ? c.lineTo(x * w, y * h) : c.moveTo(0, y * h); } c.stroke(); }
+      c.fillStyle = '#fff'; for (let k = 0; k < 10; k++) { const x = (k * 0.37 % 1) * w, y = (k * 0.23 % 0.3) * h; c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 3 + k); c.fillRect(x, y, 1.6, 1.6); } c.globalAlpha = 1;
+      poly([[0, 0.6], [0.22, 0.34], [0.4, 0.52], [0.6, 0.3], [0.84, 0.54], [1, 0.42]], '#3B5A8C');
+      poly([[0, 0.66], [0.3, 0.5], [0.55, 0.64], [0.8, 0.52], [1, 0.62]], '#26406C');
+    } else {              // the stadium: beams and a sea of lights
+      sky(['#1A0F3A', '#3B1F6E', '#6B2F8F']);
+      for (const [x, a] of [[0.1, 0.5], [0.9, -0.5]]) { const sw = Math.sin(t * 1.2 + x * 6) * 0.25; c.save(); c.translate(x * w, h * 0.62); c.rotate(-Math.PI / 2 + a + sw);
+        const g = c.createLinearGradient(0, 0, h * 0.9, 0); g.addColorStop(0, 'rgba(255,240,200,.45)'); g.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.lineTo(h * 0.9, -h * 0.14); c.lineTo(h * 0.9, h * 0.14); c.closePath(); c.fill(); c.restore(); }
+      poly([[0, 0.58], [0.5, 0.52], [1, 0.58]], '#2A1650');
+      for (let k = 0; k < 18; k++) { const x = (k * 0.137 % 1), y = 0.6 + (k * 0.29 % 0.12); c.fillStyle = `rgba(255,230,150,${0.4 + 0.6 * Math.max(0, Math.sin(t * 3 + k * 1.7))})`; c.beginPath(); c.arc(x * w, y * h, 1.5, 0, Math.PI * 2); c.fill(); }
     }
-    // the stage floor he plays on
-    c.fillStyle = '#2A2140'; c.fillRect(0, h * 0.8, w, h); c.strokeStyle = ink; c.lineWidth = 2.5; c.beginPath(); c.moveTo(0, h * 0.8); c.lineTo(w, h * 0.8); c.stroke();
+    // the stage he plays on: a dark deck with a warm lip of light
+    c.fillStyle = '#1E1830'; c.fillRect(0, h * 0.8, w, h); c.fillStyle = 'rgba(255,206,58,.55)'; c.fillRect(0, h * 0.8, w, 2);
   },
   story(c, w, h, t, hv, age){
-    // on tour: a new city every 2.4 s (quicker on hover), the next one wiping in from the right
-    { const per = hv > 0.5 ? 1.5 : 2.4, n = this.TOUR.length, k = Math.floor(t / per), f = t / per - k, i = ((k % n) + n) % n, j = (i + n - 1) % n;
-      const wipe = reduceMotion ? 1 : Math.min(1, f / 0.16), e = 1 - Math.pow(1 - wipe, 3);
-      this.tourScene(c, w, h, j, t);
-      if (e > 0) { c.save(); c.beginPath(); const x = w * (1 - e) - h * 0.2; c.moveTo(x, 0); c.lineTo(w + 2, 0); c.lineTo(w + 2, h); c.lineTo(x + h * 0.2, h); c.closePath(); c.clip(); this.tourScene(c, w, h, i, t); c.restore();
-        if (e < 1) { c.strokeStyle = COL.ink; c.lineWidth = 3; c.beginPath(); c.moveTo(w * (1 - e) - h * 0.2, 0); c.lineTo(w * (1 - e), h); c.stroke(); } }
-      this._tag = { i, f };
-    }
+    // on tour: a new stop every 2.6 s; the backdrop swings across (the old one slides out, the new one in)
+    const per = 2.6, n = this.TOUR_N, k = Math.floor(t / per), f = t / per - k, i = ((k % n) + n) % n, j = (i + n - 1) % n;
+    const p = reduceMotion ? 1 : Math.min(1, f / 0.22), e = p < 1 ? (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2) : 1;
+    if (e < 1) { c.save(); c.translate(-e * w, 0); this.tourScene(c, w, h, j, t); c.restore(); }
+    c.save(); c.translate((1 - e) * w, 0); this.tourScene(c, w, h, i, t); c.restore();
     this.storyBand(c, w, h, t, hv, age);
-    // the city's name on a tour-pass tag, popping in with the new backdrop (over the band)
-    { const { i, f } = this._tag;
-      const pop = reduceMotion ? 1 : Math.min(1, Math.max(0, (f - 0.1) / 0.15)), sc = pop < 1 ? 0.6 + 0.4 * Math.sin(pop * Math.PI / 2) * 1.1 : 1;
-      c.save(); c.translate(w * 0.05, h * 0.05); c.scale(sc, sc); c.font = `400 ${Math.round(h * 0.1)}px ${DISPLAY_FONT}`;
-      const label = this.TOUR[i], tw = c.measureText(label).width + h * 0.1;
-      c.fillStyle = COL.sun; rr(c, 0, 0, tw, h * 0.16, h * 0.04); c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
-      c.fillStyle = COL.ink; c.textBaseline = 'middle'; c.textAlign = 'left'; c.fillText(label, h * 0.05, h * 0.085); c.restore(); }
   },
   storyBand(c, w, h, t, hv, age){
     // spotlight
-    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.1 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
+    c.save(); const g = c.createRadialGradient(w / 2, 0, 0, w / 2, 0, h * 1.1); g.addColorStop(0, `rgba(255,236,160,${0.12 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,236,160,0)');
     c.fillStyle = g; c.beginPath(); c.moveTo(w * 0.4, 0); c.lineTo(w * 0.6, 0); c.lineTo(w * 1.05, h); c.lineTo(-w * 0.05, h); c.closePath(); c.fill(); c.restore();
-    const bpm = 96 + 24 * hv, spb = 60 / bpm, beat = t / spb, b0 = Math.floor(beat), ev = [];
+    const bpm = 104, spb = 60 / bpm, beat = t / spb, b0 = Math.floor(beat), ev = [];
     for (let bb = b0 - 3; bb <= b0 + 3; bb++) { const tt = bb * spb;
       ev.push({ t: tt, kind: 'hat' }, { t: tt, kind: ((bb % 2) + 2) % 2 ? 'snare' : 'kick' });
-      if (hv > 0.3) ev.push({ t: tt + spb / 2, kind: 'hat' });
-      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 3) ev.push({ t: tt + spb / 2, kind: 'tom' }, { t: tt + spb * 0.75, kind: 'tom' });
-      if (hv > 0.5 && ((bb % 4) + 4) % 4 === 0) ev.push({ t: tt, kind: 'crash' }); }
+      ev.push({ t: tt + spb / 2, kind: 'hat' });
+      if (((bb % 8) + 8) % 8 === 7) ev.push({ t: tt + spb / 2, kind: 'tom' }, { t: tt + spb * 0.75, kind: 'tom' });
+      if (((bb % 8) + 8) % 8 === 0) ev.push({ t: tt, kind: 'crash' }); }
     if (age < 0.4) ev.push({ t: t - age, kind: 'crash' }, { t: t - age, kind: 'kick' });
     ev.sort((a, b) => a.t - b.t);
     this.dSt = this.dSt || FunkDrummer.create();
-    FunkDrummer.draw(c, this.dSt, { x: w / 2, floorY: h * 1.02, h: h * 1.18, now: t, real: t, beat, spb, level: hv > 0.5 || age < 1 ? 3 : 1, events: ev, playing: true, missAgo: 9 });
+    FunkDrummer.draw(c, this.dSt, { x: w / 2, floorY: h * 1.02, h: h * 1.18, now: t, real: t, beat, spb, level: age < 1 ? 3 : 2, events: ev, playing: true, missAgo: 9 });
     if (hv > 0.3) for (let i = 0; i < 3; i++) { const cyc = (t * 0.7 + i / 3) % 1; c.globalAlpha = Math.sin(cyc * Math.PI) * hv; this.star(c, w * (0.14 + 0.36 * i), h * (0.22 + 0.12 * ((i + 1) % 2)), 5 + 3 * Math.sin(cyc * Math.PI), cyc * 2, '#FFCE3A'); }
     c.globalAlpha = 1;
   },
   // Play & Learn: an acoustic guitar under a spotlight, strummed on the beat; the strings shiver, notes float off
   play(c, w, h, t, hv, age){
-    const s = Math.min(w, h), bpm = 92 + 36 * hv, spb = 60 / bpm, beat = t / spb, ph = beat % 1;
+    const s = Math.min(w, h), bpm = 104, spb = 60 / bpm, beat = t / spb, ph = beat % 1;
     const sa = Math.min(ph * spb, age), amp = Math.exp(-sa * 7) * (age < 0.5 ? 1.8 : 1);   // string shake since the last strum
     c.save(); const g = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, s * 0.7); g.addColorStop(0, `rgba(255,206,58,${0.22 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,206,58,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
     // floating notes behind the guitar
-    for (let i = 0; i < 3 + Math.round(2 * hv); i++) { const cyc = (t * (0.35 + 0.25 * hv) + i * 0.27) % 1, x = w * (0.2 + ((i * 0.37) % 0.7)) + Math.sin(cyc * 6 + i) * 4, y = h * (0.95 - cyc * 0.9);
+    for (let i = 0; i < 4; i++) { const cyc = (t * 0.42 + i * 0.27) % 1, x = w * (0.2 + ((i * 0.37) % 0.7)) + Math.sin(cyc * 6 + i) * 4, y = h * (0.95 - cyc * 0.9);
       c.globalAlpha = Math.sin(cyc * Math.PI); this.note(c, x, y, s * 0.075, i % 2 ? '#FFCE3A' : '#FFF7E6'); }
     c.globalAlpha = 1;
     const bob = Math.pow(1 - ph, 3) * 0.05 + (age < 0.4 ? Math.sin(age * 30) * 0.08 * (1 - age / 0.4) : 0);
@@ -243,12 +232,12 @@ const ModeIcons = {
   },
   // Online: three players' takes stacked like tracks, lining up under one playhead; a REC light blinks
   online(c, w, h, t, hv, age){
-    const s = Math.min(w, h), spb = 60 / (100 + 30 * hv), beat = t / spb, ph = beat % 1, cols = ['#FF5E7E', '#2EC4B6', '#FFCE3A'];
+    const s = Math.min(w, h), spb = 60 / 108, beat = t / spb, ph = beat % 1, cols = ['#FF5E7E', '#2EC4B6', '#FFCE3A'];
     const x0 = w * 0.12, x1 = w * 0.9, tw = x1 - x0, th = h * 0.16, gap = h * 0.05, top = h * 0.36;
     const hit = age < 0.6 ? 1 - age / 0.6 : 0;
     for (let k = 0; k < 3; k++) {
       // tracks slide in from alternate sides, then lock together on the beat
-      const slide = (1 - hv) * Math.sin(t * 1.3 + k * 2.1) * w * 0.035 * (1 - hit), y = top + k * (th + gap);
+      const slide = Math.sin(t * 1.3 + k * 2.1) * w * 0.035 * (1 - hit) * (1 - hv * 0.8), y = top + k * (th + gap);
       c.save(); c.translate(slide, 0);
       c.fillStyle = COL.ink; rr(c, x0 - 3, y - 3, tw + 6, th + 6, 9); c.fill();
       c.fillStyle = '#2A2350'; rr(c, x0, y, tw, th, 7); c.fill();
@@ -256,7 +245,7 @@ const ModeIcons = {
       const n = 16, bw = tw / n;
       for (let i = 0; i < n; i++) { const bx = x0 + i * bw, pos = (i / n) * 4 - beat * 0.5, local = ((pos % 1) + 1) % 1;
         const v = 0.25 + 0.55 * Math.abs(Math.sin(i * 1.7 + k * 3.1 + Math.floor(beat * 2 + i * 0.13) * 0.9)) * (0.5 + 0.5 * Math.pow(1 - local, 2));
-        const bh = Math.min(th - 4, th * v * (0.8 + 0.4 * hv + 0.5 * hit)); c.fillStyle = cols[k]; rr(c, bx + 1.2, y + (th - bh) / 2, bw - 2.4, bh, 2); c.fill(); }
+        const bh = Math.min(th - 4, th * v * (0.9 + 0.5 * hit)); c.fillStyle = cols[k]; rr(c, bx + 1.2, y + (th - bh) / 2, bw - 2.4, bh, 2); c.fill(); }
       c.restore();
       // the player's badge
       const bx = x0 + 2, by = y + th / 2; c.beginPath(); c.arc(bx, by, th * 0.42, 0, Math.PI * 2); c.fillStyle = cols[k]; c.fill(); c.lineWidth = 2.4; c.strokeStyle = COL.ink; c.stroke();
@@ -274,7 +263,7 @@ const ModeIcons = {
     c.strokeText('REC', rx + s * 0.09, ry + 1); c.fillText('REC', rx + s * 0.09, ry + 1);
     // signal arcs: this jam is going out
     c.lineWidth = 2.6; c.strokeStyle = '#FFF7E6';
-    for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(((t * (1 + hv) - i * 0.18) % 1) * Math.PI)) * (0.4 + 0.6 * Math.max(hv, hit)); c.globalAlpha = a;
+    for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin(((t * 1.2 - i * 0.18) % 1) * Math.PI)) * (0.4 + 0.6 * Math.max(hv, hit)); c.globalAlpha = a;
       c.beginPath(); c.arc(x1 - s * 0.06, ry + s * 0.04, s * (0.05 + i * 0.05), -Math.PI * 0.85, -Math.PI * 0.15); c.stroke(); }
     c.globalAlpha = 1;
     c.beginPath(); c.arc(x1 - s * 0.06, ry + s * 0.04, s * 0.028, 0, Math.PI * 2); c.fillStyle = '#FFF7E6'; c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
