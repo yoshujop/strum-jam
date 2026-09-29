@@ -16,7 +16,7 @@ test harness, and the TODO list in priority order.
   `src/drummer.svg` is no longer used.
 - `vendor/`: TF.js + Spotify Basic Pitch model, plus the chord data read by `25-lookup.js`/`26-chart.js`
   (`chord-index.bin`: Chordonomicon title index; `hooktheory.json.gz`) and the fonts (`fonts/`: Bagel Fat One +
-  Baloo 2, SIL OFL), all embedded into the build.
+  Baloo 2, SIL OFL; the logo's DejaVu Sans subset), all embedded into the build.
 - `test/`, `ref/`: Playwright/Node test and render scripts (see HANDOFF.md "Test harness bits").
 - `.github/workflows/pages.yml` builds `src/` on every push to `main` and publishes `dist/strum-jam.html` as the
   site (https://yoshujop.github.io/strum-jam/). The root `index.html` is the old hand-uploaded build, kept for reference.
@@ -37,6 +37,7 @@ test harness, and the TODO list in priority order.
 - `node test/suggestshot.js`, `node test/battleshot.js`, `node test/curatedshot.js` (needs /tmp/career.json):
   song suggestions, a two-player battle end to end, ready-made careers + career share links.
 
+- `node test/cardshot.js <outdir>`: the mode buttons at 9 screen sizes; flags anything cut off and a menu that scrolls.
 - `node test/menushot.js <outdir>`: menu backdrop close-up, each mode button's hover effect, a click burst.
 
 ## Build

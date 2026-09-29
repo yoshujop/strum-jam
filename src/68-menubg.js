@@ -1,7 +1,8 @@
 /* =====================================================================
-   Menu backdrop: festival-cloth waves (seigaiha) under pairs of music
-   doodles, drawn in the game's ink style (flat colour, one shadow tone,
-   thick outline). Built once as an SVG tile and used as a CSS background.
+   Menu backdrop: festival-cloth waves (seigaiha) under music doodles,
+   drawn in the game's ink style (flat colour, one shadow tone, thick
+   outline), no two the same side by side. Built once as an SVG tile and
+   used as a CSS background. Also the mode buttons' icons.
    ===================================================================== */
 const MenuBG = (() => {
   const INK = '#1E1B2E', ink = w => `stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -23,12 +24,8 @@ const MenuBG = (() => {
         <path d="M-12 6 C-8 -4 8 -6 10 2 C12 14 4 22 -6 22 C-14 22 -16 14 -12 6Z" fill="#FFF7E6" ${ink(2.5)}/>
         <rect x="-8" y="0" width="14" height="5" rx="1.5" fill="${INK}"/><rect x="-8" y="10" width="14" height="5" rx="1.5" fill="${INK}"/><circle cx="12" cy="20" r="2.6" fill="#FFCE3A" ${ink(1.8)}/>`;
     },
-    handheld: () => `<path d="M-27 -42 H27 V30 C27 38 20 42 12 42 H-27Z" fill="#D8D4CC" ${ink(3.5)}/><path d="M16 -42 H27 V30 C27 38 20 42 12 42 H9 C20 40 18 30 18 30Z" fill="#B9B4AA"/><path d="M-27 -42 H27 V30 C27 38 20 42 12 42 H-27Z" fill="none" ${ink(3.5)}/>
-      <rect x="-21" y="-35" width="42" height="32" rx="4" fill="#5A5E78" ${ink(2.5)}/><rect x="-15" y="-30" width="30" height="22" fill="#A9C46A"/>
-      <path d="M-4 -12 V-25 L6 -27 V-15" fill="none" stroke="#3E5A2A" stroke-width="2.4"/><circle cx="-6" cy="-12" r="3" fill="#3E5A2A"/><circle cx="4" cy="-15" r="3" fill="#3E5A2A"/>
-      <path d="M-18 9 H-10 V1 H-4 V9 H4 V15 H-4 V23 H-10 V15 H-18Z" transform="translate(2 0)" fill="${INK}"/>
-      <circle cx="12" cy="12" r="4.5" fill="#B8336A" ${ink(2)}/><circle cx="20" cy="5" r="4.5" fill="#B8336A" ${ink(2)}/>
-      <rect x="-10" y="28" width="8" height="3" rx="1.5" fill="#7A7468" transform="rotate(-25 -6 29)"/><rect x="1" y="28" width="8" height="3" rx="1.5" fill="#7A7468" transform="rotate(-25 5 29)"/>`,
+    metronome: () => `<path d="M-12 -40 H12 L28 36 H-28Z" fill="#8FE3A0" ${ink(3.5)}/><path d="M6 -40 H12 L28 36 H16Z" fill="#6CC786"/><path d="M-12 -40 H12 L28 36 H-28Z" fill="none" ${ink(3.5)}/>
+      <rect x="-20" y="16" width="40" height="20" fill="#FFF7E6" ${ink(3)}/><path d="M0 16 L14 -30" ${ink(4)}/><circle cx="9" cy="-15" r="5" fill="#FFCE3A" ${ink(2.5)}/>${[-10, -2, 6].map(y => `<path d="M-6 ${y} H-2" ${ink(2)}/>`).join('')}`,
     headphones: () => `<path d="M-26 8 V0 C-26 -34 26 -34 26 0 V8" fill="none" stroke="${INK}" stroke-width="12" stroke-linecap="round"/><path d="M-26 8 V0 C-26 -34 26 -34 26 0 V8" fill="none" stroke="#7B5CF0" stroke-width="6" stroke-linecap="round"/>
       <rect x="-37" y="0" width="17" height="30" rx="8" fill="#7B5CF0" ${ink(3.5)}/><rect x="20" y="0" width="17" height="30" rx="8" fill="#7B5CF0" ${ink(3.5)}/>
       <rect x="-24" y="4" width="6" height="22" rx="3" fill="${INK}"/><rect x="18" y="4" width="6" height="22" rx="3" fill="${INK}"/><path d="M-33 6 V22 M24 6 V22" stroke="#A48CFF" stroke-width="2.5" stroke-linecap="round"/>`,
@@ -52,27 +49,45 @@ const MenuBG = (() => {
       <circle cx="-24" cy="0" r="13" fill="${INK}"/><circle cx="-24" cy="0" r="5" fill="#8FB8FF"/><circle cx="24" cy="0" r="13" fill="${INK}"/><circle cx="24" cy="0" r="5" fill="#8FB8FF"/>
       <rect x="-9" y="-12" width="18" height="18" rx="2" fill="#FFF7E6" ${ink(2.5)}/><path d="M-6 -18 H6" ${ink(2.5)}/>`,
   };
-  const ORDER = ['handheld', 'acoustic', 'headphones', 'taiko', 'cassette', 'electric', 'mic', 'vinyl', 'handheld', 'notes', 'boombox', 'pick', 'keytar'];
+  // twelve different items, once each per tile: neighbours (across the tile edges too) are never the same
+  const ORDER = ['acoustic', 'headphones', 'taiko', 'cassette', 'mic', 'vinyl', 'notes', 'electric', 'boombox', 'pick', 'keytar', 'metronome'];
   function seigaiha(w, h, col){ let d = ''; for (let y = 0; y <= h + 40; y += 20) for (let x = (y / 20 % 2) * 20; x <= w + 40; x += 40) for (const r of [18, 12, 6]) d += `M${x - r} ${y}a${r} ${r} 0 0 1 ${r * 2} 0`; return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/>`; }
-  // pairs of the same item side by side, tilted apart, on a staggered grid
   function tile(){
-    const W = 720, H = 560, cols = 3, rows = 3;
+    const W = 720, H = 540, cols = 4, rows = 3;
     let body = '', u = 0;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const k = ORDER[(r * cols + c + r) % ORDER.length], cx = (c + 0.5 + (r % 2 ? 0.5 : 0)) * W / cols, cy = (r + 0.5) * H / rows, sc = k === 'keytar' || k === 'boombox' ? 0.5 : 0.56;
-      for (const [dx, rot] of [[-30, -14], [30, 12]]) {
-        const x = ((cx + dx) % W + W) % W;
-        for (const wrap of [0, x > W - 60 ? -W : x < 60 ? W : null]) if (wrap !== null) body += `<g transform="translate(${x + wrap} ${cy}) rotate(${rot}) scale(${sc})">${ITEMS[k](u++)}</g>`;
-      }
+      const k = ORDER[r * cols + c], x = (c + 0.5 + (r % 2 ? 0.5 : 0)) * W / cols, y = (r + 0.5) * H / rows, sc = k === 'keytar' || k === 'boombox' ? 0.56 : 0.64, rot = [-14, 10, -6, 14, -10, 6][(r * cols + c) % 6];
+      for (const wx of [0, x > W - 70 ? -W : null]) if (wx !== null) body += `<g transform="translate(${x + wx} ${y}) rotate(${rot}) scale(${sc})">${ITEMS[k](u++)}</g>`;
     }
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#FFF4E6"/><g opacity=".38">${seigaiha(W, H, '#5FB7C9')}</g>${body}</svg>`;
+    // black-and-white sketches: every colour becomes paper, the ink stays, and the lines get a hand-drawn wobble
+    body = body.replace(/fill="(#[0-9A-Fa-f]{6}|rgba\([^)]*\))"/g, (m, c) => c.toUpperCase() === INK.toUpperCase() ? m : 'fill="#FFF4E6"')
+      .replace(/stroke="(#[0-9A-Fa-f]{6}|rgba\([^)]*\))"/g, (m, c) => c.toUpperCase() === INK.toUpperCase() ? m : 'stroke="#FFF4E6"');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><filter id="sk" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter></defs>
+      <rect width="${W}" height="${H}" fill="#FFF4E6"/><g opacity=".38">${seigaiha(W, H, '#5FB7C9')}</g><g filter="url(#sk)" opacity=".85">${body}</g></svg>`;
   }
+  // the mode buttons' icons, in the same ink style
+  const star = (x, y, R, r) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; d += (i ? 'L' : 'M') + (x + q * Math.cos(a)).toFixed(1) + ' ' + (y + q * Math.sin(a)).toFixed(1); } return d + 'Z'; };
+  // sticker-style: a thick white border round a bold, simple shape, so it reads on any card colour
+  const sticker = (shape, fill, extra) => `<path d="${shape}" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round"/><path d="${shape}" fill="${fill}" ${ink(4)}/>${extra || ''}`;
+  const ICONS = {
+    // a big guitar pick with a play button on it
+    play: () => sticker('M0 40 C-10 40 -42 -2 -38 -20 C-34 -38 34 -38 38 -20 C42 -2 10 40 0 40Z', '#FFCE3A',
+      `<path d="M8 36 C22 20 40 -4 36 -20 C34 -30 24 -34 14 -35 C30 -28 32 -12 8 36Z" fill="#E5AE14"/><path d="M0 40 C-10 40 -42 -2 -38 -20 C-34 -38 34 -38 38 -20 C42 -2 10 40 0 40Z" fill="none" ${ink(4)}/><path d="M-10 -14 L16 0 L-10 14Z" fill="${INK}" ${ink(3)}/><path d="M-22 -22 Q-12 -30 0 -30" fill="none" stroke="#FFF7C8" stroke-width="4" stroke-linecap="round"/>`),
+    // a microphone in front of a big star: your name in lights
+    story: () => `${sticker(star(0, -2, 44, 20), '#FFCE3A', `<path d="${star(6, 2, 44, 20)}" fill="#E5AE14" clip-path="url(#stc)"/>`)}<clipPath id="stc"><path d="${star(0, -2, 44, 20)}"/></clipPath><path d="${star(0, -2, 44, 20)}" fill="none" ${ink(4)}/>
+      <path d="M-6 6 L6 6 L3 34 H-3Z" fill="${INK}"/><circle cx="0" cy="-8" r="13" fill="#FF5E7E" ${ink(4)}/><path d="M-9 -12 H9 M-11 -6 H11" stroke="#FFF7E6" stroke-width="2.4" stroke-linecap="round"/><path d="M-8 -16 Q-4 -20 2 -20" fill="none" stroke="#FFF7E6" stroke-width="3" stroke-linecap="round"/>`,
+    // a VS burst: two sides clash
+    battle: () => { let d = ''; for (let i = 0; i < 20; i++) { const a = i * Math.PI / 10, q = i % 2 ? 30 : 46; d += (i ? 'L' : 'M') + (q * Math.cos(a)).toFixed(1) + ' ' + (q * Math.sin(a) * 0.9).toFixed(1); } d += 'Z';
+      return sticker(d, '#FF5E3A', `<path d="${d}" transform="scale(.72)" fill="#FFCE3A"/><text x="0" y="12" text-anchor="middle" font-family="'Bagel Fat One','Arial Black',sans-serif" font-size="34" fill="#FFFFFF" stroke="${INK}" stroke-width="3.5" paint-order="stroke" transform="rotate(-8)">VS</text>`); },
+  };
+  const icon = k => `<svg viewBox="-50 -50 100 100" width="100%" height="100%" aria-hidden="true">${ICONS[k]()}</svg>`;
   let url = '';
   return {
-    tile,
+    tile, icon,
     apply(){
       if (!url) url = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(tile()) + '")';
       document.documentElement.style.setProperty('--menu-bg', url);
+      for (const [id, k] of [['btn-play', 'play'], ['btn-story', 'story'], ['btn-battle', 'battle']]) { const m = document.querySelector('#' + id + ' .mi'); if (m) m.innerHTML = icon(k); }
     },
   };
 })();
