@@ -7,7 +7,7 @@ const out = process.argv[2] || '/tmp/battle'; require('fs').mkdirSync(out, { rec
   await p.goto('file://' + __dirname + '/../dist/strum-jam.html'); await p.waitForTimeout(700);
   await p.click('#btn-start', { force: true }); await p.waitForTimeout(800);
   await p.evaluate(() => { Settings.tuneFirst = false; });
-  await p.click('#btn-battle'); await p.waitForTimeout(800); await p.click('#btn-on-local'); await p.waitForTimeout(400);  // Online isn't configured here, so it offers the local battle
+  await p.click('#btn-battle'); await p.waitForTimeout(800); await p.click('#btn-on-local'); await p.waitForTimeout(400);  // the local battle, from the Online home
   await p.fill('[data-p="0"]', 'Josh'); await p.fill('[data-p="1"]', 'Sam');
   await p.screenshot({ path: `${out}/setup.png` });
   await p.click('#btn-bt-start', { force: true }); await p.waitForTimeout(700);

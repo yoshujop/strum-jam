@@ -9,7 +9,7 @@
    "takes" audio bucket; see supabase/setup.sql). The anon key is meant to
    be public: row-level security only allows reading and adding.
    ===================================================================== */
-const SUPABASE_URL = '';        // https://<project>.supabase.co
+const SUPABASE_URL = 'https://mlkpttzklcdlupwldjii.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_r9u0XWsis6x68biG9MtKVQ_kueS07Ks';   // the project's publishable (public) key
 const INSTRUMENTS = [
   { id: 'guitar', name: 'Guitar', icon: '🎸', ready: true },
