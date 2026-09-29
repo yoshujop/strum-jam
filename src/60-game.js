@@ -67,8 +67,9 @@ const G = {
         countIn, firstBar: this.fromBar, endBar: this.endBar,
         sectionStarts: new Set(chart.sections.map(s => s.startBar)),
         fillBars: new Set(chart.sections.map(s => s.startBar + s.bars - 1).filter(b => b < this.endBar - 1)),
-        bassAt: k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
-        onEnd: () => {} });
+        // the player's own instrument drops out of the band: no bass line in Bass, no kit in Drums
+        bassAt: opts.inst === 'bass' ? null : k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
+        noKit: opts.inst === 'drums', onEnd: () => {} });
       const cfg = Groove.cfg;
       this.list.forEach((e, i) => {
         e.t = cfg.startTime + e.beat * cfg.beatDur;
@@ -127,10 +128,11 @@ const G = {
     Sfx.fail && Sfx.fail(); Sfx.boo && Sfx.boo();
     const chart = this.chart, acc = this.judgedN ? this.accSum / (100 * this.judgedN) : 0;
     const done = this.list.filter(e => e.final).length;
+    const progress = Parts.active ? Parts.progress() : this.list.length ? done / this.list.length : 0, inst = Parts.active ? Parts.inst : undefined;
     // the stage falls apart for a moment, then the results
     setTimeout(() => UI.showResults({ mode: 'stage', failed: true, chart, score: this.score, acc, grade: 'F', title: 'Booed Off!', counts: this.counts,
       maxCombo: this.maxCombo, noteAcc: 0, tough: [], tap: this.tapMode, tempo: this.opts.tempo, topLevel: this.topLevel,
-      progress: Parts.active ? Parts.progress() : this.list.length ? done / this.list.length : 0, newBest: false, inst: Parts.active ? Parts.inst : undefined }), 2200);
+      progress, newBest: false, inst }), 2200);
     if (Parts.active) setTimeout(() => Parts.end(), 2150);
   },
   setLevel(n){

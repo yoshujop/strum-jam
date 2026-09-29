@@ -2,7 +2,7 @@
    Audio: synthesized drum kit, groove scheduler, plucked-guitar preview
    ===================================================================== */
 const AudioEngine = (() => {
-  let ctx = null, smooth = { off: null }, master, duckBus, drumBus, clickBus, sfxBus, noiseBuf, chordTaps = { key: '', n: 0, at: 0 };
+  let ctx = null, smooth = { off: null }, master, duckBus, drumBus, playerBus, clickBus, sfxBus, noiseBuf, chordTaps = { key: '', n: 0, at: 0 };
   const pluckCache = new Map();
   function ensure(){
     if (!ctx) {
@@ -15,6 +15,8 @@ const AudioEngine = (() => {
       // background music (band + menu theme) goes through duckBus so it can dip while a chord preview plays
       duckBus = ctx.createGain(); duckBus.gain.value = 1; duckBus.connect(master);
       drumBus = ctx.createGain(); drumBus.gain.value = Settings.drumVol; drumBus.connect(duckBus);
+      // what the player makes (pads, MIDI kit, MIDI keys), apart from the band, so an Online take can record just that
+      playerBus = ctx.createGain(); playerBus.gain.value = 0.9; playerBus.connect(duckBus);
       // iOS pauses ("interrupts") the context when the mic opens or a call comes in: wake it on the next touch
       const wake = () => { if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}); };
       ['pointerdown', 'touchend', 'keydown'].forEach(e => window.addEventListener(e, wake, { passive: true }));
@@ -179,8 +181,17 @@ const AudioEngine = (() => {
     if (good) { tone(t, 'sine', 880, 880, 0.18, 0.08, sfxBus); tone(t + 0.07, 'sine', 1320, 1320, 0.16, 0.12, sfxBus); }
     else tone(t, 'triangle', 220, 150, 0.2, 0.15, sfxBus);
   }
+  // run a kit call so it sounds on the player's bus instead of the band's
+  function onPlayerBus(fn){ ensure(); const d = drumBus; drumBus = playerBus; try { fn(); } finally { drumBus = d; } }
+  // a simple electric-piano voice for MIDI keys (two sines, a bell on top, a soft decay)
+  function keyNote(midi, t, vel){
+    ensure(); t = t || ctx.currentTime; vel = vel == null ? 0.7 : vel;
+    const f = midiToHz(midi), g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.22 * vel, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    g.connect(playerBus);
+    [[1, 'triangle', 1], [2, 'sine', 0.35], [4, 'sine', 0.08]].forEach(([h, type, a]) => { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = type; o.frequency.value = f * h; og.gain.value = a; o.connect(og).connect(g); o.start(t); o.stop(t + 1.7); });
+  }
   return {
-    ensure, kit, strum, blip, tone, noise, pluckBuffer, playChord, arpeggio, duck,
+    ensure, kit, onPlayerBus, keyNote, get playerBus(){ ensure(); return playerBus; }, strum, blip, tone, noise, pluckBuffer, playChord, arpeggio, duck,
     get duckBus(){ ensure(); return duckBus; },
     get ctx(){ return ctx; },
     get master(){ return master; },
@@ -224,6 +235,8 @@ function lane(str, n){
   for (let i = 0; i < n; i++) { const c = str ? str[i % str.length] : '.'; out[i] = c === 'X' ? 1 : c === 'x' ? 0.8 : c === 'g' ? 0.3 : c === 'o' ? -0.8 : 0; }
   return out;
 }
+// Drums mode: the band's kit stays quiet (the player is the drummer); the count-in, click and bass still sound
+const SILENT_KIT = new Proxy({}, { get: (_, k) => ['sticks', 'click', 'bass'].includes(k) ? AudioEngine.kit[k] : () => {} });
 function buildPattern(chart, styleOverride){
   const style = styleOverride || chart.song.style;
   const { beats, sub } = chart; const n = beats * sub;
@@ -299,6 +312,7 @@ const Groove = {
   },
   // hits already scheduled (recent past) plus the ones coming up
   events(now){
+    if (this.cfg && this.cfg.noKit && typeof Parts !== 'undefined' && Parts.active) return Parts.drumEvents(now);   // Drums: the drummer plays the player's hits
     const out = this.hits.filter(h => h.t > now - 1.6);
     if (this.running && this.cfg) for (let k = this.k, m = 0; m < 96 && this.timeOf(k) < now + 1.3; k++, m++) for (const kind of this.plan(k)) out.push({ t: this.timeOf(k), kind });
     return out;
@@ -306,7 +320,7 @@ const Groove = {
   // pitched backing (bass, toms) only when it can't leak into the mic
   pitchedOk(){ return !(typeof Mic !== 'undefined' && Mic.on) || !!Settings.headphones; },
   play(k, t){
-    const c = this.cfg, P = c.pattern, kit = AudioEngine.kit;
+    const c = this.cfg, P = c.pattern, kit = c.noKit ? SILENT_KIT : AudioEngine.kit;
     if (t < AudioEngine.ctx.currentTime - 0.01) return;
     if (k < c.firstStep) { if (((k % c.sub) + c.sub) % c.sub === 0) { kit.sticks(t); this.hits.push({ t, kind: 'stick' }); } return; }
     const stepsPerBar = P.n, bar = Math.floor(k / stepsPerBar), i = k % stepsPerBar;

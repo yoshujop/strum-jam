@@ -11,7 +11,7 @@ const Parts = {
   active: false, inst: 'guitar', targets: [], lines: [], trail: [], guide: false, endT: 0, lastVoice: null, frameN: 0,
   RESULT_PTS: { perfect: 100, great: 80, good: 50, ok: 20, miss: 0 },
   // how the vocal rail should look (Stage asks while drawing)
-  tallRail(){ return this.active && this.inst === 'vocals'; },
+  railScale(){ return !this.active ? 1 : { vocals: 1.7, bass: 1.35, drums: 1.35, piano: 1.1 }[this.inst] || 1; },
 
   /* ---------- building the part (in chart beats) ---------- */
   // vox: {lines: [{t0, t1, text}] in recording seconds, map (Lyrics map), melody: [{t0, t1, m}] or null}
@@ -47,10 +47,11 @@ const Parts = {
       this.guide = !(opts.vox.melody && opts.vox.melody.length);
       this.lines = v.lines.map(l => ({ ...l, t0: T(l.b0), t1: T(l.b1) }));
       this.targets = v.targets.map(t => ({ ...t, t0: T(t.b0), t1: T(t.b1), n: 0, hit: 0, voiced: 0, result: null }));
-    }
+    } else { this.lines = []; this.guide = false; this.beginBand(g, chart, cfg, fromBeat, endBeat); }
     g.trackEvents = []; g.list = [];
     this.endT = T(endBeat);
     this.lineIdx = 0; this.panelKey = '';
+    Listen.cal = (this.inst === 'piano' && Mic.ears.piano) || Mic.ears.guitar || null;
     this.comp = { next: fromBeat, cfg, chart, endBeat };
     UI.partPanel(this.inst);
     return this.targets.length > 0;
@@ -58,22 +59,23 @@ const Parts = {
   // after a pause: the band starts again from the bar we stopped in, so everything not yet judged moves to the new clock
   resumeAt(g, fromBeat, cfg){
     const T = b => cfg.startTime + b * cfg.beatDur;
-    for (const t of this.targets) { if (t.result) continue; if (t.b0 < fromBeat) { t.result = 'skip'; continue; } t.t0 = T(t.b0); t.t1 = T(t.b1); t.n = t.hit = t.voiced = 0; }
+    for (const t of this.targets) { if (t.result) continue; if (t.b0 < fromBeat - 1e-6) { t.result = 'skip'; continue; }
+      if (this.inst === 'vocals') { t.t0 = T(t.b0); t.t1 = T(t.b1); t.n = t.hit = t.voiced = 0; } else { this.timeTarget(t, cfg); t.firstOk = null; t.okN = 0; } }
     this.lines.forEach(l => { l.t0 = T(l.b0); l.t1 = T(l.b1); });
     this.endT = T(this.comp.endBeat); this.comp.cfg = cfg; this.comp.next = fromBeat; this.trail = []; this.panelKey = '';
   },
   // how wide the singer's mouth is: the voice's loudness while it's being heard
   mouthOpen(now){ const v = this.lastVoice; return v ? Math.min(1, 0.35 + v.rms * 9) : 0; },
   progress(){ const n = this.targets.length; return n ? this.targets.filter(t => t.result).length / n : 0; },
-  end(){ this.active = false; this.targets = []; this.lines = []; UI.partPanel(null); },
+  end(){ this.active = false; this.targets = []; this.lines = []; Listen.cal = Mic.ears.guitar || null; this.unbindDrums && this.unbindDrums(); UI.partPanel(null); },
 
   /* ---------- the voice: McLeod pitch on the small analyser (2048 samples), 75..1000 Hz ---------- */
-  voice(){
+  voice(raw){
     if (!Mic.on || !Mic.anSmall) return null;
     const x = Mic.timeBuf; Mic.anSmall.getFloatTimeDomainData(x);
     const N = x.length, sr = Mic.sr;
     let e = 0; for (let i = 0; i < N; i++) e += x[i] * x[i];
-    const rms = Math.sqrt(e / N); if (rms < Math.max(0.006, Mic.gate() * 2)) return null;
+    const E = Mic.ears.vocals, rms = Math.sqrt(e / N); if (rms < (raw ? 0.002 : E ? E.gate : Math.max(0.006, Mic.gate() * 2))) return null;   // the level calibration learned, else a safe default
     const minLag = Math.floor(sr / 1000), maxLag = Math.min(Math.floor(sr / 75), N >> 1);
     const nsdf = this._nsdf || (this._nsdf = new Float32Array(2048));
     for (let tau = minLag; tau <= maxLag + 1; tau++) {
@@ -100,6 +102,7 @@ const Parts = {
     g.beatNow = Groove.beatAt(now); g.trackBeat = g.beatNow;
     { const c = g.chart; let k = 0; for (let i = 0; i < c.sections.length; i++) if (g.beatNow >= c.sections[i].startBeat) k = i; if (k !== g.sectionIndex) g.sectionIndex = k; }
     this.compFrame(now);
+    if (this.inst !== 'vocals') { if (this.inst === 'drums') this.drumFrame(g, now); else this.noteFrame(g, now); this.bandPanelFrame(now); return; }
     const tJ = now - (Settings.latency || 0) / 1000 - 0.03;       // the sound we're hearing now was sung a moment ago
     const v = (this.frameN & 1) ? this.lastVoice : (this.lastVoice = this.voice());
     if (v) { this.trail.push({ t: tJ, m: v.m }); }
@@ -140,7 +143,7 @@ const Parts = {
   },
   // the band's chords under the singer (headphones only: from a speaker they'd leak into the mic)
   compFrame(now){
-    const c = this.comp; if (!c || !Groove.pitchedOk()) return;
+    const c = this.comp; if (!c || !Groove.pitchedOk() || this.inst === 'piano') return;
     const ahead = Groove.beatAt(now + 0.25);
     while (c.next <= ahead && c.next < c.endBeat) {
       const b = c.next, e = c.chart.events.find(x => x.beat === b);
@@ -178,11 +181,16 @@ const Parts = {
     if (!g.running) return;
     g.running = false; Groove.stop(); Mic.onsetListeners.clear();
     const acc = g.judgedN ? g.accSum / (100 * g.judgedN) : 0;
-    const grade = acc >= 0.9 ? ['S', 'Superstar!'] : acc >= 0.75 ? ['A', 'What a Voice!'] : acc >= 0.6 ? ['B', 'Nice Pipes!'] : acc >= 0.4 ? ['C', 'Getting There'] : ['D', 'Keep Singing'];
-    const inTune = this.targets.reduce((a, t) => a + t.hit, 0) / Math.max(1, this.targets.reduce((a, t) => a + t.n, 0));
+    const V = this.inst === 'vocals', titles = { vocals: ['Superstar!', 'What a Voice!', 'Nice Pipes!', 'Getting There', 'Keep Singing'], bass: ['Low-End Legend!', 'In the Pocket!', 'Solid Groove!', 'Getting There', 'Keep Thumping'],
+      piano: ['Keys Master!', 'Rock Solid!', 'Nice Chords!', 'Getting There', 'Keep Playing'], drums: ['Human Metronome!', 'Tight Groove!', 'Nice Beat!', 'Getting There', 'Keep Drumming'] }[this.inst];
+    const ga = acc >= 0.9 ? 0 : acc >= 0.75 ? 1 : acc >= 0.6 ? 2 : acc >= 0.4 ? 3 : 4, grade = [['S', 'A', 'B', 'C', 'D'][ga], titles[ga]];
+    const judged = this.targets.filter(t => t.result && t.result !== 'skip');
+    const inTune = V ? this.targets.reduce((a, t) => a + t.hit, 0) / Math.max(1, this.targets.reduce((a, t) => a + t.n, 0)) : judged.filter(t => t.result !== 'miss').length / Math.max(1, judged.length);
     // the toughest lines: where the most bars were missed
     const byLine = this.lines.map(l => { const ts = this.targets.filter(t => t.t0 >= l.t0 - 0.05 && t.t0 < l.t1); return { label: l.text.length > 34 ? l.text.slice(0, 32) + '…' : l.text, frac: ts.length ? ts.reduce((a, t) => a + (t.frac || 0), 0) / ts.length : 1, n: ts.length }; });
-    const tough = byLine.filter(x => x.n && x.frac < 0.35).sort((a, b) => a.frac - b.frac).slice(0, 3);
+    let tough = byLine.filter(x => x.n && x.frac < 0.35).sort((a, b) => a.frac - b.frac).slice(0, 3);
+    if (!V && this.inst !== 'drums') { const by = {}; judged.forEach(t => { const k = t.label || t.chord; if (!k) return; const o = by[k] || (by[k] = { label: this.inst === 'bass' ? 'under ' + k : k, n: 0, ok: 0 }); o.n++; if (t.result !== 'miss') o.ok++; });
+      tough = Object.values(by).map(o => ({ label: o.label, frac: o.ok / o.n })).filter(o => o.frac < 0.7).sort((a, b) => a.frac - b.frac).slice(0, 3); }
     const res = { mode: 'stage', inst: this.inst, chart: g.chart, score: g.score, acc, grade: grade[0], title: grade[1], counts: g.counts, maxCombo: g.maxCombo,
       noteAcc: inTune, tough, tap: false, tempo: g.opts.tempo, topLevel: g.topLevel, guide: this.guide };
     const best = Store.get('best', {}), k = g.chart.song.id + ':' + this.inst;
@@ -195,6 +203,7 @@ const Parts = {
   /* ---------- the lane on the rail ---------- */
   // octave-free: 12 rows, C at the bottom. Notes scroll right to left past the hit line like the chord cards.
   drawRail(c, o){
+    if (this.inst !== 'vocals') return this.drawBandRail(c, o);
     const { W, railY, railH, hitX, ppb, curB, now } = o;
     const top = railY + 8, h = railH - 16, rowH = h / 12, y = pc => top + h - ((pc % 12) + 0.5) * rowH;
     // rows: the chord's notes lit faintly (a guide even when there's a melody)

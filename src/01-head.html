@@ -672,6 +672,28 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .vox-cur span.sung{color:var(--coral);transform:translateY(-2px)}
 .vox-next{font-weight:800;font-size:clamp(15px,2vw,20px);opacity:.55}
 .vox-count{position:absolute;top:8px;left:0;right:0;font-size:14px;letter-spacing:.4em;color:var(--coral)}
+.board.band .cmd-row,.board.band .cmd-sub,.board.band .fb-card{display:none}
+.band-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;min-height:130px;padding:12px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
+.band-panel .bp-t{display:grid;gap:2px;min-width:0}
+.band-panel small{font-weight:800;text-transform:uppercase;letter-spacing:.08em;opacity:.6}
+.band-panel b{font-family:var(--display);font-weight:400;font-size:clamp(34px,5vw,56px);line-height:1}
+.band-panel span{font-weight:800}
+.band-panel em{font-style:normal;font-weight:700;opacity:.6}
+.band-panel .bp-pic svg{display:block;width:min(320px,42vw);height:auto}
+.band-panel[data-inst="drums"]{grid-template-columns:1fr}
+.band-panel[data-inst="drums"] .bp-pic{display:none}
+.drum-pads{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.drum-pads button{display:grid;justify-items:center;gap:2px;padding:16px 6px;font-family:var(--display);font-size:22px;border:4px solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink);cursor:pointer;touch-action:manipulation;user-select:none}
+.drum-pads button small{font-family:var(--ui,inherit);font-size:11px;font-weight:800;opacity:.6}
+.drum-pads [data-lane="hat"]{background:var(--sun)}.drum-pads [data-lane="snare"]{background:#fff}.drum-pads [data-lane="kick"]{background:var(--coral);color:#fff}
+.drum-pads button.hit{animation:padhit .15s ease-out}
+@keyframes padhit{0%{transform:translateY(4px) scale(.96);box-shadow:0 1px 0 var(--ink)}100%{transform:none}}
+@media (max-width:560px){.band-panel{grid-template-columns:1fr}.band-panel .bp-pic svg{width:100%}}
+.cal-dots{display:flex;gap:6px;flex-wrap:wrap}
+.cal-dots i{width:16px;height:16px;border-radius:50%;border:3px solid var(--ink);background:#fff}
+.cal-dots i.on{background:var(--sun);transform:scale(1.2)}
+.cal-dots i.done{background:var(--mint,#8FE3A0)}
+.cal-say{font-family:var(--display);font-size:clamp(22px,3.4vw,30px);line-height:1.15;margin:4px 0}
 .online{background-color:#241C4A}
 .online .page-h span{color:var(--teal)}
 .on-card{display:grid;gap:10px;margin-bottom:16px;padding:14px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);color:var(--ink);box-shadow:0 6px 0 #000}
@@ -1046,6 +1068,7 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <button class="mode stage" id="btn-stage" type="button"><b>Stage</b><span>In time with the band, scored.</span><em id="best-score"></em></button>
     </div>
     <div id="vox-setup" hidden></div>
+    <div id="inst-info" hidden></div>
     <div class="opts dd">
       <label class="o sf gtr"><b>Chord shapes</b><select id="seg-easy"><option value="easy">Easy</option><option value="standard">Standard</option><option value="neck">Whole neck</option></select><span class="small muted" id="easy-note"></span></label>
       <label class="o sf"><b>Tempo <span id="tempo-val" hidden>100%</span></b><select id="tempo" aria-label="Tempo percent"><option value="100">100%</option><option value="95">95%</option><option value="90">90%</option><option value="85">85%</option><option value="80">80%</option><option value="75">75%</option><option value="70">70%</option><option value="65">65%</option><option value="60">60%</option><option value="55">55%</option><option value="50">50%</option></select><span class="small muted" id="tempo-bpm"></span></label>
@@ -1092,6 +1115,8 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <div class="sc"><b id="hud-score">0</b><span id="hud-score-l">score</span></div>
       <div class="hype" title="Crowd hype: play chords quickly and cleanly to fire up the band"><div class="hype-bar"><i id="hype-fill"></i><em></em><em></em><em></em><em></em></div><span id="hype-label">Warming up</span></div>
     </div>
+    <div class="band-panel" id="band-panel" hidden><div class="bp-t"><small>Play</small><b id="band-big"></b><span id="band-sub"></span><em id="band-next"></em></div><div class="bp-pic" id="band-pic"></div>
+      <div class="drum-pads" id="drum-pads" hidden><button type="button" data-lane="hat">HAT<small>K</small></button><button type="button" data-lane="snare">SNARE<small>J</small></button><button type="button" data-lane="kick">KICK<small>F</small></button></div></div>
     <div class="vox-panel" id="vox-panel" hidden><span class="vox-count" id="vox-count"></span><div class="vox-cur" id="vox-cur"></div><div class="vox-next" id="vox-next"></div></div>
     <div hidden><span id="fb-view-label"></span><div id="str-chips"></div><div id="hint"></div><ol id="steps"></ol></div>
   </div>
@@ -1154,6 +1179,17 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 </section>
 
 <!-- ============ MODALS ============ -->
+<div class="modal" id="m-cal" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="cal-h">
+    <div class="hd"><h2 id="cal-h">Train my ears</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Done</button></div>
+    <div class="cal-dots" id="cal-dots"></div>
+    <p class="cal-say" id="cal-say"></p>
+    <div><b class="small">Input level</b><div class="meter"><i id="cal-meter"></i></div></div>
+    <p class="small" id="cal-res"></p>
+    <div class="row"><button class="btn btn-go" id="btn-cal-go" type="button">Start</button></div>
+  </div>
+</div>
+
 <div class="modal" id="m-mic" hidden>
   <div class="sheet" role="dialog" aria-labelledby="m-mic-h">
     <div class="hd"><h2 id="m-mic-h">Mic check</h2><button class="btn btn-sm" data-close data-sfx="none" type="button">Done</button></div>
@@ -1162,12 +1198,14 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
       <button class="btn btn-go" id="btn-mic-on" type="button">Turn on mic</button>
       <select id="sel-device" aria-label="Microphone" style="flex:1;min-width:180px" hidden></select>
     </div>
+    <label class="field small" id="chan-row">Audio interface input <select id="sel-chan" aria-label="Interface input"><option value="-1">Both / mono mic</option><option value="0">Input 1 only</option><option value="1">Input 2 only</option></select><span class="muted">Plugged straight into an interface? Pick the input your instrument (or vocal mic) is on: no room noise.</span></label>
     <div class="warnbox" id="mic-warn" hidden></div>
     <div><b class="small">Input level</b><div class="meter"><i id="meter"></i></div></div>
     <div class="row">
       <button class="btn btn-sm btn-teal" id="btn-mic-cal" type="button">Set up this mic</button>
       <span class="small" id="mic-cal-msg">Teaches the game what your room sounds like, so it only listens to your guitar.</span>
     </div>
+    <div class="row"><button class="btn btn-sm btn-teal" id="btn-mic-ears" type="button">👂 Train my ears</button><span class="small">Play a few notes and chords on your instrument so the game learns how your mic hears it.</span></div>
     <div><b class="small">Notes I hear right now</b><div class="heard" id="heard"></div></div>
     <div class="testrow"><b class="small">Test a chord:</b><select id="test-chord" aria-label="Chord to test"></select><span id="test-res" class="small">Strum it and I’ll check every note.</span></div>
     <div class="tuner">

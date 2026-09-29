@@ -997,9 +997,12 @@ const UI = {
       if (G.running) G.tapMode = !Mic.on;
     };
     $('sel-device').onchange = async e => { Settings.deviceId = e.target.value; saveSettings(); Mic.stop(); await Mic.start(); this.refreshMic(); this.openMicMsg(); };
+    $('sel-chan').value = String(Mic.chan());
+    $('sel-chan').onchange = async e => { Settings.inChannel = +e.target.value; saveSettings(); if (Mic.on) { Mic.stop(); await Mic.start(); } this.refreshMic(); this.openMicMsg(); };
     $('sens').oninput = e => { Settings.sens = +e.target.value; saveSettings(); };
     $('lat').oninput = e => { Settings.latency = +e.target.value; $('lat-val').textContent = Settings.latency; saveSettings(); };
     $('btn-calib').onclick = () => this.calibrate();
+    $('btn-mic-ears').onclick = () => this.openCalib(this.inst ? this.inst() : 'guitar');
     $('btn-tune-song').onclick = () => this.openTune(null);
     $('btn-tune-go').onclick = () => this.tuneDone(true);
     $('btn-tune-skip').onclick = () => this.tuneDone(true);
@@ -1059,6 +1062,7 @@ const UI = {
       if (this.screen === 'game') { G.frame(now); Stage.draw(G, now); }
       else if (this.screen === 'title') { TitleArt.draw(performance.now() / 1000); ModeIcons.draw(performance.now() / 1000); }
       if (this.openModal === 'm-mic') this.micFrame();
+      if (this.openModal === 'm-cal') { Mic.analyze(true); const m = $('cal-meter'); if (m) m.style.width = Math.min(100, Math.sqrt(Mic.level) * 260) + '%'; }
       if (this.openModal === 'm-tune') this.tuneFrame();
       if (this.frameN % 30 === 0 && this.screen !== 'game') this.refreshMic();
     } catch (err) { if (this.frameN % 120 === 0) console.error(err); }

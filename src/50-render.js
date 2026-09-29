@@ -344,6 +344,51 @@ function drawSinger(c, x, footY, s, o){
   c.restore();
 }
 
+/* Tofu: a soft lilac block with a keyboard on an X stand, the band's keys player (the player, in Piano).
+   Both hands come down on each chord; the keys light where they land. */
+function drawKeys(c, x, footY, s, o){
+  o = o || {};
+  const lw = Math.max(2.5, s * 0.035), ph = (((o.beat || 0) % 1) + 1) % 1, press = reduceMotion ? 0 : Math.max(0, Math.min(1, o.press || 0));
+  const bob = reduceMotion ? 0 : Math.pow(1 - ph, 3) * s * 0.035, hop = reduceMotion ? 0 : (o.jump || 0) * s * 0.25;
+  c.save(); c.translate(x, footY); c.lineWidth = lw; c.strokeStyle = COL.ink; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.fillStyle = 'rgba(30,27,46,.18)'; c.beginPath(); c.ellipse(0, 0, s * 0.5, s * 0.07, 0, 0, Math.PI * 2); c.fill();
+  // body (behind the keyboard): a rounded block with a little antenna-sprout
+  c.save(); c.translate(0, -bob - hop);
+  const bx = -s * 0.28, by = -s * 1.12, bw = s * 0.56, bh = s * 0.62;
+  c.beginPath(); c.moveTo(s * 0.02, by); c.quadraticCurveTo(s * 0.05, by - s * 0.14, s * 0.14, by - s * 0.16); c.stroke();
+  c.fillStyle = COL.mint; c.beginPath(); c.ellipse(s * 0.17, by - s * 0.17, s * 0.06, s * 0.035, -0.5, 0, Math.PI * 2); c.fill(); c.stroke();
+  c.fillStyle = '#C9B8FF'; rr(c, bx, by, bw, bh, s * 0.16); c.fill();
+  c.save(); rr(c, bx, by, bw, bh, s * 0.16); c.clip(); c.fillStyle = 'rgba(30,27,46,.14)'; c.fillRect(bx + bw * 0.72, by, bw, bh); c.restore();
+  rr(c, bx, by, bw, bh, s * 0.16); c.stroke();
+  c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = lw * 1.1; c.beginPath(); c.arc(bx + s * 0.13, by + s * 0.13, s * 0.07, Math.PI * 1.05, Math.PI * 1.5); c.stroke(); c.strokeStyle = COL.ink; c.lineWidth = lw;
+  // face: round glasses, a small smile (big grin on a good chord)
+  const ey = by + s * 0.24;
+  for (const sx of [-0.1, 0.1]) { c.fillStyle = '#fff'; c.beginPath(); c.arc(sx * s, ey, s * 0.07, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = COL.ink; c.beginPath(); c.arc(sx * s, ey + (o.mood === 'miss' ? s * 0.02 : s * 0.005) + (press ? s * 0.015 : 0), s * 0.028, 0, Math.PI * 2); c.fill(); }
+  c.beginPath(); c.moveTo(-s * 0.03, ey); c.lineTo(s * 0.03, ey); c.stroke();
+  c.fillStyle = 'rgba(255,94,126,.45)'; for (const sx of [-0.2, 0.2]) { c.beginPath(); c.ellipse(sx * s, ey + s * 0.1, s * 0.045, s * 0.025, 0, 0, Math.PI * 2); c.fill(); }
+  c.fillStyle = COL.ink;
+  if (o.mood === 'great' || press > 0.5) { c.beginPath(); c.moveTo(-s * 0.07, ey + s * 0.12); c.quadraticCurveTo(0, ey + s * 0.24, s * 0.07, ey + s * 0.12); c.closePath(); c.fill(); }
+  else { c.beginPath(); c.arc(0, ey + s * 0.11, s * 0.05, Math.PI * 0.15, Math.PI * 0.85); c.stroke(); }
+  // arms down to the keys; hands drop on a chord
+  const ky = -s * 0.52, hand = press * s * 0.05;
+  c.lineWidth = lw * 1.2;
+  for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(sx * s * 0.25, by + bh * 0.7); c.quadraticCurveTo(sx * s * 0.36, ky - s * 0.12, sx * s * 0.22, ky - s * 0.03 + hand); c.stroke(); }
+  c.restore();
+  // X stand + keyboard (in front)
+  c.lineWidth = lw * 1.1; c.beginPath(); c.moveTo(-s * 0.36, -s * 0.02); c.lineTo(s * 0.36, ky + s * 0.04); c.moveTo(s * 0.36, -s * 0.02); c.lineTo(-s * 0.36, ky + s * 0.04); c.stroke();
+  c.lineWidth = lw;
+  const kx = -s * 0.52, kw = s * 1.04, kh = s * 0.14;
+  c.fillStyle = COL.ink2; rr(c, kx, ky - kh * 0.35, kw, kh * 1.35, s * 0.04); c.fill(); c.stroke();
+  c.fillStyle = '#fff'; c.fillRect(kx + s * 0.05, ky, kw - s * 0.1, kh * 0.8); c.strokeRect(kx + s * 0.05, ky, kw - s * 0.1, kh * 0.8);
+  const n = 8, kwid = (kw - s * 0.1) / n, lit = press > 0.2 ? [0, 2, 4] : [];
+  for (let i = 1; i < n; i++) { c.beginPath(); c.moveTo(kx + s * 0.05 + i * kwid, ky); c.lineTo(kx + s * 0.05 + i * kwid, ky + kh * 0.8); c.lineWidth = lw * 0.5; c.stroke(); }
+  lit.forEach(i => { c.fillStyle = COL.sun; c.fillRect(kx + s * 0.05 + i * kwid + 1, ky + 1, kwid - 2, kh * 0.8 - 2); });
+  c.fillStyle = COL.ink; [0, 1, 3, 4, 5].forEach(i => rr(c, kx + s * 0.05 + (i + 0.66) * kwid, ky, kwid * 0.68, kh * 0.5, s * 0.008) || c.fill());
+  c.fillStyle = COL.coral; c.beginPath(); c.arc(kx + kw - s * 0.09, ky - kh * 0.12, s * 0.018, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+
 /* ---------- the bean crowd: stable slots, members pop up smoothly as the hype grows ---------- */
 function makeCrowd(W){
   const n = Math.max(6, Math.round(W / 58)), out = [];
@@ -472,9 +517,9 @@ const Stage = {
     const phase = ((beatF % 1) + 1) % 1;
     // background: the street venue (cached image), washed with the section's colour
     const bg = BG_COL[secIdx % BG_COL.length];
-    const tall = Parts.tallRail(), railY0 = Math.max(18, Math.min(H * 0.08, 60)), railH0 = Math.min(90, Math.max(40, H * 0.16)) * (tall ? 1.7 : 1), floorY0 = H * 0.86;
+    const tall = Parts.railScale(), railY0 = Math.max(18, Math.min(H * 0.08, 60)), railH0 = Math.min(90, Math.max(40, H * 0.16)) * tall, floorY0 = H * 0.86;
     // Story mode paints the era's stage; otherwise the street under the railway bridge
-    const scene = this.scene, key = W + 'x' + H + (scene ? scene.key : '') + (tall ? 'T' : '');
+    const scene = this.scene, key = W + 'x' + H + (scene ? scene.key : '') + (tall !== 1 ? 'T' + tall : '');
     if (this.bgKey !== key) {
       this.bgKey = key; const img = new Image(); img.decoding = 'async';
       img.src = scene ? Scenes.dataUrl(scene, Math.round(W), Math.round(H), { railY: railY0, railH: railH0, floorY: floorY0 })
@@ -588,9 +633,10 @@ const Stage = {
     // his drawing starts ~110 units below the top of the 650-unit box: size him so his afro stops just under the chord rail
     let dH = Math.max(90, Math.min((avail - 6) * 650 / 545, s * 3.1)), dW = dH * 500 / 650;
     // on narrow screens shrink the pair so both fit side by side
-    const fitF = Math.min(1, (W * 0.94) / (s * 1.5 + dW * 0.9 + (Parts.active && Parts.inst === 'vocals' ? s * 1.4 : 0)));
+    const fitF = Math.min(1, (W * 0.94) / (s * 1.5 + dW * 0.9 + (Parts.active && ['vocals', 'bass', 'piano'].includes(Parts.inst) ? s * 1.75 : 0)));
     const sP = s * fitF; dH *= fitF; dW *= fitF;
-    const singer = Parts.active && Parts.inst === 'vocals', sgW = singer ? sP * 1.4 : 0;
+    // the player's own character stands out front, left of Pip: Lulu (vocals), Bo (bass), Tofu (keys)
+    const front = Parts.active && ['vocals', 'bass', 'piano'].includes(Parts.inst) ? Parts.inst : '', singer = !!front, sgW = singer ? sP * (front === 'piano' ? 1.55 : front === 'bass' ? 1.75 : 1.4) : 0;
     const pairL = sP * 0.55 + sP * 0.95 + dW * 0.9 + sgW;              // Pip's width + a comfortable gap + kit width (+ the singer out front)
     let pipX = W / 2 - pairL / 2 + sP * 0.5 + sgW;
     const drumCX = pipX + sP * 0.95 + dW * 0.5;
@@ -598,9 +644,12 @@ const Stage = {
     const dcx = Settings.lefty ? W - drumCX : drumCX;
     this.placeDrummer(dcx, floorY, dW, dH, G, beatF);
     this.pipX = pipX;
-    if (this.thrumIn > 0.02 && W > 620) drawThrum(c, (Settings.lefty ? dcx - dW * 0.62 - s * 0.5 : dcx + dW * 0.62 + s * 0.5) + (1 - this.thrumIn) * W * 0.15 * (Settings.lefty ? -1 : 1), floorY, s * 0.85, beatF, { alpha: Math.min(1, this.thrumIn * 1.5), lefty: Settings.lefty });
-    if (singer) { const sx = Settings.lefty ? pipX + sgW : pipX - sgW; this.mouth = (this.mouth || 0) + ((Parts.mouthOpen ? Parts.mouthOpen(now) : 0) - (this.mouth || 0)) * Math.min(1, dt * 18);
-      drawSinger(c, sx, floorY + sP * 0.04, sP * 1.08, { beat: beatF, open: this.mouth, mood: G.mood(now), jump, now }); }
+    if (this.thrumIn > 0.02 && W > 620 && front !== 'bass') drawThrum(c, (Settings.lefty ? dcx - dW * 0.62 - s * 0.5 : dcx + dW * 0.62 + s * 0.5) + (1 - this.thrumIn) * W * 0.15 * (Settings.lefty ? -1 : 1), floorY, s * 0.85, beatF, { alpha: Math.min(1, this.thrumIn * 1.5), lefty: Settings.lefty });
+    if (singer) { const sx = Settings.lefty ? pipX + sgW : pipX - sgW;
+      if (front === 'vocals') { this.mouth = (this.mouth || 0) + ((Parts.mouthOpen ? Parts.mouthOpen(now) : 0) - (this.mouth || 0)) * Math.min(1, dt * 18);
+        drawSinger(c, sx, floorY + sP * 0.04, sP * 1.08, { beat: beatF, open: this.mouth, mood: G.mood(now), jump, now }); }
+      else if (front === 'bass') drawThrum(c, sx, floorY, sP * 1.05, beatF, { lefty: Settings.lefty, alpha: 1 });
+      else drawKeys(c, sx, floorY, sP * 1.05, { beat: beatF, press: Math.max(0, 1 - (now - (G.lastGoodAt || -9)) * 5), mood: G.mood(now), jump }); }
     drawPip(c, pipX, floorY, sP, { bounce: G.running ? bounce * (1 + lvl * 0.15) : bounce * 0.3, squash: Math.cos(phase * Math.PI * 2) * 0.5, strum: strumAnim, mood: lvl >= 3 && G.mood(now) === 'idle' ? 'great' : G.mood(now), lookX: 1, jump, lefty: Settings.lefty });
     // camera flashes from the crowd when things heat up
     if (lvl >= 3 && !reduceMotion && Math.random() < 0.04 * (lvl - 2)) this.flashes.push({ x: Math.random() * W, y: H - 40 - Math.random() * 30, a: 1 });

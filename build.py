@@ -6,7 +6,7 @@ head = open('src/01-head.html', encoding='utf-8').read()
 import base64 as _b64
 def _face(fam, f, w): return "@font-face{font-family:'%s';font-style:normal;font-weight:%s;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2')}" % (fam, w, _b64.b64encode(open('vendor/fonts/' + f, 'rb').read()).decode())
 head = head.replace('<!--FONTS-->', '<style>' + _face('Bagel Fat One', 'bagel-fat-one-latin.woff2', '400') + _face('Baloo 2', 'baloo2-latin.woff2', '400 800') + _face('SJ Logo', 'dejavu-sans-logo.woff2', '400') + '</style>')
-parts = ['05-settings.js','10-theory.js','20-songs.js','25-lookup.js','26-chart.js','30-audio.js','35-music.js','36-sfx.js','40-mic.js','45-ear.js','46-listen.js','47-analyze.js','48-scenes.js','50-render.js','52-drummer.js','60-game.js','61-lyrics.js','62-parts.js','64-curated.js','65-story.js','66-battle.js','67-challenge.js','68-menubg.js','69-online.js','70-ui.js','71-inst.js']
+parts = ['05-settings.js','10-theory.js','20-songs.js','25-lookup.js','26-chart.js','30-audio.js','35-music.js','36-sfx.js','40-mic.js','41-midi.js','45-ear.js','46-listen.js','47-analyze.js','48-scenes.js','50-render.js','52-drummer.js','60-game.js','61-lyrics.js','62-parts.js','63-band.js','64-curated.js','65-story.js','66-battle.js','67-challenge.js','68-menubg.js','69-online.js','70-ui.js','71-inst.js','72-calib.js']
 js = '\n'.join(open('src/'+p, encoding='utf-8').read() for p in parts)
 # the neural listener's engine and model, embedded so the page needs no network
 import json, base64

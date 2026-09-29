@@ -6,9 +6,9 @@
 const INSTS = [
   { id: 'guitar', name: 'Guitar', ready: true },
   { id: 'vocals', name: 'Vocals', ready: true },
-  { id: 'bass', name: 'Bass', ready: false },
-  { id: 'piano', name: 'Piano', ready: false },
-  { id: 'drums', name: 'Drums', ready: false },
+  { id: 'bass', name: 'Bass', ready: true },
+  { id: 'piano', name: 'Piano', ready: true },
+  { id: 'drums', name: 'Drums', ready: true },
 ];
 Object.assign(UI, {
   vox: null,
@@ -24,7 +24,21 @@ Object.assign(UI, {
     $('btn-stage').querySelector('span').textContent = g ? 'In time with the band, scored.' : cur === 'vocals' ? 'Sing with the band, scored.' : 'In time with the band, scored.';
     $('vox-setup').hidden = cur !== 'vocals';
     if (cur === 'vocals') this.loadVox();
+    this.instInfo(cur);
   },
+  // how each instrument is heard, and MIDI
+  instInfo(cur){
+    const box = $('inst-info'); if (!box) return;
+    const txt = { bass: 'Play the bass line: roots, fifths and octaves built from the chords, shown as tab. The game hears your bass through the mic or an audio interface (any octave counts).',
+      piano: 'Play the chords as the cards reach the line. Any octave and any inversion counts. Plug in a MIDI keyboard for the cleanest reading, or play into the mic.',
+      drums: 'Play the band’s groove: kick, snare and hats. Use a MIDI e-kit, the keyboard (F kick, J snare, K hat), the pads on screen, or any drum into the mic (timing only).' }[cur];
+    box.hidden = !txt; if (!txt) return;
+    const midi = cur !== 'bass' ? (Midi.available() ? `<button class="btn btn-sm" type="button" id="btn-midi">${Midi.ok ? (Midi.name ? '🎹 MIDI: ' + esc(Midi.name) : '🎹 MIDI on: plug a device in') : '🎹 Connect MIDI'}</button>` : '<span class="small muted">This browser has no MIDI support.</span>') : '';
+    box.innerHTML = `<div class="vox-card"><h3>${INST_NAMES[cur]}</h3><p class="small">${txt}</p><div class="row">${midi}<button class="btn btn-sm btn-teal" type="button" id="btn-cal-inst">👂 Train my ears</button><span class="small muted">Wear headphones: the band stays out of the mic.</span></div></div>`;
+    $('btn-cal-inst').onclick = () => this.openCalib(cur);
+    if ($('btn-midi')) $('btn-midi').onclick = async () => { await Midi.init(); this.instInfo(cur); };
+  },
+  midiChanged(){ if (this.screen === 'song') this.instInfo(this.inst()); },
 
   /* ---------- vocals: lyrics, timing, melody ---------- */
   voxFileKey(s){ return 'voxfile:' + s.id; },
@@ -61,6 +75,7 @@ Object.assign(UI, {
         <label class="btn btn-sm vox-file">🎵 ${v.melody ? 'Use another song file' : 'Add the song file'}<input type="file" id="vox-file" accept="audio/*" hidden></label>
         <span class="vox-nudge" title="If the words come early or late, move them"><b>Words:</b><button class="btn btn-sm" type="button" data-nudge="-${this.chart.beats}">◀◀ bar</button><button class="btn btn-sm" type="button" data-nudge="-0.5">◀ ½</button><b id="vox-nudge-v">${nudge > 0 ? '+' : ''}${nudge} beats</b><button class="btn btn-sm" type="button" data-nudge="0.5">½ ▶</button><button class="btn btn-sm" type="button" data-nudge="${this.chart.beats}">bar ▶▶</button></span>
         <button class="btn btn-sm" type="button" id="btn-vox-reload">Look up again</button>
+        <button class="btn btn-sm btn-teal" type="button" id="btn-cal-vox">👂 Train my ears</button>
       </div>
       <p class="small muted" id="vox-msg">Headphones help a lot: the game hears your voice, not the band.</p>
       ${paste}</div>`;
@@ -69,6 +84,7 @@ Object.assign(UI, {
       const r = this.vox.rec; r.nudge = Math.max(-64, Math.min(64, (r.nudge || 0) + +b.dataset.nudge)); this.vox.map.nudge = r.nudge; Lyrics.save(s, r);
       $('vox-nudge-v').textContent = `${r.nudge > 0 ? '+' : ''}${r.nudge} beats`;
     });
+    $('btn-cal-vox').onclick = () => this.openCalib('vocals');
     $('btn-vox-reload').onclick = () => { Lyrics.clear(s); Store.set(this.voxFileKey(s), null); this.loadVox(); };
     $('vox-file').onchange = async e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -96,9 +112,29 @@ Object.assign(UI, {
   partPanel(inst){
     const board = $('board'); if (!board) return;
     board.classList.toggle('vox', inst === 'vocals');
+    const band = ['bass', 'piano', 'drums'].includes(inst);
+    board.classList.toggle('band', band);
+    $('band-panel').hidden = !band; $('band-panel').dataset.inst = inst || '';
+    $('drum-pads').hidden = inst !== 'drums';
+    this.bandBox = band ? { big: $('band-big'), sub: $('band-sub'), next: $('band-next'), pic: $('band-pic') } : null;
+    if (this.bandBox) { this.bandBox.big.textContent = ''; this.bandBox.sub.textContent = ''; this.bandBox.next.textContent = ''; this.bandBox.pic.innerHTML = ''; }
     const p = $('vox-panel');
     p.hidden = inst !== 'vocals';
     this.voxBox = inst === 'vocals' ? { cur: $('vox-cur'), next: $('vox-next'), count: $('vox-count') } : null;
     if (this.voxBox) { this.voxBox.cur.textContent = ''; this.voxBox.next.textContent = ''; this.voxBox.count.textContent = ''; }
   },
+});
+
+// Drums: keyboard and pads
+UI.drumPad = function(lane){ const b = lane && document.querySelector(`#drum-pads [data-lane="${lane}"]`); if (!b) return; b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit'); };
+document.addEventListener('keydown', e => {
+  if (UI.screen !== 'game' || !Parts.active || Parts.inst !== 'drums' || UI.openModal || e.repeat) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName)) return;
+  const lane = DRUM_KEYS[e.key.toLowerCase()]; if (!lane) return;
+  e.preventDefault(); e.stopPropagation();
+  Parts.drumHit(lane, AudioEngine.now() - AudioEngine.outputLatency(), 'key');
+}, true);
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest && e.target.closest('#drum-pads [data-lane]'); if (!b) return;
+  e.preventDefault(); Parts.drumHit(b.dataset.lane, AudioEngine.now() - AudioEngine.outputLatency(), 'pad');
 });

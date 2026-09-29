@@ -184,8 +184,12 @@ const Listen = {
   // Measured on real guitars: a chord note that's the only one of its letter scores 0.38+ when played and at most
   // 0.13 when not, so it's clear-cut. A note whose letter is also on another string (G2 + G3 + G4 in G) can't be told
   // apart from that string's overtone (a "ghost" up to 0.49), so those strings only light up when they're very clear.
+  // A mic trained in the ear calibration (Calib) may lower the "heard" bars (a quiet or dull mic) or raise the "wrong
+  // note" bar (a mic that rings with ghosts); an untrained mic keeps the measured defaults.
+  cal: null,
   judge(h, midis, mode){
-    const P = { relaxed: { hear: 0.2, dup: 0.5, wrong: 0.55 }, normal: { hear: 0.25, dup: 0.55, wrong: 0.45 }, strict: { hear: 0.3, dup: 0.6, wrong: 0.38 } }[mode] || { hear: 0.25, dup: 0.55, wrong: 0.45 };
+    const P0 = { relaxed: { hear: 0.2, dup: 0.5, wrong: 0.55 }, normal: { hear: 0.25, dup: 0.55, wrong: 0.45 }, strict: { hear: 0.3, dup: 0.6, wrong: 0.38 } }[mode] || { hear: 0.25, dup: 0.55, wrong: 0.45 };
+    const K = this.cal, P = K ? { hear: P0.hear * K.hearK, dup: P0.dup * K.hearK, wrong: Math.max(P0.wrong, K.wrongMin || 0) } : P0;
     const exp = [...new Set(midis)], pcs = new Set(exp.map(m => m % 12));
     const pcCount = {}; for (const m of exp) pcCount[m % 12] = (pcCount[m % 12] || 0) + 1;
     const res = { ok: false, fit: 0, missing: [], wrong: [], wrongNotes: [], noteState: {}, heardCount: 0, attempt: false, level: 0 };
@@ -215,7 +219,7 @@ const Listen = {
     return res;
   },
   // the notes clearly sounding right now (for the mic check chips)
-  now(){ const h = this.heard(this.reliableT - 0.35, this.reliableT); if (!h) return []; const out = []; for (let m = 38; m <= 88; m++) if (h.note[m] >= 0.4) out.push({ m, s: h.note[m] }); return out.sort((a, b) => b.s - a.s).slice(0, 6); },
+  now(){ const h = this.heard(this.reliableT - 0.35, this.reliableT); if (!h) return []; const out = []; const th = 0.4 * (this.cal ? this.cal.hearK : 1); for (let m = 38; m <= 88; m++) if (h.note[m] >= th) out.push({ m, s: h.note[m] }); return out.sort((a, b) => b.s - a.s).slice(0, 6); },
 };
 
 const LISTEN_WORKER_SRC = `

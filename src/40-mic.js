@@ -10,8 +10,9 @@ const Mic = {
   smallDb: null, prevDb: null, timeBuf: null, longBuf: null, sr: 48000, level: 0, rms: 0,
   fluxHist: [], lastOnset: -1, onsets: [], onsetListeners: new Set(), muteUntil: 0, deafUntil: 0,
   noiseRms: 0.002, rmsHist: [], noise: new Float32Array(128), noiseReady: false, lastLoud: -9, quietFrames: 0,
-  an: null, anTime: 0, anSeq: 0, frame: 0, calibrating: false,
+  an: null, anTime: 0, anSeq: 0, frame: 0, calibrating: false, ears: {},
   available(){ return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); },
+  chan(){ return Settings.inChannel === 0 || Settings.inChannel === 1 ? Settings.inChannel : -1; },
   async start(){
     if (this.on) return true;
     this.failed = ''; this.warn = '';
@@ -20,7 +21,7 @@ const Mic = {
     try { if (ctx.state === 'suspended') await ctx.resume(); } catch (e) {}
     const want = id => {
       // raw sound: no voice processing, which would squash sustained guitar notes
-      const audio = { echoCancellation: !!Settings.echo, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 1 } };
+      const audio = { echoCancellation: !!Settings.echo, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: this.chan() >= 0 ? 2 : 1 } };
       if (id) audio.deviceId = { exact: id };
       return { audio };
     };
@@ -41,11 +42,15 @@ const Mic = {
     }
     try { if (ctx.state !== 'running') await ctx.resume(); } catch (e) {}
     this.src = ctx.createMediaStreamSource(this.stream);
+    // an audio interface: listen to one of its inputs only (the instrument on input 1, a vocal mic on input 2, ...)
+    let node = this.src;
+    if (this.chan() >= 0) { const sp = ctx.createChannelSplitter(2), g = ctx.createGain(); this.src.connect(sp); sp.connect(g, this.chan()); node = g; }
+    this.inNode = node;
     this.anLong = ctx.createAnalyser(); this.anLong.fftSize = Ear.N; this.anLong.smoothingTimeConstant = 0;
     this.anSmall = ctx.createAnalyser(); this.anSmall.fftSize = 2048; this.anSmall.smoothingTimeConstant = 0;
     this.sink = ctx.createGain(); this.sink.gain.value = 0;
-    this.src.connect(this.anLong); this.src.connect(this.anSmall);
-    Listen.attach(ctx, this.src);
+    node.connect(this.anLong); node.connect(this.anSmall);
+    Listen.attach(ctx, node);
     this.anSmall.connect(this.sink); this.anLong.connect(this.sink); this.sink.connect(ctx.destination);
     this.sr = ctx.sampleRate;
     this.smallDb = new Float32Array(this.anSmall.frequencyBinCount);
@@ -55,7 +60,7 @@ const Mic = {
     const tr = this.stream.getAudioTracks()[0];
     const st = (tr && tr.getSettings) ? tr.getSettings() : {};
     this.label = (tr && tr.label) || '';
-    this.deviceId = st.deviceId || Settings.deviceId || 'default';
+    this.deviceId = (st.deviceId || Settings.deviceId || 'default') + (this.chan() >= 0 ? ':in' + (this.chan() + 1) : '');   // each interface input learns its own noise
     // Bluetooth headsets drop to a phone-call mode with muffled 8-16 kHz audio when the mic is on
     if (/hands-?free|headset|airpods|bluetooth|\bbt\b|buds|hfp|wh-1000|bose|beats/i.test(this.label) || (st.sampleRate && st.sampleRate <= 16000)) this.warn = 'bluetooth';
     this.rmsHist = []; this.fluxHist = []; this.an = null; this.lastLoud = -9; this.quietFrames = 0;
@@ -82,10 +87,11 @@ const Mic = {
     const p = (Settings.micProfiles || {})[this.deviceId];
     this.noise.fill(0); this.noiseReady = false; this.noiseRms = 0.002;
     if (p && Array.isArray(p.noise)) { p.noise.forEach((v, i) => { this.noise[36 + i] = +v || 0; }); this.noiseReady = true; this.noiseRms = Math.max(0.0002, +p.rms || 0.002); }
+    this.ears = p && p.ears || {}; Listen.cal = this.ears.guitar || null;          // what the ear calibration learned for this mic
   },
   saveProfile(){
     const all = Settings.micProfiles || (Settings.micProfiles = {});
-    all[this.deviceId] = { noise: Array.from(this.noise.subarray(36, 101), v => +v.toPrecision(3)), rms: +this.noiseRms.toPrecision(3), at: Date.now() };
+    all[this.deviceId] = { ...(all[this.deviceId] || {}), noise: Array.from(this.noise.subarray(36, 101), v => +v.toPrecision(3)), rms: +this.noiseRms.toPrecision(3), at: Date.now() };
     const keys = Object.keys(all); if (keys.length > 8) delete all[keys.sort((a, b) => all[a].at - all[b].at)[0]];
     saveSettings();
   },
