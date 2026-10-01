@@ -217,106 +217,72 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .map .bar{min-width:44px;padding:1px 8px;border:2px solid var(--ink);border-radius:8px;background:#fff;font-weight:800;font-size:13px;text-align:center}
 .tip{padding:10px 14px;border-left:6px solid var(--ink);background:var(--paper);border-radius:0 12px 12px 0;font-weight:600}
 
-/* ---------- game screen ---------- */
-/* the board has a fixed height, so the stage never jumps when a chord's steps or hints change length */
-.game{--bh:min(45vh,540px);display:grid;grid-template-rows:auto minmax(200px,1fr) auto;grid-template-columns:minmax(0,1fr);background:var(--ink);overflow:hidden}
-.hud{display:flex;align-items:center;gap:10px;padding:8px 12px;min-width:0;background:var(--ink);color:var(--paper)}
-.hud .btn{box-shadow:0 3px 0 #000}
-.hud .ht{min-width:0;flex:1}
-.hud .ht b{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
-.hud .ht span{font-size:13px;opacity:.8;white-space:nowrap}
-/* score + hype: a wooden score plaque over a vertical bamboo tube that fills up as the crowd heats up */
-.gmeter{position:relative;z-index:2;display:grid;justify-items:center;align-content:center;gap:8px;grid-area:meter}
-.gmeter .sc{text-align:center;font-variant-numeric:tabular-nums;min-width:96px;padding:4px 12px 6px;border:3.5px solid var(--ink);border-radius:10px;box-shadow:4px 5px 0 var(--ink);color:#F4E7C8;
-  background:repeating-linear-gradient(3deg,rgba(255,255,255,.05) 0 3px,transparent 3px 12px),linear-gradient(180deg,#5A3A22,#3E2616);transform:rotate(2deg)}
-.gmeter .sc small{display:block;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
-.gmeter .sc b{display:block;font-family:var(--display);font-weight:400;font-size:30px;line-height:1;color:var(--sun);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill}
-.gmeter .sc span{display:block;font-size:12px;font-weight:800;color:#F4E7C8;white-space:nowrap}
-.gmeter .hype{display:grid;justify-items:center;gap:6px;width:auto}
-.gmeter .hype-bar{position:relative;width:34px;height:var(--mh,150px);border:3.5px solid var(--ink);border-radius:18px;overflow:hidden;box-shadow:4px 5px 0 rgba(30,27,46,.85);
-  background:linear-gradient(90deg,#5E6E1C,#A9BD4C 30%,#D6E27F 45%,#9CB03E 70%,#5E6E1C)}
-.gmeter .hype-bar i{position:absolute;left:0;right:0;bottom:0;height:0;width:auto;background:linear-gradient(0deg,var(--teal),var(--sun) 55%,var(--coral));transition:height .25s ease-out;box-shadow:inset 6px 0 0 rgba(255,255,255,.3)}
-.gmeter .hype-bar em{position:absolute;left:-2px;right:-2px;height:4px;background:var(--ink);border-radius:2px}
-.gmeter .hype-bar em:nth-of-type(1){bottom:18%}.gmeter .hype-bar em:nth-of-type(2){bottom:40%}.gmeter .hype-bar em:nth-of-type(3){bottom:62%}.gmeter .hype-bar em:nth-of-type(4){bottom:85%}
-.gmeter .hype-bar::after{content:none}
-#hype-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#F4E7C8;background:#3E2616;border:2.5px solid var(--ink);border-radius:8px;padding:0 8px;white-space:nowrap}
-.gmeter .hype.l4 #hype-label{color:var(--sun);background:var(--coral);animation:throb .5s ease-in-out infinite}
-.gmeter .sc b.bump{animation:namePop .3s cubic-bezier(.3,1.8,.5,1)}
-
-.stage-wrap{position:relative;min-height:0}
+/* ---------- game screen: the venue fills the whole screen; the HUD floats on top of it and the guitar floats at the bottom ---------- */
+.game{position:fixed;inset:0;overflow:hidden;background:#0B0A12}
+.stage-wrap{position:absolute;inset:0}
 .stage-fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 #stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation;cursor:pointer}
-/* ---- game sheet: a woven bamboo blind framed with bamboo poles, a hanging wooden sign and a rosewood neck ---- */
-.board.ww{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;justify-items:center;
-  padding:48px 52px 22px;min-height:0;max-height:var(--bh);overflow:hidden auto;overscroll-behavior:contain;border-top:5px solid var(--ink);
-  background:linear-gradient(90deg,rgba(40,20,0,.22),transparent 12%,transparent 88%,rgba(40,20,0,.22)),linear-gradient(180deg,rgba(40,20,0,.25),transparent 30%),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%23D8B46C'/%3E%3Crect y='0' width='120' height='5' fill='%23DDBB74'/%3E%3Crect y='5' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='1' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='6' width='120' height='5' fill='%23D4AE66'/%3E%3Crect y='11' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='7' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='12' width='120' height='5' fill='%23E2C27E'/%3E%3Crect y='17' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='13' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='18' width='120' height='5' fill='%23D8B46C'/%3E%3Crect y='23' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='19' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='24' width='120' height='5' fill='%23CFA75E'/%3E%3Crect y='29' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='25' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='30' width='120' height='5' fill='%23E0BF78'/%3E%3Crect y='35' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='31' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='36' width='120' height='5' fill='%23D6B06A'/%3E%3Crect y='41' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='37' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='42' width='120' height='5' fill='%23DCBA72'/%3E%3Crect y='47' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='43' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='48' width='120' height='5' fill='%23D1AA62'/%3E%3Crect y='53' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='49' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect y='54' width='120' height='5' fill='%23E3C480'/%3E%3Crect y='59' width='120' height='1' fill='%238A6A34' opacity='.55'/%3E%3Crect y='55' width='120' height='1' fill='%23F3DCA2' opacity='.5'/%3E%3Crect x='58' width='3' height='60' fill='%235A3A1A' opacity='.75'/%3E%3Crect x='56' y='1.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='7.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='13.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='19.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='25.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='31.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='37.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='43.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='49.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3Crect x='56' y='55.5' width='7' height='3' rx='1.5' fill='%236E4A22'/%3E%3C/svg%3E") 0 0/120px 60px,#D8B46C}
-.board.ww::before{content:"";position:absolute;left:0;right:0;top:0;height:34px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='34'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%235E6E1C'/%3E%3Cstop offset='.22' stop-color='%23A9BD4C'/%3E%3Cstop offset='.4' stop-color='%23D6E27F'/%3E%3Cstop offset='.55' stop-color='%23B5C757'/%3E%3Cstop offset='1' stop-color='%235E6E1C'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='170' height='34' fill='url(%23g)'/%3E%3Crect x='10' y='9' width='136' height='3' rx='1.5' fill='%23F1F6C4' opacity='.45'/%3E%3Cpath d='M30 26 q30 1 60 0' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.5'/%3E%3Crect x='156' y='-1' width='8' height='36' rx='3' fill='%238FA235'/%3E%3Crect x='159' y='-1' width='2.5' height='36' fill='%234E5C15'/%3E%3Crect x='163' y='-1' width='1.5' height='36' fill='%23E4EEA0' opacity='.7'/%3E%3C/svg%3E") 0 0/170px 34px;border-bottom:4px solid var(--ink);box-shadow:0 5px 0 rgba(30,27,46,.25);z-index:2}
-.bpole{position:absolute;top:0;bottom:0;width:34px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='150'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%235E6E1C'/%3E%3Cstop offset='.22' stop-color='%23A9BD4C'/%3E%3Cstop offset='.4' stop-color='%23D6E27F'/%3E%3Cstop offset='.55' stop-color='%23B5C757'/%3E%3Cstop offset='1' stop-color='%235E6E1C'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='34' height='150' fill='url(%23g)'/%3E%3Crect x='9' y='10' width='3' height='118' rx='1.5' fill='%23F1F6C4' opacity='.45'/%3E%3Cpath d='M4 40 q1 20 0 44' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.5'/%3E%3Cpath d='M26 20 q-1 30 0 70' stroke='%236E7F22' stroke-width='1' fill='none' opacity='.45'/%3E%3Crect x='-1' y='136' width='36' height='8' rx='3' fill='%238FA235'/%3E%3Crect x='-1' y='139' width='36' height='2.5' fill='%234E5C15'/%3E%3Crect x='-1' y='143' width='36' height='1.5' fill='%23E4EEA0' opacity='.7'/%3E%3C/svg%3E") 0 18px/34px 150px;border-left:4px solid var(--ink);border-right:4px solid var(--ink);z-index:1}
-.bpole.l{left:0}.bpole.r{right:0}
-.blash{position:absolute;top:-4px;width:44px;height:44px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Cg stroke='%231E1B2E' stroke-width='2'%3E%3Cpath d='M4 8 L40 36 L36 40 L0 12Z' fill='%23C9A15E'/%3E%3Cpath d='M40 8 L4 36 L8 40 L44 12Z' fill='%23B38A48'/%3E%3Cpath d='M4 20 L40 20 L40 25 L4 25Z' fill='%23D9B26E'/%3E%3C/g%3E%3C/svg%3E") 0 0/44px 44px;z-index:3}
-.blash.l{left:-5px}.blash.r{right:-5px}
-.bleaf{position:absolute;top:22px;width:120px;height:80px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80' viewBox='0 0 120 80'%3E%3Cg stroke='%231E1B2E' stroke-width='2.5' stroke-linejoin='round'%3E%3Cpath d='M8 10 C40 4 70 8 104 26 C70 26 40 22 8 10Z' fill='%237FA83A'/%3E%3Cpath d='M14 16 C34 30 50 50 58 76 C40 58 24 40 14 16Z' fill='%236A9430'/%3E%3Cpath d='M20 12 C50 26 80 44 112 60 C76 58 44 40 20 12Z' fill='%2393BE48'/%3E%3C/g%3E%3Cg stroke='%234E7020' stroke-width='1.2' fill='none'%3E%3Cpath d='M12 11 C44 12 72 18 100 25'/%3E%3Cpath d='M16 18 C30 36 44 54 56 72'/%3E%3Cpath d='M24 15 C54 30 82 46 108 58'/%3E%3C/g%3E%3C/svg%3E") 0 0/120px 80px;z-index:3;pointer-events:none;transform-origin:10px 10px;animation:sway 4s ease-in-out infinite}
-.bleaf.l{left:18px}.bleaf.r{right:18px;transform:scaleX(-1);animation-name:swayR}
-@keyframes sway{0%,100%{rotate:0deg}50%{rotate:4deg}}@keyframes swayR{0%,100%{transform:scaleX(-1) rotate(0)}50%{transform:scaleX(-1) rotate(4deg)}}
-.cmd-row{position:relative;z-index:2;width:100%;max-width:1040px;display:flex;flex-wrap:wrap;gap:16px 22px;align-items:center;justify-content:center}
-/* the command, painted on a wooden sign hanging from two ropes */
-.cmd{position:relative;display:flex;align-items:baseline;gap:6px;transform:rotate(-3deg);transform-origin:50% -30px;padding:4px 22px 8px;border:4px solid var(--ink);border-radius:10px;box-shadow:5px 6px 0 var(--ink);
-  background:repeating-linear-gradient(3deg,rgba(255,255,255,.05) 0 3px,transparent 3px 12px),linear-gradient(180deg,#5A3A22,#3E2616);font-family:var(--display);line-height:1;white-space:nowrap;animation:signSwing 3s ease-in-out infinite}
-.cmd::before,.cmd::after{content:"";position:absolute;top:-30px;width:3px;height:30px;background:#7A5A2A;border-left:1px solid var(--ink)}
-.cmd::before{left:24px;transform:rotate(14deg)}.cmd::after{right:24px;transform:rotate(-14deg)}
-@keyframes signSwing{0%,100%{rotate:0deg}50%{rotate:1.6deg}}
-.cmd-verb{font-size:26px;color:#F4E7C8;text-transform:uppercase}
-.cmd b{font-weight:400;font-size:62px;color:var(--sun);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:3px 4px 0 var(--ink)}
-.cmd-bang{font-size:46px;color:#F4E7C8}
-.cmd-sub{position:relative;z-index:2;font-weight:800;font-size:13px;color:#F4E7C8;background:#3E2616;border:2px solid var(--ink);border-radius:8px;padding:0 10px}
-.cmd-sub:empty{display:none}
-/* hear it: a red name-seal stamp */
-.hear-btn{width:84px;height:84px;border-radius:50%;border:4px solid var(--ink);background:radial-gradient(circle at 38% 32%,#EE5A4A,#C92A22 70%);color:#FFF3E0;display:grid;place-items:center;align-content:center;gap:0;
-  font:400 18px/1 var(--display);box-shadow:4px 5px 0 var(--ink);transform:rotate(4deg);cursor:pointer;transition:transform .12s;position:relative;padding:0}
-.hear-btn::after{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid rgba(255,235,220,.6)}
-.hear-btn .hear-ico{display:none}
-.hear-btn small{display:block;font:800 9.5px/1.1 var(--ui);max-width:62px;margin-top:3px;opacity:.9}
-.hear-btn:hover{transform:rotate(-3deg) scale(1.05)}.hear-btn:active{transform:translate(3px,4px);box-shadow:1px 1px 0 var(--ink)}
-.cmd-right{display:flex;gap:14px;align-items:center}
-/* next: a wooden shrine plaque */
-.cmd-right .next{position:relative;display:block;text-align:center;width:104px;padding:18px 8px 8px;border:0;background:#E8C98A;clip-path:polygon(50% 0,100% 24%,100% 100%,0 100%,0 24%);filter:drop-shadow(3px 4px 0 var(--ink));transform:rotate(-3deg)}
-.cmd-right .next::before{content:"";position:absolute;inset:0;clip-path:inherit;border:3.5px solid var(--ink);pointer-events:none}
-.cmd-right .next #next-svg{display:none}
-.cmd-right .next small{display:block;font-weight:800;font-size:12px;color:#5A3A22;letter-spacing:.08em}
-.cmd-right .next b{font-family:var(--display);font-weight:400;font-size:30px;color:var(--ink);line-height:1}
-.skip-btn{border:3px solid var(--ink);border-radius:10px;background:#F4E7C8;font:800 15px var(--ui);padding:5px 12px;box-shadow:3px 4px 0 var(--ink);cursor:pointer;color:#3E2616}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:0!important;padding:0!important;border:0!important}
+/* HUD: pause + song on the left, the hype meter in the middle, the score on the right, all stickers on the scene */
+.hud{position:absolute;top:0;left:0;right:0;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 0;pointer-events:none;color:var(--ink)}
+.hud>*>*{pointer-events:auto}
+.hud-l{display:flex;align-items:center;gap:10px;min-width:0}
+.hud-r{display:flex;align-items:flex-start;justify-content:flex-end;gap:10px;min-width:0}
+.hud .btn-icon{flex:none;width:46px;min-height:46px;height:46px;padding:0;border-radius:50%;border-width:3.5px;box-shadow:0 4px 0 #000;font-size:15px}
+.hud .ht{min-width:0;padding:2px 14px 4px;border:3px solid var(--ink);border-radius:14px;background:var(--paper);box-shadow:0 4px 0 rgba(0,0,0,.55);transform:rotate(-1.5deg)}
+.hud .ht b{display:block;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+.hud .ht span{display:block;font-size:12px;font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
+.hud .chip{flex:none;margin-top:6px;box-shadow:0 3px 0 rgba(0,0,0,.5)}
+/* hype: one long segmented bar across the top, like a microgame timer; the level's name hangs under it */
+.gmeter{display:grid;justify-items:center;gap:0;padding-top:4px}
+.gmeter .hype{display:grid;justify-items:center;gap:0}
+.gmeter .hype-bar{position:relative;width:clamp(150px,30vw,400px);height:28px;border:4px solid var(--ink);border-radius:16px;overflow:hidden;background:#2A2440;box-shadow:0 5px 0 rgba(0,0,0,.55),inset 0 4px 0 rgba(0,0,0,.35)}
+.gmeter .hype-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:repeating-linear-gradient(-60deg,rgba(255,255,255,.18) 0 8px,transparent 8px 18px),linear-gradient(90deg,var(--teal),var(--sun) 55%,var(--coral));transition:width .25s ease-out;box-shadow:inset 0 5px 0 rgba(255,255,255,.4),inset 0 -4px 0 rgba(0,0,0,.18)}
+.gmeter .hype-bar em{position:absolute;top:-3px;bottom:-3px;width:4px;margin-left:-2px;background:var(--ink)}
+.gmeter .hype-bar em:nth-of-type(1){left:18%}.gmeter .hype-bar em:nth-of-type(2){left:40%}.gmeter .hype-bar em:nth-of-type(3){left:62%}.gmeter .hype-bar em:nth-of-type(4){left:85%}
+#hype-label{position:relative;z-index:1;margin-top:-3px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:var(--sun);border:3px solid var(--ink);border-radius:9px;padding:0 9px;white-space:nowrap;box-shadow:0 3px 0 rgba(0,0,0,.45);transform:rotate(1.5deg)}
+.gmeter .hype.l4 #hype-label{color:#fff;background:var(--coral);animation:throb .5s ease-in-out infinite}
+.gmeter .hype.l4 .hype-bar{box-shadow:0 5px 0 rgba(0,0,0,.55),0 0 18px 2px rgba(255,94,126,.6)}
+/* score: a big inked number */
+.hud .sc{display:grid;justify-items:end;text-align:right;font-variant-numeric:tabular-nums;line-height:1}
+.hud .sc b{display:block;font-family:var(--display);font-weight:400;font-size:38px;line-height:.95;color:var(--sun);-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink),4px 5px 0 var(--ink);min-width:1ch}
+.hud .sc b.bump{animation:namePop .3s cubic-bezier(.3,1.8,.5,1)}
+.hud .sc span{display:inline-block;margin-top:2px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--paper);background:rgba(30,27,46,.85);border:2px solid var(--ink);border-radius:8px;padding:0 8px;white-space:nowrap}
+/* the guitar: headstock (with the chord to play), a timing lane along the top of the neck, the neck itself. No frame round it. */
+.board.ww{position:absolute;left:0;right:0;bottom:0;z-index:3;display:grid;justify-items:center;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.board.ww button,.board.ww select,.board.ww input,.board.ww .band-panel,.board.ww .vox-panel{pointer-events:auto}
+.fb-card{position:relative;display:block;width:max-content;max-width:100%}
+#fretboard{display:block;overflow:visible}
+.fb-lane{position:absolute;pointer-events:none}
+/* hear it: a red stamp on the headstock's corner */
+.hear-btn{position:absolute;z-index:3;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;border:4px solid var(--ink);background:radial-gradient(circle at 38% 32%,#EE5A4A,#C92A22 70%);color:#FFF3E0;display:grid;place-items:center;align-content:center;gap:0;
+  font:400 14px/1 var(--display);box-shadow:3px 4px 0 var(--ink);transform:rotate(-8deg);cursor:pointer;transition:transform .12s;padding:0}
+.hear-btn::after{content:"";position:absolute;inset:4px;border-radius:50%;border:2px solid rgba(255,235,220,.6);pointer-events:none}
+.hear-btn small{display:none}
+.hear-btn:hover{transform:rotate(4deg) scale(1.08)}.hear-btn:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--ink)}
+.skip-btn{white-space:nowrap;border:3px solid var(--ink);border-radius:10px;background:var(--paper);font:800 14px var(--ui);padding:3px 12px;box-shadow:3px 4px 0 var(--ink);cursor:pointer;color:var(--ink)}
 .skip-btn[hidden]{display:none}
-.fb-card .skip-btn{position:absolute;right:22px;bottom:-17px;z-index:3;padding:2px 12px;font-size:14px;transform:rotate(-2deg)}
-/* the neck sits in a cream frame pegged to the blind */
-.fb-card{position:relative;z-index:2;width:100%;max-width:1040px;border:5px solid var(--ink);border-radius:16px;padding:18px 16px 6px;box-shadow:7px 9px 0 rgba(30,27,46,.85);
-  background:linear-gradient(180deg,#FBF1DC,#F1E1BF)}
-.screw{position:absolute;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#D9AE6B,#7A5A2A);border:3px solid var(--ink)}
-.screw::after{content:none}
-.screw.a{left:-12px;top:-12px}.screw.b{right:-12px;top:-12px}.screw.c{left:-12px;bottom:-12px}.screw.d{right:-12px;bottom:-12px}
-.fb-sticker{position:absolute;left:50%;top:-17px;translate:-50% 0;white-space:nowrap;z-index:3;border:3px solid var(--ink);border-radius:6px;padding:1px 14px;font:800 14px var(--ui);background:#FFF7E6;transform:rotate(2deg);box-shadow:2px 3px 0 var(--ink);animation:namePop .35s cubic-bezier(.3,1.8,.5,1)}
+.fb-card .skip-btn{position:absolute;z-index:3;transform:translate(-100%,-50%) rotate(-2deg)}
+.cmd-sub{position:absolute;z-index:3;transform:translate(0,-100%);font-weight:800;font-size:12px;color:var(--ink);background:var(--paper);border:2.5px solid var(--ink);border-radius:8px;padding:0 9px;white-space:nowrap;box-shadow:2px 3px 0 rgba(0,0,0,.45)}
+.cmd-sub:empty{display:none}
+.fb-sticker{position:absolute;z-index:3;left:50%;top:0;translate:-50% -30%;white-space:nowrap;border:3px solid var(--ink);border-radius:8px;padding:1px 14px;font:800 14px var(--ui);background:var(--paper);transform:rotate(2deg);box-shadow:2px 3px 0 var(--ink);animation:namePop .35s cubic-bezier(.3,1.8,.5,1)}
 .fb-sticker:empty{display:none}
 .fb-sticker.bad{background:#D8392B;color:#fff}.fb-sticker.good{background:var(--good);color:#fff}
-#fretboard{width:100%;height:auto;display:block;max-height:calc(var(--bh) - 170px);margin:0 auto}
-/* landscape screens: the sign, stamp and plaque stack in a column beside the neck, so the sheet stays short and the band gets the room */
-@media (orientation:landscape) and (min-width:761px){
-  /* three columns with equal outer ones, so the neck's frame sits in the middle of the page and the sign sits in the left one */
-  .board.ww{grid-template-columns:minmax(200px,1fr) minmax(0,max-content) minmax(200px,1fr);grid-template-areas:"cmd fb meter" "sub fb meter";align-items:center;column-gap:24px;padding:46px 56px 18px}
-  .board.ww .cmd-row{justify-self:center}
-  .board.ww .gmeter{--mh:calc(var(--bh) - 176px);justify-self:center}
-  .bleaf.r{display:none}
-  .board.ww .cmd-row{grid-area:cmd;flex-direction:column;flex-wrap:nowrap;gap:14px;align-self:center}
-  .board.ww .cmd-sub{grid-area:sub;align-self:start}
-  .board.ww .fb-card{grid-area:fb;justify-self:center}
-  .board.ww .cmd b{font-size:54px}.board.ww .cmd-verb{font-size:22px}.board.ww .cmd-bang{font-size:40px}
-  .board.ww .cmd-right{gap:12px}
-  .board.ww .hear-btn{width:76px;height:76px}
-  .board.ww .cmd-right .next{width:88px;padding:14px 6px 6px}
-  .board.ww .cmd-right{flex-wrap:nowrap;justify-content:center}
-  .board.ww .hear-btn{width:70px;height:70px;font-size:15px}.board.ww .hear-btn small{font-size:8.5px;max-width:52px}
-  .board.ww .cmd-right .next{width:80px}
-  #fretboard{height:calc(var(--bh) - 112px);max-height:none;width:auto;max-width:100%}
-  .board.ww .fb-card{width:auto;max-width:100%}
-  .bleaf{width:84px;height:56px;background-size:84px 56px}
+#fretboard .fb-now{transform-box:fill-box;transform-origin:center}
+#fretboard .fb-now.pop{animation:namePop .45s cubic-bezier(.3,1.8,.5,1)}
+#fretboard .fghost{opacity:0;transition:opacity .18s ease-out}
+#fretboard.ghost .fghost{opacity:1}
+#fretboard.strum .fstring:not(.heard):not(.miss){animation:strumFlash .28s ease-out}
+@keyframes strumFlash{0%{stroke:#FFFFFF}100%{}}
+@media (max-width:600px){
+  .hud{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"l r" "m m";row-gap:4px;padding-inline:10px}
+  .hud-l{grid-area:l}.hud-r{grid-area:r}.gmeter{grid-area:m;padding-top:0}
+  .gmeter .hype{grid-template-columns:auto auto;align-items:center;gap:8px}
+  .gmeter .hype-bar{width:min(62vw,300px);height:20px;border-width:3px}
+  #hype-label{margin-top:0;font-size:10px}
+  .hud .btn-icon{width:40px;height:40px;min-height:40px}
+  .hud .ht b{font-size:14px}.hud .sc b{font-size:28px}
+  .hear-btn{width:46px;height:46px;margin:-23px 0 0 -23px;font-size:12px}
 }
 .ww-spark{display:none}
 .legend{display:none}
@@ -664,16 +630,16 @@ input[type=range]{width:100%;accent-color:var(--coral)}
 .vox-nudge b{min-width:70px;text-align:center;font-size:14px}
 .vox-paste summary{cursor:pointer;font-weight:800}
 .vox-paste textarea{width:100%;margin:8px 0;font:inherit;padding:8px;border:3px solid var(--ink);border-radius:12px}
-.board.vox .cmd-row,.board.vox .cmd-sub,.board.vox .fb-card{display:none}
-.vox-panel{position:relative;display:grid;gap:6px;align-content:center;min-height:130px;padding:14px 18px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink);text-align:center}
+.board.vox .fb-card{display:none}
+.vox-panel{position:relative;width:min(900px,100%);display:grid;gap:6px;align-content:center;min-height:130px;padding:14px 18px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink);text-align:center}
 .vox-cur{font-family:var(--display);font-size:clamp(24px,4.2vw,44px);line-height:1.1;color:rgba(30,27,46,.35)}
 .vox-cur.on{color:var(--ink)}
 .vox-cur span{display:inline-block;transition:color .08s,transform .12s}
 .vox-cur span.sung{color:var(--coral);transform:translateY(-2px)}
 .vox-next{font-weight:800;font-size:clamp(15px,2vw,20px);opacity:.55}
 .vox-count{position:absolute;top:8px;left:0;right:0;font-size:14px;letter-spacing:.4em;color:var(--coral)}
-.board.band .cmd-row,.board.band .cmd-sub,.board.band .fb-card{display:none}
-.band-panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;min-height:130px;padding:12px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
+.board.band .fb-card{display:none}
+.band-panel{width:min(900px,100%);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;min-height:130px;padding:12px 16px;border:4px solid var(--ink);border-radius:20px;background:var(--paper);box-shadow:0 6px 0 var(--ink)}
 .band-panel .bp-t{display:grid;gap:2px;min-width:0}
 .band-panel small{font-weight:800;text-transform:uppercase;letter-spacing:.08em;opacity:.6}
 .band-panel b{font-family:var(--display);font-weight:400;font-size:clamp(34px,5vw,56px);line-height:1}
@@ -825,6 +791,18 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 .m-story b{color:var(--sun)}
 .m-battle{background:var(--grape);color:#fff}
 .m-battle b{text-shadow:2px 2px 0 var(--ink)}
+/* laptop screens are wide but short: size the logo, bubble and band by the height too, and keep clear air between the hero and the buttons */
+.wrap.menu{padding-block:clamp(10px,1.8vh,18px) clamp(14px,2.6vh,28px)}
+.menu .topbar{margin-bottom:clamp(4px,1vh,10px)}
+.menu .hero{margin-block:0 clamp(34px,5.5vh,56px);min-height:0}
+.menu .logo{font-size:clamp(56px,min(11vw,16vh),128px)}
+.menu .tagbox{margin-top:clamp(14px,2.8vh,30px);font-size:clamp(16px,min(2vw,3.1vh),23px);max-width:min(29ch,100%)}
+.menu .title-art{max-width:min(100%,calc((100dvh - 350px) * 1.35))}
+@media (max-height:820px) and (min-width:761px){
+  .mcard{min-height:0;padding:12px 14px 12px 12px}
+  .mcard .mi{width:clamp(64px,min(7.4vw,13vh),104px)}
+  .mcard b{font-size:clamp(20px,min(2.4vw,4.4vh),31px)}
+}
 .page-h{font-family:var(--display);font-weight:400;font-size:clamp(46px,8vw,84px);line-height:.9;margin:6px 0 16px;color:var(--paper);text-shadow:4px 0 0 var(--ink),-4px 0 0 var(--ink),0 4px 0 var(--ink),0 -4px 0 var(--ink),6px 7px 0 var(--ink)}
 .page-h span{color:var(--coral)}
 @media (max-width:760px){
@@ -858,30 +836,6 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
   .mode span{font-size:12px!important;line-height:1.2!important}
 
   .map .row{grid-template-columns:1fr}
-  .hud .ht span{display:none}
-}
-/* phones and portrait tablets: fretboard full width, then the chord cards, buttons, hint and steps; the board scrolls */
-@media (max-width:760px),(orientation:portrait) and (max-width:1100px){
-  .game{--bh:min(60vh,620px)}
-  #fretboard{max-height:calc(var(--bh) - 125px)}
-  .board.ww{padding:40px 28px 16px;gap:8px;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cmd cmd" "sub sub" "fb meter";column-gap:10px}
-  .board.ww .cmd-row{grid-area:cmd;justify-self:center}.board.ww .cmd-sub{grid-area:sub;justify-self:center}.board.ww .fb-card{grid-area:fb}
-  .gmeter{gap:6px}.gmeter .sc{min-width:0;padding:2px 6px 4px}.gmeter .sc b{font-size:20px}.gmeter .sc small{font-size:8px}.gmeter .sc span{font-size:9px}
-  .gmeter .hype-bar{width:24px;--mh:110px}#hype-label{font-size:8px;padding:0 4px;max-width:64px;white-space:normal;text-align:center;line-height:1.1}
-  .bleaf{display:none}
-  .board.ww .cmd-row{flex-wrap:nowrap;gap:10px}
-  .board.ww .cmd{padding:2px 12px 5px}
-  .board.ww .cmd::before,.board.ww .cmd::after{top:-22px;height:22px}
-  .bpole{width:26px;background-size:26px 115px}
-  .bleaf{width:84px;height:56px;background-size:84px 56px;top:24px}
-  .cmd-row{gap:12px 14px}
-  .cmd b{font-size:34px;-webkit-text-stroke-width:2.5px}.cmd-verb{font-size:15px}.cmd-bang{font-size:26px}
-  .hear-btn{width:54px;height:54px;font-size:12px;border-width:3px}.hear-btn small{font-size:7px;max-width:42px}.hear-btn::after{inset:4px}
-  .cmd-right{gap:8px}
-  .cmd-right .next{width:60px;padding:11px 4px 4px}.cmd-right .next b{font-size:19px}.cmd-right .next small{font-size:9px}
-  .fb-card{padding:14px 4px 2px;border-radius:14px;border-width:4px}
-  .legend,.fb-key{font-size:12px;gap:4px 6px}
-  .hud .ht span{display:none}
 }
 @media (max-width:520px){
   .topbar{flex-wrap:nowrap;align-items:flex-start;gap:6px}
@@ -889,25 +843,7 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
   .topbar .btn-sm,.topbar .chip{font-size:12px;padding:5px 9px}
   .search{padding:8px;gap:6px}
   .search input{font-size:16px}
-  .hud{gap:6px;padding:6px 8px}
   #hud-mic-text{display:none}
-  .now b{font-size:30px}
-}
-/* short landscape (phones on their side): stage on the left, the sheet on the right */
-@media (max-height:520px) and (min-width:640px){
-  .game{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);grid-template-rows:auto minmax(0,1fr)}
-  .game .hud{grid-column:1/-1}
-  .game .board.ww{border-top:0;border-left:5px solid var(--ink);max-height:none;height:100%;padding:40px 30px 12px;
-    grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cmd cmd" "sub sub" "fb meter";column-gap:10px;row-gap:8px;align-items:start}
-  .game .board.ww .cmd-row{flex-direction:row;justify-self:center}
-  .game .board.ww .cmd b{font-size:34px}.game .board.ww .cmd-verb{font-size:15px}.game .board.ww .cmd-bang{font-size:26px}
-  .game .board.ww .hear-btn{width:54px;height:54px;font-size:12px}.game .board.ww .hear-btn small{font-size:7px;max-width:42px}
-  .game .board.ww .cmd-right .next{width:60px;padding:11px 4px 4px}.game .board.ww .cmd-right .next b{font-size:19px}
-  .game .board.ww .fb-card{width:100%}
-  .game #fretboard{width:100%;height:auto;max-height:none}
-  .game .board.ww .gmeter{--mh:90px}.gmeter .sc b{font-size:20px}.bleaf{display:none}
-  #fretboard{max-height:none}
-  .cmd b{font-size:44px}.cmd-verb{font-size:22px}.cmd-bang{font-size:36px}
 }
 @media (prefers-reduced-motion:reduce){
   .eq i,.stamp,.tk,.beam,.btn-big,.sign,#fretboard .fdot,.ww-spark,.bleaf,.cmd,#fretboard .flight.heard,#fretboard .flight.miss,#fretboard .fring.miss,#fretboard .fwrong,.card:hover .stub,.now b.pop,.steps li{animation:none!important}
@@ -1107,32 +1043,31 @@ b.p0,b.p1,b.p2,b.p3{background:none;color:var(--sun)}
 
 <!-- ============ GAME ============ -->
 <section id="scr-game" class="screen game" hidden>
-  <div class="hud">
-    <button class="btn btn-sm btn-icon" id="btn-pause" type="button" aria-label="Pause">❚❚</button>
-    <div class="ht"><b id="hud-title">Song</b><span id="hud-sub">Practice</span></div>
-    <span class="chip" id="hud-mic"><span class="dot" id="hud-mic-dot"></span><span id="hud-mic-text">Mic</span></span>
-  </div>
   <div class="stage-wrap"><canvas id="stage" aria-label="Rhythm stage. Tap or press space to strum when no mic is on."></canvas></div>
-  <div class="board ww" id="board">
-    <i class="bpole l" aria-hidden="true"></i><i class="bpole r" aria-hidden="true"></i><i class="blash l" aria-hidden="true"></i><i class="blash r" aria-hidden="true"></i><i class="bleaf l" aria-hidden="true"></i><i class="bleaf r" aria-hidden="true"></i>
-    <div class="cmd-row">
-      <div class="cmd" aria-live="polite"><span class="cmd-verb">Play</span><b id="now-name">G</b><span class="cmd-bang">!</span></div>
-      <div class="cmd-right">
-        <button class="hear-btn" id="btn-hear" type="button" aria-label="Hear the chord">HEAR<small>tap again: arpeggio</small></button>
-        <div class="next" id="next-box"><div id="next-svg"></div><div><small>Next</small><b id="next-name">C</b></div></div>
-      </div>
+  <div class="hud" id="hud">
+    <div class="hud-l">
+      <button class="btn btn-sm btn-icon" id="btn-pause" type="button" aria-label="Pause">❚❚</button>
+      <div class="ht"><b id="hud-title">Song</b><span id="hud-sub">Practice</span></div>
     </div>
-    <span class="cmd-sub" id="now-sub"></span>
-    <div class="fb-card">
-      <i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>
-      <span class="fb-sticker" id="fb-status"></span>
-      <button class="skip-btn" id="btn-skip" type="button">Skip ›</button>
-      <svg id="fretboard" viewBox="0 26 908 262" role="img" aria-label="Fretboard showing finger positions and which strings the game hears"></svg>
-    </div>
-    <div class="gmeter" aria-label="Score and crowd hype">
-      <div class="sc"><b id="hud-score">0</b><span id="hud-score-l">score</span></div>
+    <div class="gmeter" aria-label="Crowd hype">
       <div class="hype" title="Crowd hype: play chords quickly and cleanly to fire up the band"><div class="hype-bar"><i id="hype-fill"></i><em></em><em></em><em></em><em></em></div><span id="hype-label">Warming up</span></div>
     </div>
+    <div class="hud-r">
+      <div class="sc" aria-label="Score"><b id="hud-score">0</b><span id="hud-score-l">score</span></div>
+      <span class="chip" id="hud-mic"><span class="dot" id="hud-mic-dot"></span><span id="hud-mic-text">Mic</span></span>
+    </div>
+  </div>
+  <div class="board ww" id="board">
+    <div class="fb-card" id="fb-card">
+      <svg id="fretboard" viewBox="0 26 908 262" role="img" aria-label="Guitar neck: the chord to play on the headstock, the chords coming up along the top of the neck, finger positions on the strings, and which strings the game hears"></svg>
+      <canvas class="fb-lane" id="fb-lane" aria-hidden="true"></canvas>
+      <span class="fb-sticker" id="fb-status"></span>
+      <span class="cmd-sub" id="now-sub"></span>
+      <button class="hear-btn" id="btn-hear" type="button" aria-label="Hear the chord" title="Hear the chord (H). Tap again for an arpeggio.">HEAR<small>tap again: arpeggio</small></button>
+      <button class="skip-btn" id="btn-skip" type="button">Skip ›</button>
+    </div>
+    <div class="sr-only" aria-live="polite">Play <b id="now-name">G</b></div>
+    <div class="sr-only" id="next-box"><div id="next-svg"></div><small>Next</small> <b id="next-name">C</b></div>
     <div class="band-panel" id="band-panel" hidden><div class="bp-t"><small>Play</small><b id="band-big"></b><span id="band-sub"></span><em id="band-next"></em></div><div class="bp-pic" id="band-pic"></div>
       <div class="drum-pads" id="drum-pads" hidden><button type="button" data-lane="hat">HAT<small>K</small></button><button type="button" data-lane="snare">SNARE<small>J</small></button><button type="button" data-lane="kick">KICK<small>F</small></button></div></div>
     <div class="vox-panel" id="vox-panel" hidden><span class="vox-count" id="vox-count"></span><div class="vox-cur" id="vox-cur"></div><div class="vox-next" id="vox-next"></div></div>

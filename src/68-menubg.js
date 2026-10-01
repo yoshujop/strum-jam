@@ -184,8 +184,8 @@ const ModeIcons = {
     if (hv > 0.3) for (let i = 0; i < 3; i++) { const cyc = (t * 0.7 + i / 3) % 1; c.globalAlpha = Math.sin(cyc * Math.PI) * hv; this.star(c, w * (0.14 + 0.36 * i), h * (0.22 + 0.12 * ((i + 1) % 2)), 5 + 3 * Math.sin(cyc * Math.PI), cyc * 2, '#FFCE3A'); }
     c.globalAlpha = 1;
   },
-  // Play & Learn: an acoustic guitar under a spotlight, strummed on the beat; the strings shiver, notes float off
-  play(c, w, h, t, hv, age){
+  // Play & Learn, guitar: an acoustic guitar under a spotlight, strummed on the beat; the strings shiver, notes float off
+  i_guitar(c, w, h, t, hv, age){
     const s = Math.min(w, h), bpm = 104, spb = 60 / bpm, beat = t / spb, ph = beat % 1;
     const sa = Math.min(ph * spb, age), amp = Math.exp(-sa * 7) * (age < 0.5 ? 1.8 : 1);   // string shake since the last strum
     c.save(); const g = c.createRadialGradient(w * 0.5, h * 0.45, 0, w * 0.5, h * 0.45, s * 0.7); g.addColorStop(0, `rgba(255,206,58,${0.22 + 0.3 * hv})`); g.addColorStop(1, 'rgba(255,206,58,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
@@ -225,13 +225,167 @@ const ModeIcons = {
         c.beginPath(); c.moveTo(w * 0.52 + Math.cos(an) * r0, h * 0.5 + Math.sin(an) * r0); c.lineTo(w * 0.52 + Math.cos(an) * r1, h * 0.5 + Math.sin(an) * r1); c.lineWidth = 3; c.strokeStyle = '#FFCE3A'; c.stroke(); }
       c.globalAlpha = 1; }
   },
+  // the Play & Learn and Online icons swap between scenes the way the Story one tours: every few seconds the next one swings in
+  // (each has its own backdrop colour, and a little label under it so you can read what it is)
+  swing(c, w, h, t, n, per, off, draw){
+    const tt = t + off, k = Math.floor(tt / per), f = tt / per - k, i = ((k % n) + n) % n, j = (i + n - 1) % n;
+    const p = reduceMotion ? 1 : Math.min(1, f / 0.2), e = p < 1 ? (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2) : 1;
+    if (e < 1) { c.save(); c.translate(-e * w, 0); draw(j, 1); c.restore(); }
+    c.save(); c.translate((1 - e) * w, 0); draw(i, f); c.restore();
+  },
+  label(c, w, h, text){
+    const s = Math.min(w, h), fs = Math.max(8, Math.round(s * 0.1));
+    c.font = `800 ${fs}px ${UI_FONT}`; const tw = c.measureText(text).width + fs * 1.1, th = fs * 1.45, x = w / 2 - tw / 2, y = h - th - s * 0.05;
+    c.fillStyle = COL.ink; rr(c, x, y, tw, th, th / 2); c.fill(); c.fillStyle = '#FFF7E6'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, w / 2, y + th / 2 + 0.5); c.textAlign = 'left';
+  },
+  bgFill(c, w, h, col, glow, hv){
+    c.fillStyle = col; c.fillRect(0, 0, w, h);
+    const s = Math.min(w, h), g = c.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, s * 0.72); g.addColorStop(0, glow.replace('A', String(0.22 + 0.3 * hv))); g.addColorStop(1, glow.replace('A', '0'));
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+  },
+  PLAY_SCENES: [['guitar', 'GUITAR', '#5E2240', 'rgba(255,206,58,A)'], ['vocals', 'VOCALS', '#3A2F63', 'rgba(255,143,199,A)'], ['bass', 'BASS', '#173F4A', 'rgba(46,196,182,A)'],
+    ['keys', 'KEYS', '#22305E', 'rgba(108,200,255,A)'], ['drums', 'DRUMS', '#5A2A14', 'rgba(255,176,32,A)']],
+  play(c, w, h, t, hv, age){
+    const L = this.PLAY_SCENES;
+    this.swing(c, w, h, t, L.length, 2.6, 0.9, (i, f) => { const [k, name, bg, glow] = L[i]; this.bgFill(c, w, h, bg, glow, hv); c.save(); this['i_' + k](c, w, h, t, hv, age, f); c.restore(); this.label(c, w, h, name); });
+  },
+  ONLINE_SCENES: [['battle', 'BATTLE', '#3A1238'], ['record', 'RECORD', '#241C4A'], ['share', 'SHARE', '#113A42']],
+  online(c, w, h, t, hv, age){
+    const L = this.ONLINE_SCENES;
+    this.swing(c, w, h, t, L.length, 2.6, 1.7, (i, f) => { const [k, name, bg] = L[i]; c.fillStyle = bg; c.fillRect(0, 0, w, h); c.save(); this['o_' + k](c, w, h, t, hv, age, f); c.restore(); this.label(c, w, h, name); });
+  },
+  // Vocals: a microphone bobbing on the beat, sound rings coming off its head, notes floating up
+  i_vocals(c, w, h, t, hv, age){
+    const s = Math.min(w, h), spb = 60 / 104, ph = (t / spb) % 1, pump = Math.pow(1 - ph, 3);
+    for (let i = 0; i < 3; i++) { const cyc = (t * 0.45 + i * 0.33) % 1; c.globalAlpha = Math.sin(cyc * Math.PI); this.note(c, w * (0.72 + 0.12 * Math.sin(i * 2 + cyc * 4)), h * (0.78 - cyc * 0.6), s * 0.06, i % 2 ? '#FF8FC7' : '#FFF7E6'); }
+    c.globalAlpha = 1;
+    c.save(); c.translate(w * 0.44, h * 0.48); c.rotate(-0.35 + Math.sin(t * 2.4) * 0.06 - pump * 0.05); c.scale(s / 128, s / 128); c.translate(0, -pump * 3);
+    // rings of sound from the grille
+    for (let i = 0; i < 3; i++) { const a = Math.max(0, 1 - ((ph + i * 0.33) % 1)); c.globalAlpha = a * (0.6 + 0.4 * hv); c.strokeStyle = '#FF8FC7'; c.lineWidth = 3.2;
+      c.beginPath(); c.arc(0, -22, 30 + (1 - a) * 26, -Math.PI * 0.85, -Math.PI * 0.15); c.stroke(); }
+    c.globalAlpha = 1;
+    c.lineJoin = 'round';
+    c.fillStyle = COL.ink; rr(c, -12, -2, 24, 62, 11); c.fill(); c.beginPath(); c.arc(0, -22, 26, 0, Math.PI * 2); c.fill();          // one ink silhouette
+    c.fillStyle = COL.coral; rr(c, -8, 2, 16, 54, 8); c.fill(); c.fillStyle = '#D93E62'; rr(c, 2, 2, 6, 54, 3); c.fill();
+    c.fillStyle = '#3A3552'; rr(c, -11, -4, 22, 10, 3); c.fill();
+    c.fillStyle = '#D9DDE6'; c.beginPath(); c.arc(0, -22, 22, 0, Math.PI * 2); c.fill();
+    c.save(); c.beginPath(); c.arc(0, -22, 22, 0, Math.PI * 2); c.clip(); c.strokeStyle = '#8E94A4'; c.lineWidth = 1.6;
+    for (let k = -30; k <= 30; k += 7) { c.beginPath(); c.moveTo(k, -50); c.lineTo(k + 20, 6); c.stroke(); c.beginPath(); c.moveTo(k, 6); c.lineTo(k + 20, -50); c.stroke(); }
+    c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(-8, -32, 7, 4, -0.6, 0, Math.PI * 2); c.fill(); c.restore();
+    c.lineWidth = 3; c.strokeStyle = COL.ink; c.beginPath(); c.arc(0, -22, 22, 0, Math.PI * 2); c.stroke();
+    c.restore();
+  },
+  // Bass: a four-string bass plucked on the beat; its strings wobble and low booms ripple out of the body
+  i_bass(c, w, h, t, hv, age){
+    const s = Math.min(w, h), spb = 60 / 104, beat = t / spb, ph = beat % 1, amp = Math.exp(-Math.min(ph * spb, age) * 6) * (age < 0.5 ? 1.8 : 1);
+    for (let i = 0; i < 2; i++) { const a = Math.max(0, 1 - ((ph + i * 0.5) % 1)); c.globalAlpha = a * 0.55; c.strokeStyle = '#2EC4B6'; c.lineWidth = 3;
+      c.beginPath(); c.arc(w * 0.44, h * 0.62, s * (0.16 + (1 - a) * 0.28), 0, Math.PI * 2); c.stroke(); }
+    c.globalAlpha = 1;
+    c.save(); c.translate(w * 0.5, h * 0.6); c.rotate(-0.8 + Math.pow(1 - ph, 3) * 0.04); c.scale(s / 132, s / 132);
+    const B = new Path2D('M-5 -8 C-9 -26 -27 -30 -22 -10 C-31 2 -30 28 -17 38 C-7 46 13 46 21 35 C31 23 27 6 20 -1 C27 -20 19 -36 7 -22 C5 -17 4 -12 4 -8 Z');
+    const neck = pad => rr(c, -4.5 - pad, -86 - pad, 9 + pad * 2, 82 + pad * 2, 3), head = pad => rr(c, -7 - pad, -104 - pad, 13 + pad * 2, 20 + pad * 2, 4);
+    c.lineJoin = 'round'; c.strokeStyle = COL.ink; c.lineWidth = 8; c.stroke(B); c.fillStyle = COL.ink; neck(4); c.fill(); head(4); c.fill();
+    c.fillStyle = '#2EC4B6'; c.fill(B);
+    c.save(); c.clip(B); c.fillStyle = '#1E948A'; c.translate(7, 6); c.fill(B); c.restore();
+    c.save(); c.clip(B); c.fillStyle = '#2EC4B6'; c.translate(2, 1); c.scale(0.94, 0.94); c.fill(B); c.restore();
+    c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.ellipse(-15, 8, 3, 12, 0.15, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#8A5A3B'; neck(0); c.fill(); c.fillStyle = '#5E3A26'; head(0); c.fill();
+    c.fillStyle = 'rgba(30,27,46,.45)'; for (let k = 1; k < 7; k++) c.fillRect(-4.5, -4 - k * 11, 9, 1.5);
+    c.fillStyle = COL.ink; rr(c, -9, 8, 18, 7, 3); c.fill(); rr(c, -8, 28, 16, 5, 2); c.fill();
+    c.fillStyle = '#FFF7E6'; for (const y of [-101, -95, -89]) { c.beginPath(); c.arc(-10, y, 2.3, 0, Math.PI * 2); c.fill(); c.lineWidth = 1.5; c.strokeStyle = COL.ink; c.stroke(); }
+    c.strokeStyle = '#FFF7E6'; c.lineWidth = 1.2;
+    for (let k = 0; k < 4; k++) { const x = -3 + k * 2; c.beginPath(); c.moveTo(x, -88);
+      for (let y = -86; y <= 33; y += 3) { const u = (y + 86) / 119; c.lineTo(x + Math.sin(u * Math.PI) * Math.sin(t * 60 + k * 2 + y * 0.03) * amp * 2.2, y); } c.stroke(); }
+    c.restore();
+    // a plucking thumb
+    c.save(); c.translate(w * 0.5, h * 0.6); c.rotate(-0.8); c.scale(s / 132, s / 132); const pk = Math.min(1, ph * spb / 0.08);
+    c.translate(-6 + 12 * pk, 10); c.fillStyle = '#C98A5C'; c.beginPath(); c.ellipse(0, 0, 5, 7, 0.3, 0, Math.PI * 2); c.fill(); c.lineWidth = 2.4; c.strokeStyle = COL.ink; c.stroke(); c.restore();
+  },
+  // Keys: a little synth whose keys go down in chords on the beat, a note popping up off each one
+  i_keys(c, w, h, t, hv, age){
+    const s = Math.min(w, h), spb = 60 / 104, beat = t / spb, b = Math.floor(beat), ph = beat % 1;
+    const chords = [[0, 2, 4], [3, 5, 0], [4, 6, 1], [3, 5, 0]], down = chords[((b % 4) + 4) % 4], hit = ph < 0.55 || age < 0.3;
+    const x0 = w * 0.1, kw = w * 0.8, y0 = h * 0.4, kh = h * 0.3, n = 7, ww = kw / n;
+    c.fillStyle = COL.ink; rr(c, x0 - 5, h * 0.2 - 4, kw + 10, kh + h * 0.22 + 8, 9); c.fill();
+    c.fillStyle = '#3A3354'; rr(c, x0 - 2, h * 0.2 - 1, kw + 4, h * 0.19, 6); c.fill();
+    c.fillStyle = '#12343F'; rr(c, x0 + kw * 0.36, h * 0.235, kw * 0.34, h * 0.11, 3); c.fill();
+    c.strokeStyle = '#8FE3A0'; c.lineWidth = 1.6; c.beginPath(); for (let k = 0; k <= 20; k++) { const x = x0 + kw * (0.37 + 0.32 * k / 20), y = h * 0.29 + Math.sin(k * 0.9 + t * 8) * h * 0.03 * (hit ? 1 : 0.4); k ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+    for (const [kx, col] of [[0.12, COL.coral], [0.24, COL.sun], [0.84, COL.teal]]) { c.beginPath(); c.arc(x0 + kw * kx, h * 0.29, s * 0.04, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.lineWidth = 1.6; c.strokeStyle = COL.ink; c.stroke(); }
+    for (let k = 0; k < n; k++) { const on = hit && down.includes(k), dy = on ? 2 : 0;
+      c.fillStyle = on ? '#FFE37A' : '#FFF7E6'; rr(c, x0 + k * ww + 1, y0 + dy, ww - 2, kh - dy, 3); c.fill(); c.lineWidth = 1.8; c.strokeStyle = COL.ink; c.stroke();
+      if (on && ph < 0.4) { c.globalAlpha = 1 - ph / 0.4; this.note(c, x0 + (k + 0.5) * ww, y0 - s * 0.02 - ph * s * 0.35, s * 0.045, '#FFE37A'); c.globalAlpha = 1; } }
+    c.fillStyle = COL.ink; for (const k of [1, 2, 4, 5, 6]) rr(c, x0 + k * ww - ww * 0.28, y0, ww * 0.56, kh * 0.58, 2), c.fill();
+  },
+  // Drums: a snare with two sticks trading hits, the head squashing and a star popping off each hit
+  i_drums(c, w, h, t, hv, age){
+    const s = Math.min(w, h), spb = 60 / 104, eighth = t / (spb / 2), e = Math.floor(eighth), ph = eighth % 1, lr = ((e % 2) + 2) % 2;
+    const q = Math.exp(-ph * 5) * (age < 0.3 ? 1.5 : 1), cx = w * 0.5, cy = h * 0.52, rx = s * 0.3, ry = s * 0.09, dh = s * 0.2;
+    c.save(); c.translate(cx, cy); c.scale(1 + 0.04 * q, 1 - 0.06 * q); c.translate(-cx, -cy);
+    c.fillStyle = COL.ink; c.beginPath(); c.ellipse(cx, cy + dh, rx + 3, ry + 3, 0, 0, Math.PI * 2); c.fill(); c.fillRect(cx - rx - 3, cy, rx * 2 + 6, dh); c.beginPath(); c.ellipse(cx, cy, rx + 3, ry + 3, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = COL.coral; c.beginPath(); c.ellipse(cx, cy + dh, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.fillRect(cx - rx, cy, rx * 2, dh);
+    c.fillStyle = '#D93E62'; c.fillRect(cx + rx * 0.45, cy, rx * 0.55, dh);
+    c.fillStyle = '#D9DDE6'; for (let k = 0; k < 5; k++) { const x = cx - rx * 0.8 + k * rx * 0.4; rr(c, x - 2.5, cy + dh * 0.2, 5, dh * 0.6, 2); c.fill(); }
+    c.fillStyle = '#FFF7E6'; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill(); c.lineWidth = 2; c.strokeStyle = COL.ink; c.stroke();
+    c.restore();
+    // sticks: each one swings down on its own eighth note
+    for (const side of [0, 1]) { const mine = side === lr, lift = mine ? Math.min(1, ph / 0.5) : 1 - Math.min(1, ph / 0.2) * 0.6, sg = side ? 1 : -1;
+      const hx = cx + sg * s * 0.36, hy = cy - s * 0.3, ang = Math.atan2(cy - hy, (cx + sg * s * 0.06) - hx) - sg * lift * 0.9;
+      c.save(); c.translate(hx, hy); c.rotate(ang); c.lineCap = 'round'; c.strokeStyle = COL.ink; c.lineWidth = s * 0.07; c.beginPath(); c.moveTo(-s * 0.06, 0); c.lineTo(s * 0.34, 0); c.stroke();
+      c.strokeStyle = '#F6DCA8'; c.lineWidth = s * 0.035; c.stroke(); c.restore();
+      if (mine && ph < 0.3) { c.globalAlpha = 1 - ph / 0.3; this.star(c, cx + sg * s * 0.16, cy - s * 0.12 - ph * s * 0.2, s * (0.06 + ph * 0.1), ph * 3, '#FFCE3A'); c.globalAlpha = 1; } }
+  },
+  // Online, battle: two players face off over a VS with a lightning bolt, lunging in on the beat, a tug of war for the lead
+  o_battle(c, w, h, t, hv, age, f){
+    const s = Math.min(w, h), spb = 60 / 108, beat = t / spb, ph = beat % 1, lunge = Math.pow(1 - ph, 3), who = Math.floor(beat) % 2;
+    c.save(); const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, 'rgba(255,94,126,.35)'); g.addColorStop(0.5, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(46,196,182,.35)'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore();
+    // the bolt behind the VS
+    c.save(); c.translate(w / 2, h * 0.44); c.rotate(0.15); c.beginPath(); c.moveTo(-s * 0.05, -s * 0.28); c.lineTo(s * 0.1, -s * 0.28); c.lineTo(s * 0.02, -s * 0.04); c.lineTo(s * 0.12, -s * 0.04); c.lineTo(-s * 0.08, s * 0.28); c.lineTo(0, s * 0.02); c.lineTo(-s * 0.1, s * 0.02); c.closePath();
+    c.fillStyle = '#FFCE3A'; c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); c.restore();
+    const pl = (x, col, dir, act) => { const px = x + dir * s * 0.05 * (act ? lunge : 0), py = h * 0.5 - (act ? lunge * s * 0.03 : 0), r = s * 0.15;
+      c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
+      c.fillStyle = COL.ink; c.beginPath(); c.arc(px, py - r * 0.18, r * 0.34, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(px, py + r * 0.72, r * 0.55, Math.PI * 1.08, Math.PI * 1.92); c.fill();
+      c.fillStyle = '#fff'; c.beginPath(); c.arc(px + dir * r * 0.12, py - r * 0.22, r * 0.09, 0, Math.PI * 2); c.fill(); };
+    pl(w * 0.2, COL.coral, 1, who === 0); pl(w * 0.8, COL.teal, -1, who === 1);
+    c.font = `${Math.round(s * 0.2)}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 5; c.strokeStyle = COL.ink;
+    c.strokeText('VS', w / 2, h * 0.47); c.fillStyle = '#FFF7E6'; c.fillText('VS', w / 2, h * 0.47); c.textAlign = 'left';
+    // the lead: a bar across the top that swings toward whoever just scored
+    const lead = 0.5 + Math.sin(t * 1.7) * 0.22, bx = w * 0.12, bw = w * 0.76, by = h * 0.12, bh = h * 0.08;
+    c.fillStyle = COL.ink; rr(c, bx - 2, by - 2, bw + 4, bh + 4, bh); c.fill();
+    c.fillStyle = COL.coral; rr(c, bx, by, bw * lead, bh, bh / 2); c.fill(); c.fillStyle = COL.teal; rr(c, bx + bw * lead, by, bw * (1 - lead), bh, bh / 2); c.fill();
+    c.fillStyle = '#FFF7E6'; c.fillRect(bx + bw * lead - 1.5, by - 3, 3, bh + 6);
+  },
+  o_record(c, w, h, t, hv, age){ c.save(); c.scale(1, 0.8); this.onlineRec(c, w, h, t, hv, age); c.restore(); },
+  // Online, share: a paper plane carries your take from the record to three friends, who light up as it passes
+  o_share(c, w, h, t, hv, age, f){
+    const s = Math.min(w, h), k = Math.min(1, Math.max(0, (f - 0.12) / 0.7)), ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    // the take: a little record with a play triangle
+    const rx = w * 0.2, ry = h * 0.58, R = s * 0.14;
+    c.beginPath(); c.arc(rx, ry, R, 0, Math.PI * 2); c.fillStyle = '#1D1A2B'; c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
+    c.strokeStyle = '#3A3552'; c.lineWidth = 1.2; for (const q of [0.55, 0.75]) { c.beginPath(); c.arc(rx, ry, R * q, 0, Math.PI * 2); c.stroke(); }
+    c.beginPath(); c.arc(rx, ry, R * 0.35, 0, Math.PI * 2); c.fillStyle = COL.coral; c.fill();
+    c.fillStyle = '#FFF7E6'; c.beginPath(); c.moveTo(rx - R * 0.1, ry - R * 0.16); c.lineTo(rx + R * 0.18, ry); c.lineTo(rx - R * 0.1, ry + R * 0.16); c.closePath(); c.fill();
+    // the three friends and the dashed flight path to them
+    const fr = [[0.8, 0.26, COL.sun], [0.86, 0.52, COL.teal], [0.72, 0.74, COL.coral]];
+    const path = u => { const x0 = rx + R, y0 = ry - R * 0.4, x2 = w * 0.78, y2 = h * 0.2; return [x0 + (x2 - x0) * u, y0 + (y2 - y0) * u - Math.sin(u * Math.PI) * h * 0.2]; };
+    c.setLineDash([3, 4]); c.strokeStyle = 'rgba(255,247,230,.55)'; c.lineWidth = 2; c.beginPath(); for (let u = 0; u <= 1.001; u += 0.05) { const [x, y] = path(u); u ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]);
+    fr.forEach(([fx, fy, col], i) => { const lit = ease > 0.55 + i * 0.12, x = w * fx, y = h * fy, r = s * 0.075 * (lit ? 1.12 : 1);
+      if (lit) { c.globalAlpha = 0.35; c.beginPath(); c.arc(x, y, r * 1.8, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.globalAlpha = 1; }
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = lit ? col : '#4A4462'; c.fill(); c.lineWidth = 2.4; c.strokeStyle = COL.ink; c.stroke();
+      c.fillStyle = COL.ink; c.beginPath(); c.arc(x, y - r * 0.18, r * 0.34, 0, Math.PI * 2); c.fill();
+      if (lit) this.star(c, x + r * 0.9, y - r * 0.9, r * 0.45, t * 2 + i, '#FFF7E6'); });
+    // the plane
+    const [px, py] = path(ease), [qx, qy] = path(Math.min(1, ease + 0.02)), a = Math.atan2(qy - py, qx - px);
+    if (k > 0 && k < 1) { c.save(); c.translate(px, py); c.rotate(a); const L = s * 0.13;
+      c.beginPath(); c.moveTo(L * 0.6, 0); c.lineTo(-L * 0.5, -L * 0.45); c.lineTo(-L * 0.25, 0); c.lineTo(-L * 0.5, L * 0.3); c.closePath(); c.fillStyle = '#FFF7E6'; c.fill(); c.lineWidth = 2.2; c.strokeStyle = COL.ink; c.stroke();
+      c.beginPath(); c.moveTo(L * 0.6, 0); c.lineTo(-L * 0.25, 0); c.stroke(); c.restore(); }
+  },
   note(c, x, y, r, fill){
     c.lineWidth = 2; c.strokeStyle = COL.ink; c.fillStyle = fill;
     c.beginPath(); c.ellipse(x, y, r, r * 0.75, -0.4, 0, Math.PI * 2); c.fill(); c.stroke();
     c.beginPath(); c.moveTo(x + r * 0.85, y - r * 0.2); c.lineTo(x + r * 0.85, y - r * 2.6); c.quadraticCurveTo(x + r * 1.9, y - r * 2.2, x + r * 1.9, y - r * 1.3); c.lineWidth = 2.4; c.stroke();
   },
-  // Online: three players' takes stacked like tracks, lining up under one playhead; a REC light blinks
-  online(c, w, h, t, hv, age){
+  // Online, record: three players' takes stacked like tracks, lining up under one playhead; a REC light blinks
+  onlineRec(c, w, h, t, hv, age){
     const s = Math.min(w, h), spb = 60 / 108, beat = t / spb, ph = beat % 1, cols = ['#FF5E7E', '#2EC4B6', '#FFCE3A'];
     const x0 = w * 0.12, x1 = w * 0.9, tw = x1 - x0, th = h * 0.16, gap = h * 0.05, top = h * 0.36;
     const hit = age < 0.6 ? 1 - age / 0.6 : 0;

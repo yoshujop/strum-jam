@@ -15,7 +15,8 @@ const reduceMotion = (() => { try { return matchMedia('(prefers-reduced-motion: 
 
 
 /* ---------- the venue: a night-time back street under a railway bridge, pre-drawn as an SVG and cached per size ---------- */
-function streetSVG(W, H, railY, railH, floorY){
+function streetSVG(W, H, railY, railH, bandY){
+  const floorY = bandY - Math.max(10, Math.min(26, H * 0.03)) + 2;     // back edge of the deck: the wall, the signs and the speakers stand here
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const top = railY + railH;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>
@@ -66,20 +67,18 @@ function streetSVG(W, H, railY, railH, floorY){
   s += `<rect x="${vx + vw * 0.15}" y="${vy + vh * 0.7}" width="${vw * 0.7}" height="${vh * 0.1}" rx="2" fill="#12101E"/>`;
   const sh = Math.min(floorY - gb - 20, 100), sw = sh * 0.6;
   for (const sx of [W * 0.09, W * 0.9 - sw]) s += `<rect x="${sx}" y="${floorY - sh}" width="${sw}" height="${sh}" rx="5" fill="#231F36" stroke="#0F0D1A" stroke-width="3"/><circle cx="${sx + sw / 2}" cy="${floorY - sh * 0.7}" r="${sw * 0.3}" fill="#3A3552" stroke="#0F0D1A" stroke-width="3"/><circle cx="${sx + sw / 2}" cy="${floorY - sh * 0.26}" r="${sw * 0.2}" fill="#3A3552" stroke="#0F0D1A" stroke-width="3"/>`;
-  // the stage deck: warm planks with seams, grain, nails and a bright front lip
-  const dh = H - floorY, n = Math.max(3, Math.round(dh / 16)), ph = dh / n;
-  s += `<rect x="0" y="${floorY}" width="${W}" height="${dh}" fill="url(#dk)"/>`;
-  for (let i = 0; i < n; i++) {
-    const y = floorY + i * ph;
-    s += `<rect x="0" y="${y}" width="${W}" height="${ph}" fill="${i % 2 ? '#000' : '#fff'}" opacity=".05"/>`;
-    let x = -rnd() * 120;
-    while (x < W) { const L = 110 + rnd() * 160;
-      s += `<line x1="${x}" x2="${x}" y1="${y}" y2="${y + ph}" stroke="#5C3D1E" stroke-width="2"/><circle cx="${x + 6}" cy="${y + ph * 0.3}" r="1.3" fill="#4A3017"/><circle cx="${x + 6}" cy="${y + ph * 0.7}" r="1.3" fill="#4A3017"/>`;
-      for (let g = 0; g < 2; g++) { const gy = y + ph * (0.3 + g * 0.35 + rnd() * 0.1); s += `<path d="M${x + 12} ${gy} q ${L * 0.3} ${-2 + rnd() * 4} ${L * 0.6} 0 t ${L * 0.35} 0" fill="none" stroke="#7A5129" stroke-width="1" opacity=".55"/>`; }
-      x += L; }
-    s += `<line x1="0" x2="${W}" y1="${y + ph}" y2="${y + ph}" stroke="#5C3D1E" stroke-width="2"/>`;
-  }
-  s += `<rect x="0" y="${floorY - 3}" width="${W}" height="7" fill="#E3B981"/><rect x="0" y="${floorY + 4}" width="${W}" height="3" fill="#5C3D1E" opacity=".6"/>`;
+  // the stage deck: black, with a soft sheen, faint seams and a thin bright lip; below the lip, the front of the riser and the dark pit
+  const dkB = Math.max(10, Math.min(26, H * 0.03)), dkF = Math.max(14, Math.min(34, H * 0.042)), deckTop = bandY - dkB, lip = bandY + dkF, face = Math.max(14, Math.min(42, H * 0.05));
+  s += `<defs><linearGradient id="bk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C1A26"/><stop offset=".55" stop-color="#121019"/><stop offset="1" stop-color="#0B0A10"/></linearGradient>
+<radialGradient id="sh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFF4D6" stop-opacity=".16"/><stop offset="1" stop-color="#FFF4D6" stop-opacity="0"/></radialGradient></defs>`;
+  s += `<rect x="0" y="${deckTop}" width="${W}" height="${lip - deckTop}" fill="url(#bk)"/><rect x="0" y="${deckTop}" width="${W}" height="2.5" fill="#000" opacity=".6"/>`;
+  s += `<ellipse cx="${W / 2}" cy="${bandY}" rx="${W * 0.42}" ry="${(lip - deckTop) * 0.7}" fill="url(#sh)"/>`;
+  for (const f of [0.38, 0.72]) s += `<line x1="0" x2="${W}" y1="${deckTop + (lip - deckTop) * f}" y2="${deckTop + (lip - deckTop) * f}" stroke="#2A2736" stroke-width="1.2" opacity=".8"/>`;
+  for (let x = -rnd() * 90; x < W; x += 140 + rnd() * 90) s += `<line x1="${x}" x2="${x - 6}" y1="${deckTop + 2}" y2="${lip}" stroke="#23202E" stroke-width="1.2"/>`;
+  s += `<rect x="0" y="${lip - 2}" width="${W}" height="5" fill="#3A3552"/><rect x="0" y="${lip - 2}" width="${W}" height="1.6" fill="#8A84AC" opacity=".8"/>`;
+  s += `<rect x="0" y="${lip + 3}" width="${W}" height="${face}" fill="#0F0D16"/>`;
+  for (let x = 30; x < W; x += 60) s += `<line x1="${x}" x2="${x}" y1="${lip + 3}" y2="${lip + 3 + face}" stroke="#1B1826" stroke-width="2"/>`;
+  s += `<rect x="0" y="${lip + 3 + face}" width="${W}" height="${Math.max(0, H - lip - 3 - face)}" fill="#07060B"/><rect x="0" y="${lip + 3 + face}" width="${W}" height="3" fill="#000"/>`;
   return s + '</svg>';
 }
 
@@ -498,7 +497,7 @@ const Stage = {
     const old = this.crowd; this.crowd = makeCrowd(this.W);
     this.crowd.forEach((m, i) => { if (old[i]) { m.pres = old[i].pres; m.arm = old[i].arm; } });
   },
-  reset(){ this.popups = []; this.parts = []; this.banner = null; this.flashes = []; this.shake = 0; this.flash = 0; this.thrumIn = 0; this.thrumHold = 0; this.dangerV = 0; this.failAt = 0; this.cracks = null; this.crowd.forEach(m => { m.pres = 0; m.arm = 0; m.leave = 0; }); },
+  reset(){ this._lay = null; this.popups = []; this.parts = []; this.banner = null; this.flashes = []; this.shake = 0; this.flash = 0; this.thrumIn = 0; this.thrumHold = 0; this.dangerV = 0; this.failAt = 0; this.cracks = null; this.crowd.forEach(m => { m.pres = 0; m.arm = 0; m.leave = 0; }); },
   burst(x, y, n, cols){
     if (reduceMotion) return;
     x = x == null ? this.hitPt.x : x; y = y == null ? this.hitPt.y : y;
@@ -520,6 +519,29 @@ const Stage = {
   },
   bannerShow(text, color){ this.banner = { text, color: color || COL.sun, t0: performance.now() }; },
   ring(){ this.flash = 1; },
+  // where things are on the full-screen stage: the HUD's bottom, the top of the overlay at the bottom (guitar or part panel),
+  // the parts' lane just above that panel, the floor the band stands on and the crowd's baseline
+  lay(){
+    // measured every few frames (reading the layout every frame would force it to be recomputed after each HUD update)
+    if (this._lay && this._layW === this.W && this._layH === this.H && (this._layN = (this._layN || 0) + 1) % 10) return this._lay;
+    this._layW = this.W; this._layH = this.H; this._lay = this.layNow(); return this._lay;
+  },
+  layNow(){
+    const H = this.H, cr = this.cv.getBoundingClientRect();
+    const hud = this.hudEl || (this.hudEl = document.getElementById('hud')), bd = this.boardEl || (this.boardEl = document.getElementById('board'));
+    const hudB = hud ? Math.max(40, hud.getBoundingClientRect().bottom - cr.top) : 56;
+    let bT = bd ? bd.getBoundingClientRect().top - cr.top : H * 0.62;
+    if (!(bT > hudB + 120)) bT = Math.max(hudB + 120, H * 0.6);
+    bT = Math.min(bT, H - 20);
+    let railY = 0, railH = 0;
+    if (Parts.active) { railH = Math.min(90, Math.max(40, H * 0.13)) * Parts.railScale(); railY = bT - railH - 14; }
+    const peek = Math.max(16, Math.min(40, H * 0.042));
+    const base = Parts.active ? railY : bT;
+    // keep the floor steady while the overlay settles (the background is redrawn when it moves)
+    let floorY = Math.round((base - peek) / 6) * 6;
+    if (this.floorY0 && Math.abs(this.floorY0 - floorY) < 6) floorY = this.floorY0; this.floorY0 = floorY;
+    return { hudB, bT, railY, railH, floorY, crowdY: base + Math.max(18, H * 0.03) };
+  },
   // the funk drummer is drawn on the stage (see 52-drummer.js), keyed to what the kit plays as it is heard
   placeDrummer(cx, floorY, w, h){ this.drumAt = { cx, floorY, h }; },
   drawDrummer(c, G, beatF){
@@ -538,110 +560,60 @@ const Stage = {
     const chart = G.chart, secIdx = G.sectionIndex || 0;
     const beatF = G.beatNow;
     const phase = ((beatF % 1) + 1) % 1;
-    // background: the street venue (cached image), washed with the section's colour
+    // the venue fills the whole screen; the HUD floats over its top, the guitar (or the part's panel) over its bottom
+    const Ly = this.lay(), floorY = Ly.floorY, top = Ly.hudB;
     const bg = BG_COL[secIdx % BG_COL.length];
-    const tall = Parts.railScale(), railY0 = Math.max(18, Math.min(H * 0.08, 60)), railH0 = Math.min(90, Math.max(40, H * 0.16)) * tall, floorY0 = H * 0.86;
     // Story mode paints the era's stage; otherwise the street under the railway bridge
-    const scene = this.scene, key = W + 'x' + H + (scene ? scene.key : '') + (tall !== 1 ? 'T' + tall : '');
+    const scene = this.scene, key = W + 'x' + H + (scene ? scene.key : '') + '|' + Math.round(floorY) + '|' + Math.round(top);
     if (this.bgKey !== key) {
       this.bgKey = key; const img = new Image(); img.decoding = 'async';
-      img.src = scene ? Scenes.dataUrl(scene, Math.round(W), Math.round(H), { railY: railY0, railH: railH0, floorY: floorY0 })
-        : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(streetSVG(Math.round(W), Math.round(H), railY0, railH0, floorY0));
-      this.bgImg = img;
+      img.src = scene ? Scenes.dataUrl(scene, Math.round(W), Math.round(H), { railY: 0, railH: 0, floorY })
+        : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(streetSVG(Math.round(W), Math.round(H), 0, Math.max(24, top - 16), floorY));
+      img.onload = () => { this.bgImg = img; };
+      if (!this.bgImg) this.bgImg = img;
     }
     if (this.bgImg && this.bgImg.complete && this.bgImg.naturalWidth) c.drawImage(this.bgImg, 0, 0, W, H);
     else { c.fillStyle = '#231C47'; c.fillRect(0, 0, W, H); }
-    c.save(); c.globalAlpha = 0.1; c.fillStyle = bg; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore();
+    c.save(); c.globalAlpha = 0.1; c.fillStyle = bg; c.fillRect(0, top, W, floorY - top); c.restore();
     // the lanterns and neon breathe with the beat
-    if (!reduceMotion) { c.save(); c.globalAlpha = 0.07 * Math.pow(1 - phase, 2); c.fillStyle = scene ? scene.palette[2] : '#FFB199'; c.fillRect(0, railY0 + railH0, W, floorY0 - railY0 - railH0); c.restore(); }
-    if (scene) Scenes.drawLive(c, scene, { W, H, top: railY0 + railH0, F: floorY0, now, dt, phase, hype: G.hype || 0, level: G.level || 0 });
+    if (!reduceMotion) { c.save(); c.globalAlpha = 0.07 * Math.pow(1 - phase, 2); c.fillStyle = scene ? scene.palette[2] : '#FFB199'; c.fillRect(0, top, W, floorY - top); c.restore(); }
+    if (scene) Scenes.drawLive(c, scene, { W, H, top: 0, F: floorY, now, dt, phase, hype: G.hype || 0, level: G.level || 0 });
     // playing badly: the room goes dark and red, the lights start failing
     const dv = this.dangerV = (this.dangerV || 0) + ((G.failed ? 1 : G.danger || 0) - (this.dangerV || 0)) * Math.min(1, dt * 2.5);
     if (dv > 0.02) { c.fillStyle = `rgba(70,0,16,${Math.min(0.6, dv * 0.55)})`; c.fillRect(0, 0, W, H); }
-    // spotlights sweep harder as the hype grows
+    // spotlights sweep harder as the hype grows, and pool on the black stage floor
     const hype = G.hype || 0, lvl = G.level || 0;
-    if (hype > 0.05 && !reduceMotion && dv < 0.6) {
+    if (!reduceMotion && dv < 0.6) {
       const nBeams = 2 + lvl;
       for (let i = 0; i < nBeams; i++) {
-        const ox = W * (i + 0.5) / nBeams, ang = Math.sin(now * (0.6 + i * 0.17) + i * 2) * 0.5;
+        const ox = W * (i + 0.5) / nBeams, ang = Math.sin(now * (0.6 + i * 0.17) + i * 2) * 0.5, a = (0.1 + hype * 0.3) * (1 - dv);
         c.save(); c.translate(ox, -20); c.rotate(ang);
-        const g = c.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, `rgba(255,${Math.round(255 - dv * 200)},${Math.round(255 - dv * 220)},${(0.12 + hype * 0.28) * (1 - dv)})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+        const g = c.createLinearGradient(0, 0, 0, floorY + 30);
+        g.addColorStop(0, `rgba(255,${Math.round(255 - dv * 200)},${Math.round(255 - dv * 220)},${a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
         c.fillStyle = g; c.beginPath(); c.moveTo(-12, 0); c.lineTo(12, 0); c.lineTo(90, H * 1.1); c.lineTo(-90, H * 1.1); c.closePath(); c.fill();
         c.restore();
+        // where the beam lands on the deck
+        const hx = ox + Math.tan(-ang) * (floorY + 20);
+        if (hx > -80 && hx < W + 80) { c.save(); c.translate(hx, floorY + 2); c.scale(1, 0.18); const pg = c.createRadialGradient(0, 0, 0, 0, 0, 110); pg.addColorStop(0, `rgba(255,244,210,${a * 1.2})`); pg.addColorStop(1, 'rgba(255,244,210,0)'); c.fillStyle = pg; c.beginPath(); c.arc(0, 0, 110, 0, Math.PI * 2); c.fill(); c.restore(); }
       }
     }
-    const floorY = H * 0.86;
-    // rail
-    const railY = railY0, railH = railH0;
+    // the parts' lane (vocals, bass, keys, drums) floats just above their panel; the guitar's lane lives on the neck itself
+    const railY = Ly.railY, railH = Ly.railH;
     const hitX = Math.max(84, Math.min(W * 0.2, 200));
     const ppb = Math.min(120, Math.max(50, W * 0.09));
-    c.fillStyle = COL.paper; rr(c, -10, railY, W + 20, railH, 16); c.fill();
-    c.lineWidth = 4; c.strokeStyle = COL.ink; c.stroke();
-    const curB = G.trackBeat;
-    const b0 = Math.floor(curB - hitX / ppb) - 1, b1 = Math.ceil(curB + (W - hitX) / ppb) + 1;
     const beats = chart.beats;
-    c.fillStyle = 'rgba(30,27,46,.25)';
-    for (let b = b0; b <= b1; b++) {
-      if (G.mode === 'practice') break;
-      const x = hitX + (b - curB) * ppb;
-      const isBar = ((b % beats) + beats) % beats === 0;
-      c.fillRect(x - (isBar ? 2 : 1), railY + railH - (isBar ? 18 : 10), isBar ? 4 : 2, isBar ? 14 : 6);
-    }
-    // chord cards
-    c.save(); rr(c, -10, railY, W + 20, railH, 16); c.clip();
-    if (Parts.active) Parts.drawRail(c, { W, railY, railH, hitX, ppb, curB, now });
-    for (const ev of G.trackEvents) {
-      const x0 = hitX + (ev.tb - curB) * ppb, w = Math.max(34, ev.tl * ppb - 6);
-      if (x0 > W + 20 || x0 + w < -20) continue;
-      const col = cardColor(ev.label);
-      const y = railY + 8, h = railH - 16 - (G.mode === 'stage' ? 10 : 0);
-      c.globalAlpha = ev.done ? 0.45 : 1;
-      c.fillStyle = col; rr(c, x0, y, w, h, 12); c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
-      if (ev.result) { c.fillStyle = ev.result === 'miss' ? 'rgba(229,72,77,.35)' : 'rgba(43,182,115,.35)'; rr(c, x0, y, w, h, 12); c.fill(); }
-      c.fillStyle = textOn(col);
-      const fs = Math.round(Math.min(h * 0.55, 34));
-      c.font = `${fs}px ${DISPLAY_FONT}`; c.textBaseline = 'middle'; c.textAlign = 'left';
-      const tw = c.measureText(ev.label).width;
-      let lx = x0 + 10;
-      if (x0 < hitX + 18 && x0 + w > hitX) lx = Math.max(x0 + 10, Math.min(hitX + 20, x0 + w - tw - 8));
-      c.fillText(ev.label, lx, y + h / 2 + 2);
-      if (ev.result && w > tw + 50) { c.font = `800 ${Math.round(fs * 0.55)}px ${UI_FONT}`; c.textAlign = 'right'; c.fillText(ev.result === 'miss' ? '✕' : '✓', x0 + w - 10, y + h / 2 + 2); }
-      c.globalAlpha = 1;
-    }
-    if (G.mode === 'stage' && G.strumSteps && !Parts.active) {
-      const L = G.strumSteps.length, per = beats / L;
-      for (let b = Math.floor(b0 / beats) * beats; b <= b1; b += beats) {
-        for (let i = 0; i < L; i++) {
-          const ch = G.strumSteps[i]; if (ch !== 'D' && ch !== 'U') continue;
-          const x = hitX + (b + i * per - curB) * ppb, y = railY + railH - 11;
-          c.fillStyle = COL.ink;
-          c.beginPath(); if (ch === 'D') { c.moveTo(x - 5, y - 4); c.lineTo(x + 5, y - 4); c.lineTo(x, y + 4); } else { c.moveTo(x - 5, y + 4); c.lineTo(x + 5, y + 4); c.lineTo(x, y - 4); } c.fill();
-        }
-      }
-    }
-    c.restore();
-    this.hitPt = { x: hitX, y: railY + railH / 2 };
-    // hit marker
-    if (this.flash > 0.02) { c.fillStyle = `rgba(255,244,184,${this.flash * 0.8})`; c.beginPath(); c.arc(hitX, railY + railH / 2, railH * (0.6 + (1 - this.flash) * 0.9), 0, Math.PI * 2); c.fill(); }
-    const pulse = reduceMotion ? 0 : Math.pow(1 - phase, 3);
-    c.lineWidth = 5 + pulse * 3; c.strokeStyle = COL.ink;
-    rr(c, hitX - 10, railY - 6, 20, railH + 12, 10); c.fillStyle = 'rgba(255,255,255,.35)'; c.fill(); c.stroke();
-    c.fillStyle = COL.coral; c.beginPath(); c.moveTo(hitX - 11, railY - 16); c.lineTo(hitX + 11, railY - 16); c.lineTo(hitX, railY - 4); c.closePath(); c.fill(); c.lineWidth = 3; c.stroke();
-    // section + capo tags
+    // section + capo tags, just under the HUD on the left
     const sec = chart.sections[secIdx];
     if (sec) {
       c.font = `800 14px ${UI_FONT}`; const t = sec.name.toUpperCase(); const tw = c.measureText(t).width;
-      // centred between Pip and Boom so the characters never cover it
-      let tw2 = 0; if (G.capoText) { c.font = `800 13px ${UI_FONT}`; tw2 = c.measureText(G.capoText).width + 28; c.font = `800 14px ${UI_FONT}`; }
-      const bx = 12, by = railY + railH + 10;            // top-left, clear of the band in the middle
-      c.fillStyle = COL.ink; rr(c, bx, by, tw + 22, 26, 13); c.fill();
+      const bx = 14, by = top + 8;
+      c.fillStyle = COL.ink; rr(c, bx, by, tw + 22, 26, 13); c.fill(); c.lineWidth = 2; c.strokeStyle = 'rgba(255,247,230,.35)'; c.stroke();
       c.fillStyle = COL.paper; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(t, bx + 11, by + 14);
       if (G.capoText) { c.font = `800 13px ${UI_FONT}`; const t2 = G.capoText, tw2 = c.measureText(t2).width; c.fillStyle = COL.paper; rr(c, bx + tw + 30, by, tw2 + 20, 26, 13); c.fill(); c.lineWidth = 2.5; c.strokeStyle = COL.ink; c.stroke(); c.fillStyle = COL.ink; c.fillText(t2, bx + tw + 40, by + 14); }
     }
-    // characters
-    // size the band to the room between the rail and the floor, so nobody pokes into the chord rail
-    const s = Math.max(36, Math.min(150, (floorY - railY - railH - 6) / 1.5, W * 0.26));
+    // characters, sized to the room between the HUD and the floor
+    const avail = floorY - top - 30;
+    const s = Math.max(36, Math.min(175, avail / 1.5, W * 0.26));
     const ui = Math.max(0.68, Math.min(1, H / 380, W / 700));   // text scale for small stages
     const bounce = Math.abs(Math.sin(phase * Math.PI));
     const since = now - (G.lastStrumAt || -9);
@@ -652,22 +624,24 @@ const Stage = {
     if (lvl >= 2 && Groove.pitchedOk()) this.thrumHold = 3.5; else this.thrumHold = Math.max(0, this.thrumHold - dt);
     this.thrumIn += ((this.thrumHold > 0 ? 1 : 0) - this.thrumIn) * Math.min(1, dt * 2.5);
     // the band stands together in the middle: Pip on the left, the funk drummer beside him
-    const avail = floorY - railY - railH;
-    // his drawing starts ~110 units below the top of the 650-unit box: size him so his afro stops just under the chord rail
-    let dH = Math.max(90, Math.min((avail - 6) * 650 / 545, s * 3.1)), dW = dH * 500 / 650;
-    // on narrow screens shrink the pair so both fit side by side
-    const fitF = Math.min(1, (W * 0.94) / (s * 1.5 + dW * 0.9 + (Parts.active && ['vocals', 'bass', 'piano'].includes(Parts.inst) ? s * 1.75 : 0)));
+    // his drawing starts ~110 units below the top of the 650-unit box: size him so his afro stays under the HUD
+    let dH = Math.max(90, Math.min((avail + 24) * 650 / 545, s * (W < 600 ? 2.7 : 3.1))), dW = dH * 500 / 650;
+    // the whole band's width, from the end of Pip's guitar to Bo (bass, from level 2; the band slides over as he walks on)
+    const front0 = Parts.active && ['vocals', 'bass', 'piano'].includes(Parts.inst) ? Parts.inst : '', boK = W > 620 && front0 !== 'bass' ? this.thrumIn : 0;
+    const sg0 = front0 ? s * (front0 === 'piano' ? 1.55 : front0 === 'bass' ? 1.75 : 1.4) : 0;
+    const span = sg0 + 1.8 * s + 0.5 * dW + Math.max(0.5 * dW, (0.62 * dW + 0.95 * s) * boK);
+    // on narrow screens shrink the band so everyone fits side by side
+    const fitF = Math.min(1, (W * 0.96) / span);
     const sP = s * fitF; dH *= fitF; dW *= fitF;
     // the player's own character stands out front, left of Pip: Lulu (vocals), Bo (bass), Tofu (keys)
-    const front = Parts.active && ['vocals', 'bass', 'piano'].includes(Parts.inst) ? Parts.inst : '', singer = !!front, sgW = singer ? sP * (front === 'piano' ? 1.55 : front === 'bass' ? 1.75 : 1.4) : 0;
-    const pairL = sP * 0.55 + sP * 0.95 + dW * 0.9 + sgW;              // Pip's width + a comfortable gap + kit width (+ the singer out front)
-    let pipX = W / 2 - pairL / 2 + sP * 0.5 + sgW;
+    const front = front0, singer = !!front, sgW = sg0 * fitF;
+    let pipX = W / 2 - span * fitF / 2 + sgW + 0.85 * sP;
     const drumCX = pipX + sP * 0.95 + dW * 0.5;
     if (Settings.lefty) pipX = W - pipX;
     const dcx = Settings.lefty ? W - drumCX : drumCX;
     this.placeDrummer(dcx, floorY, dW, dH, G, beatF);
     this.pipX = pipX;
-    if (this.thrumIn > 0.02 && W > 620 && front !== 'bass') drawThrum(c, (Settings.lefty ? dcx - dW * 0.62 - s * 0.5 : dcx + dW * 0.62 + s * 0.5) + (1 - this.thrumIn) * W * 0.15 * (Settings.lefty ? -1 : 1), floorY, s * 0.85, beatF, { alpha: Math.min(1, this.thrumIn * 1.5), lefty: Settings.lefty });
+    if (this.thrumIn > 0.02 && W > 620 && front !== 'bass') drawThrum(c, (Settings.lefty ? dcx - dW * 0.62 - sP * 0.5 : dcx + dW * 0.62 + sP * 0.5) + (1 - this.thrumIn) * W * 0.15 * (Settings.lefty ? -1 : 1), floorY, sP * 0.85, beatF, { alpha: Math.min(1, this.thrumIn * 1.5), lefty: Settings.lefty });
     if (singer) { const sx = Settings.lefty ? pipX + sgW : pipX - sgW;
       if (front === 'vocals') { this.mouth = (this.mouth || 0) + ((Parts.mouthOpen ? Parts.mouthOpen(now) : 0) - (this.mouth || 0)) * Math.min(1, dt * 18);
         drawSinger(c, sx, floorY + sP * 0.04, sP * 1.08, { beat: beatF, open: this.mouth, mood: G.mood(now), jump, now }); }
@@ -678,8 +652,26 @@ const Stage = {
     if (lvl >= 3 && !reduceMotion && Math.random() < 0.04 * (lvl - 2)) this.flashes.push({ x: Math.random() * W, y: H - 40 - Math.random() * 30, a: 1 });
     this.flashes = this.flashes.filter(f => (f.a -= dt * 4) > 0);
     this.flashes.forEach(f => { c.fillStyle = `rgba(255,255,255,${f.a})`; c.beginPath(); c.arc(f.x, f.y, 6 + (1 - f.a) * 14, 0, Math.PI * 2); c.fill(); });
-    { const cs = Math.max(0.55, Math.min(1, H / 420)); c.save(); c.translate(0, H * (1 - cs)); c.scale(cs, cs); drawCrowd(c, W / cs, H, phase, hype, now, lvl, this.crowd, dt * (G.failed ? 2.5 : 1), dv); c.restore(); }
     this.drawDrummer(c, G, beatF);
+    // the crowd stands in front of the stage (their heads hide the band's feet); their bodies carry on down behind the guitar
+    { const cs = Math.max(0.62, Math.min(1.15, H / 560)); c.save(); c.translate(0, Ly.crowdY); c.scale(cs, cs); drawCrowd(c, W / cs, -6, phase, hype, now, lvl, this.crowd, dt * (G.failed ? 2.5 : 1), dv); c.restore(); }
+    // the other instruments' lane: a strip that floats just above their panel
+    if (Parts.active && railH > 0) {
+      const rx = 10, rw = W - 20, curB = G.trackBeat;
+      c.save(); rr(c, rx, railY, rw, railH, 16); c.lineWidth = 16; c.strokeStyle = '#FFF7E6'; c.stroke(); c.fillStyle = COL.paper; c.fill(); c.lineWidth = 5; c.strokeStyle = COL.ink; c.stroke();
+      const b0 = Math.floor(curB - hitX / ppb) - 1, b1 = Math.ceil(curB + (W - hitX) / ppb) + 1;
+      c.fillStyle = 'rgba(30,27,46,.25)';
+      for (let b = b0; b <= b1; b++) { const x = hitX + (b - curB) * ppb, isBar = ((b % beats) + beats) % beats === 0; c.fillRect(x - (isBar ? 2 : 1), railY + railH - (isBar ? 18 : 10), isBar ? 4 : 2, isBar ? 14 : 6); }
+      rr(c, rx, railY, rw, railH, 16); c.clip();
+      Parts.drawRail(c, { W, railY, railH, hitX, ppb, curB, now });
+      c.restore();
+      this.hitPt = { x: hitX, y: railY + railH / 2 };
+      if (this.flash > 0.02) { c.fillStyle = `rgba(255,244,184,${this.flash * 0.8})`; c.beginPath(); c.arc(hitX, railY + railH / 2, railH * (0.6 + (1 - this.flash) * 0.9), 0, Math.PI * 2); c.fill(); }
+      const pulse = reduceMotion ? 0 : Math.pow(1 - phase, 3);
+      c.lineWidth = 5 + pulse * 3; c.strokeStyle = COL.ink;
+      rr(c, hitX - 10, railY - 6, 20, railH + 12, 10); c.fillStyle = 'rgba(255,255,255,.35)'; c.fill(); c.stroke();
+      c.fillStyle = COL.coral; c.beginPath(); c.moveTo(hitX - 11, railY - 16); c.lineTo(hitX + 11, railY - 16); c.lineTo(hitX, railY - 4); c.closePath(); c.fill(); c.lineWidth = 3; c.stroke();
+    } else if (!Parts.active) Fretboard.drawLane(G, now);
     // everything from here on goes on the top layer
     if (this.fxc) { c = this.fxc; c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, W, H); }
     // particles
@@ -696,20 +688,20 @@ const Stage = {
     // speech-bubble popups above Pip: newest at the anchor, older ones slide up and fade
     const tNow = performance.now(), LIFE = 900;
     this.popups = this.popups.filter(p => tNow - p.t0 < LIFE);
-    const px = Math.max(8, Math.min(W - 150 * ui, (this.pipX || hitX) - s * 0.6 - 150 * ui)), py0 = Math.max(railY + railH + 30 * ui, floorY - s * 1.35);
+    const px = Math.max(8, Math.min(W - 150 * ui, (this.pipX || hitX) - s * 0.6 - 150 * ui)), py0 = Math.max(top + 44 * ui, floorY - s * 1.35);
     const nP = this.popups.length;
     this.popups.forEach((p, i) => {
       const target = (nP - 1 - i) * 44 * ui;
       p.y += (target - p.y) * Math.min(1, dt * 14);
       const age = (tNow - p.t0) / LIFE;
-      const top = i === nP - 1;
-      c.globalAlpha = Math.max(0, (age < 0.75 ? 1 : 1 - (age - 0.75) / 0.25) * (top ? 1 : 0.8));
-      const fs = (p.big ? 30 : 22) * (top ? 1 : 0.82) * ui;
+      const newest = i === nP - 1;
+      c.globalAlpha = Math.max(0, (age < 0.75 ? 1 : 1 - (age - 0.75) / 0.25) * (newest ? 1 : 0.8));
+      const fs = (p.big ? 30 : 22) * (newest ? 1 : 0.82) * ui;
       c.font = `${Math.round(fs)}px ${DISPLAY_FONT}`; const tw = c.measureText(p.text).width;
       const sc = reduceMotion ? 1 : age < 0.12 ? 0.6 + age / 0.12 * 0.5 : age < 0.22 ? 1.1 - (age - 0.12) : 1;
       c.save(); c.translate(px, py0 - p.y - age * 14); c.scale(sc, sc); c.rotate(-0.05);
       c.fillStyle = p.color; rr(c, -8, -fs * 0.7, tw + 16, fs * 1.4, 12); c.fill(); c.lineWidth = 3; c.strokeStyle = COL.ink; c.stroke();
-      if (top) { c.beginPath(); c.moveTo(4, fs * 0.7 - 1); c.lineTo(-10, fs * 0.7 + 12); c.lineTo(18, fs * 0.7 - 1); c.closePath(); c.fill(); c.stroke(); c.fillStyle = p.color; c.fillRect(3, fs * 0.7 - 5, 16, 5); }
+      if (newest) { c.beginPath(); c.moveTo(4, fs * 0.7 - 1); c.lineTo(-10, fs * 0.7 + 12); c.lineTo(18, fs * 0.7 - 1); c.closePath(); c.fill(); c.stroke(); c.fillStyle = p.color; c.fillRect(3, fs * 0.7 - 5, 16, 5); }
       c.fillStyle = p.color === COL.coral || p.color === COL.grape || p.color === COL.bad ? '#fff' : COL.ink;
       c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(p.text, 0, 2);
       c.restore(); c.globalAlpha = 1;
@@ -725,7 +717,7 @@ const Stage = {
         const fs = Math.round(Math.max(14, Math.min(34, W * 0.05, H * 0.085)));
         c.font = `${fs}px ${DISPLAY_FONT}`;
         const tw = Math.min(W - 40, c.measureText(this.banner.text).width + 44), bh = fs + 24;
-        const cy = railY + railH + (floorY - railY - railH) * 0.3;
+        const cy = top + (floorY - top) * 0.3;
         c.save(); c.translate(W / 2 + bx, cy); c.rotate(-0.035);
         c.fillStyle = COL.ink; rr(c, -tw / 2 + 5, -bh / 2 + 6, tw, bh, 14); c.fill();
         c.fillStyle = this.banner.color; rr(c, -tw / 2, -bh / 2, tw, bh, 14); c.fill(); c.lineWidth = 4; c.strokeStyle = COL.ink; c.stroke();
@@ -736,14 +728,15 @@ const Stage = {
     }
     // count-in
     if (G.countText) {
-      c.font = `${Math.round(Math.min(H * 0.4, 130))}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.lineWidth = 12; c.strokeStyle = COL.ink; c.strokeText(G.countText, W / 2, H * 0.52); c.fillStyle = COL.paper; c.fillText(G.countText, W / 2, H * 0.52);
+      c.font = `${Math.round(Math.min((floorY - top) * 0.6, 130))}px ${DISPLAY_FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const cy = (top + floorY) / 2;
+      c.lineWidth = 12; c.strokeStyle = COL.ink; c.strokeText(G.countText, W / 2, cy); c.fillStyle = COL.paper; c.fillText(G.countText, W / 2, cy);
     }
     this.drawDanger(c, W, H, dv, now, G);
     if (G.tapMode && G.running) {
       c.font = `800 13px ${UI_FONT}`; c.textAlign = 'right'; c.textBaseline = 'top';
       const t = 'No mic: tap here or press Space to strum'; const tw = c.measureText(t).width;
-      c.fillStyle = 'rgba(30,27,46,.8)'; rr(c, W - tw - 24, 8, tw + 16, 22, 11); c.fill(); c.fillStyle = COL.paper; c.fillText(t, W - 16, 11);
+      const ty = top + (W < 600 ? 42 : 8); c.fillStyle = 'rgba(30,27,46,.8)'; rr(c, W - tw - 26, ty, tw + 16, 22, 11); c.fill(); c.fillStyle = COL.paper; c.fillText(t, W - 18, ty + 3);
     }
   }
 };
@@ -796,40 +789,144 @@ Stage.drawDanger = function (c, W, H, dv, now, G){
 /* ---------- fretboard (SVG), made for beginners, with live note feedback ---------- */
 const Fretboard = {
   svg: null, lights: [], lightText: [], strings: [], rings: [], cur: null, geo: null, wrongG: null,
-  init(svg){ this.svg = svg; },
-  render(ev, capo, lefty){
+  init(svg){
+    this.svg = svg; this.card = svg.closest('.fb-card'); this.laneCv = document.getElementById('fb-lane');
+    this.hearBtn = document.getElementById('btn-hear'); this.skipBtn = document.getElementById('btn-skip');
+    this.subEl = document.getElementById('now-sub'); this.stickEl = document.getElementById('fb-status');
+    let t = 0; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => this.refit(), 120); });
+  },
+  // after a resize: draw the same chord again for the new space (frets shown, size, phone or wide layout)
+  refit(){ if (this.cur && this.svg && this.svg.offsetParent) this.render(this.cur, this.capo || 0, this.lefty, this.next); },
+  // phones, and tablets held upright: the plate goes above the neck and 4 frets fill the width
+  isNarrow(){ const W = window.innerWidth, H = window.innerHeight; return W < 600 || (H > W * 1.15 && W < 1000); },
+  // the room the guitar gets: the whole width, and a share of the height that leaves the band most of the stage
+  avail(){
+    const W = window.innerWidth, H = window.innerHeight;
+    return { w: Math.max(220, Math.min(W - 24, 1560)), h: this.isNarrow() ? H * (W < 600 ? 0.52 : 0.46) : Math.min(H * (H < 540 ? 0.46 : 0.41), 350) };
+  },
+  // viewBox geometry (before mirroring for lefties): headstock + dock on the left, the timing lane along the top of the neck
+  metrics(narrow, K, NF){
+    // wide screens: a tall plate on the headstock beside the neck. Phones (short on width, long on height): the plate sits in the
+    // lane's row above a slim headstock, so the neck keeps the width
+    const laneH = narrow ? 168 : 62, x0 = 150, gap = 36 * K, plateW = narrow ? 290 : 176, dockL = narrow ? 18 : 30 - plateW;
+    const laneY0 = 42, laneY1 = laneY0 + laneH, nY0 = laneY1 + 10, top = nY0 + 22;
+    const x1 = NF <= 5 ? 880 : x0 + 730 * (0.45 + 0.11 * NF);
+    return { laneH, x0, gap, dockL, plateW, laneY0, laneY1, nY0, top, x1, nH: gap * 5 + 44, vbW: x1 + 40 - dockL, vbH: top + gap * 5 + 26 + 22 * K - 26 };
+  },
+  // how much neck fits: phones show the 4 frets around the shape; wider screens as many as fit the height budget, up to 12
+  fretsToShow(){
+    if (this.isNarrow()) return 4;
+    const { w, h } = this.avail();
+    for (let nf = 12; nf > 5; nf--) { const m = this.metrics(false, 1, nf); if (m.vbW / m.vbH * h <= w) return nf; }
+    return 5;
+  },
+  render(ev, capo, lefty, next){
     const svg = this.svg; if (!svg) return;
-    this.cur = ev;
+    const same = this.cur && ev && this.cur.label === ev.label;
+    this.cur = ev; this.capo = capo; this.lefty = lefty; this.next = next || null;
     const NS = 'http://www.w3.org/2000/svg';
     const X = x => lefty ? 1000 - x : x;
-    const anchor = a => lefty ? (a === 'start' ? 'end' : a === 'end' ? 'start' : a) : a;
     const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) if (attrs[k] !== undefined) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
     this.el = el;
-    svg.textContent = '';
+    svg.textContent = ''; svg.classList.remove('ghost', 'strum'); this.ghostOn = false;
     this.lights = []; this.lightText = []; this.strings = []; this.rings = []; this.geo = null; this.wrongG = null;
-    if (!ev || ev.rest) {
-      svg.appendChild(el('text', { x: 500, y: 150, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': 34, fill: COL.ink }, ev && ev.rest ? 'Rest. No chord here.' : ''));
-      return;
-    }
-    // just the neck: string names (which light up green/red) on one side, frets underneath
-    // phones: taller string spacing and bigger dots, since the width is what limits us there
-    const narrow = window.innerWidth < 600;
-    const K = narrow ? 1.75 : 1;
+    const narrow = this.isNarrow();
+    const K = narrow ? (window.innerHeight / window.innerWidth > 1.55 ? 2.05 : 1.75) : 1;
     this.K = K;
-    // how much neck fits: phones show the 4 frets around the shape; wider screens show more, up to the 12th fret
     const NF = this.fretsToShow();
     this.nfShown = NF;
-    const v = ev.v, x0 = 150, top = 26 + 32 * K, gap = 36 * K;
-    const x1 = NF <= 5 ? 880 : x0 + 730 * (0.45 + 0.11 * NF);
-    const vbH = top + gap * 5 + 26 + 22 * K; // wide: equal margins so the neck sits in the middle; narrow: no spare margin, every pixel goes to the neck
-    svg.setAttribute("viewBox", narrow ? `${lefty ? 94 : 46} 26 860 ${vbH - 26}` : `${lefty ? 894 - x1 : 54} 26 ${x1 + 52} ${vbH - 26}`);
+    const m = this.metrics(narrow, K, NF);
+    const { x0, x1, gap, top, nY0, nH, dockL, laneY0, laneY1, laneH } = m;
+    const vbX = lefty ? X(x1 + 30) : dockL - 10;
+    svg.setAttribute('viewBox', `${vbX} 26 ${m.vbW} ${m.vbH}`);
+    // the svg's size in pixels, so everything placed over it in % lines up exactly
+    { const { w, h } = this.avail(), asp = m.vbW / m.vbH, sw = Math.min(w, h * asp); svg.style.width = Math.round(sw) + 'px'; svg.style.height = Math.round(sw / asp) + 'px'; }
+    const P = (x, y) => [((X(x) - vbX) / m.vbW * 100).toFixed(3) + '%', ((y - 26) / m.vbH * 100).toFixed(3) + '%'];
+    const place = (e, x, y) => { if (!e) return; const [l, t] = P(x, y); e.style.left = l; e.style.top = t; };
+    const defs = el('defs', {});
+    defs.innerHTML = `<linearGradient id="fbRose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A2A1C"/><stop offset=".5" stop-color="#6B3F2A"/><stop offset="1" stop-color="#43261A"/></linearGradient>
+      <radialGradient id="fbPearl" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#E8E1F0"/><stop offset="1" stop-color="#BFB6CF"/></radialGradient>
+      <linearGradient id="fbFret" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E8A80"/><stop offset=".45" stop-color="#F4F1EA"/><stop offset="1" stop-color="#A8A397"/></linearGradient>
+      <linearGradient id="fbNut" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFDF6"/><stop offset="1" stop-color="#E4DAC2"/></linearGradient>
+      <linearGradient id="fbHead" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC23D"/><stop offset="1" stop-color="#FFA41A"/></linearGradient>
+      <linearGradient id="fbLane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B1730"/><stop offset="1" stop-color="#2C2548"/></linearGradient>`;
+    svg.appendChild(defs);
+    // ---- one silhouette: headstock, timing lane and neck share a thick ink line with a cream rim outside it ----
+    const tall = !narrow, hT = tall ? laneY0 - 4 : nY0 - 6, hB = nY0 + nH + 6, hR = x0 + 6, hL = dockL;
+    const pX0 = hL + (tall ? 10 : 4), pX1 = pX0 + m.plateW, pY0 = laneY0 + (tall ? 6 : 8), pY1 = tall ? hB - 12 : laneY1 - 8;       // the dock: a cream plate
+    const headD = `M${X(hR)} ${hT} L${X(hL + 40)} ${hT} Q${X(hL)} ${hT} ${X(hL)} ${hT + 40} L${X(hL)} ${hB - 60} Q${X(hL)} ${hB} ${X(hL + 60)} ${hB} L${X(hR)} ${hB} Z`;
+    const lx0 = tall ? pX1 + 2 : hL - 4, laneX = Math.min(X(lx0), X(x1 + 18)), laneW = x1 + 18 - lx0;
+    const neckX = Math.min(X(x0 - 6), X(x1 + 16)), neckW = x1 - x0 + 22;
+    const sil = [['path', { d: headD }], ['rect', { x: laneX, y: laneY0, width: laneW, height: laneH, rx: 14 }], ['rect', { x: neckX, y: nY0, width: neckW, height: nH, rx: 12 }]];
+    for (const [w, col] of [[20, '#FFF7E6'], [9, COL.ink]]) { const g = el('g', { fill: 'none', stroke: col, 'stroke-width': w, 'stroke-linejoin': 'round' }); sil.forEach(([t, a]) => g.appendChild(el(t, a))); svg.appendChild(g); }
+    // drop shadow of the whole guitar on the floor behind it
+    { const g = el('g', { fill: 'rgba(0,0,0,.45)', transform: `translate(${lefty ? -9 : 9} 12)` }); sil.forEach(([t, a]) => g.appendChild(el(t, a))); svg.insertBefore(g, svg.children[1]); }
+    // headstock: warm orange lacquer with a shade on the lower edge and a shine
+    svg.appendChild(el('path', { d: headD, fill: 'url(#fbHead)' }));
+    svg.appendChild(el('path', { d: `M${X(hL)} ${hB - 60} Q${X(hL)} ${hB} ${X(hL + 60)} ${hB} L${X(hR)} ${hB} L${X(hR)} ${hB - 12} L${X(hL + 62)} ${hB - 12} Q${X(hL + 12)} ${hB - 14} ${X(hL + 12)} ${hB - 62} Z`, fill: '#E07F12', opacity: .75 }));
+    // the timing lane: a dark track along the top edge of the neck (cards are drawn on the canvas laid over it)
+    svg.appendChild(el('rect', { x: laneX, y: laneY0, width: laneW, height: laneH, rx: 14, fill: 'url(#fbLane)' }));
+    svg.appendChild(el('rect', { x: laneX + 6, y: laneY0 + 5, width: laneW - 12, height: 4, rx: 2, fill: '#FFFFFF', opacity: .08 }));
+    // the plate: the chord to play now, big. Lane cards slide along the top of the neck into its corner
+    svg.appendChild(el('rect', { x: Math.min(X(pX0), X(pX1)) + 4, y: pY0 + 6, width: pX1 - pX0, height: pY1 - pY0, rx: 16, fill: 'rgba(120,50,0,.35)' }));
+    svg.appendChild(el('rect', { x: Math.min(X(pX0), X(pX1)), y: pY0, width: pX1 - pX0, height: pY1 - pY0, rx: 16, fill: '#FFF7E6', stroke: COL.ink, 'stroke-width': 4.5 }));
+    this.dockNow = null;
+    const pcx = X(tall ? (pX0 + pX1) / 2 : pX0 + (pX1 - pX0) * 0.4), pw = (pX1 - pX0) * (tall ? 1 : 0.7) - 20, pH = pY1 - pY0;
+    const chordText = (lab, yMid, big, cls, fill) => {
+      // the root big, anything after it (m7, sus4, /G) a size down; on two lines when one won't fit
+      const mm = /^([A-G][#b♯♭]?)(.*)$/.exec(lab) || [lab, lab, ''], root = mm[1], rest = mm[2];
+      const one = Math.min(big, pw / Math.max(1, [...lab].length * 0.62));
+      const g = el('g', { class: cls });
+      if (!rest || one >= big * 0.72) {
+        const t = el('text', { x: pcx, y: yMid + one * 0.36, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': one, fill }, root);
+        if (rest) t.appendChild(el('tspan', { 'font-size': one * 0.7 }, rest));
+        g.appendChild(t);
+      } else {
+        const r1 = Math.min(big, pw / Math.max(1, [...root].length * 0.62)), r2 = Math.min(big * 0.55, pw / Math.max(1, [...rest].length * 0.6));
+        g.appendChild(el('text', { x: pcx, y: yMid - r2 * 0.25, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': r1, fill }, root));
+        g.appendChild(el('text', { x: pcx, y: yMid - r2 * 0.25 + r2 * 1.05, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': r2, fill }, rest));
+      }
+      return g;
+    };
+    if (ev && !ev.rest) {
+      if (tall) svg.appendChild(el('text', { x: pcx, y: pY0 + 26 * Math.min(K, 1.4), 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': 17 * Math.min(K, 1.4), 'letter-spacing': 3, fill: COL.ink2, opacity: .75 }, 'PLAY'));
+      const nt = chordText(ev.label, pY0 + pH * (tall ? 0.42 : 0.52), tall ? Math.min(pH * 0.42, 128) : pH * 0.78, 'fb-now' + (same ? '' : ' pop'), COL.ink);
+      svg.appendChild(nt); this.dockNow = nt;
+      // the next chord's name waits at the bottom of the plate, greyed, and shows with its ghost on the neck
+      if (next && !next.rest) { const gn = el('g', { class: 'fghost' }), ny = tall ? pY0 + pH * 0.8 : pY1 - 12;
+        gn.appendChild(el('text', { x: tall ? pcx : X(pX1 - 34), y: ny, 'text-anchor': tall ? 'middle' : lefty ? 'start' : 'end', 'font-family': DISPLAY_FONT, 'font-size': Math.min(30 * Math.min(K, 1.4), pw / Math.max(1, ([...next.label].length + 2.2) * 0.6)), fill: '#9A93AE' }, '→ ' + next.label));
+        svg.appendChild(gn); this.plateGhost = gn; }
+    }
+    // lay the extras over the svg: the hear stamp on the plate's corner, the capo note above it, the status sticker over the lane, skip at the neck's end
+    if (tall) place(this.hearBtn, pX0 + 34, pY1 - 2); else place(this.hearBtn, pX0 + 26, pY0 + 4);
+    // (phones: the capo note starts right of the hear stamp, and the status sticker moves to the lane's far end, out of its way)
+    if (tall) { place(this.subEl, (pX0 + pX1) / 2, laneY0 - 8); if (this.subEl) this.subEl.style.transform = 'translate(-50%,-100%)'; }
+    else { place(this.subEl, lefty ? pX0 + 84 : pX0 + 84, laneY0 - 6); if (this.subEl) this.subEl.style.transform = lefty ? 'translate(-100%,-100%)' : 'translate(0,-100%)'; }
+    if (tall) { place(this.stickEl, (x0 + x1) / 2, laneY0); if (this.stickEl) this.stickEl.style.translate = ''; }
+    else { place(this.stickEl, x1 + 10, laneY0 + 4); if (this.stickEl) this.stickEl.style.translate = lefty ? '0 -30%' : '-100% -30%'; }
+    place(this.skipBtn, x1 + 12, nY0 + nH + 2); if (this.skipBtn) this.skipBtn.style.transform = `translate(${lefty ? '0' : '-100%'},-50%) rotate(-2deg)`;
+    { const cv = this.laneCv; if (cv) { const cx0 = pX1 - 24, cx1 = x1 + 22, cy0 = laneY0 - 20, cy1 = laneY1 + 6;
+        const [l] = P(lefty ? cx1 : cx0, 0), [, t] = P(0, cy0);
+        cv.style.left = l; cv.style.top = t; cv.style.width = ((cx1 - cx0) / m.vbW * 100).toFixed(3) + '%'; cv.style.height = ((cy1 - cy0) / m.vbH * 100).toFixed(3) + '%';
+        this.laneGeo = { cx0, cx1, cy0, cy1, hit: pX1 + 8, xr: x1 + 16, y0: laneY0 + 6, y1: laneY1 - 6, lefty, narrow }; } }
+    if (!ev || ev.rest) {
+      svg.appendChild(el('rect', { x: neckX, y: nY0, width: neckW, height: nH, rx: 12, fill: 'url(#fbRose)' }));
+      svg.appendChild(el('text', { x: X((x0 + x1) / 2), y: nY0 + nH / 2 + 12, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': 34 * Math.min(K, 1.4), fill: '#FFF7E6' }, ev && ev.rest ? 'Rest. No chord here.' : ''));
+      return;
+    }
+    const v = ev.v;
     const down = Settings.fbView !== 'tab';                       // looking down: thickest string on top
     const yOf = i => top + (down ? i : 5 - i) * gap;
     const absF = v.frets.map(f => f > 0 ? f + capo : f);
     const fretted = absF.filter(f => f > 0);
-    const maxA = Math.max(capo, ...fretted, 1), minA = fretted.length ? Math.min(...fretted) : 1;
+    // the window of frets: this chord's, and the next one's too when both fit (so the ghost of the next shape shows)
+    const nextF = next && next.v ? next.v.frets.filter(f => f > 0).map(f => f + capo) : [];
+    const both = fretted.concat(nextF);
+    const span = a => a.length ? Math.max(...a) - Math.min(...a) + 1 : 0;
+    const use = NF < 12 && both.length && span(both.concat(capo > 0 ? [capo] : [])) <= NF ? both : fretted;
+    const maxA = Math.max(capo, ...use, 1), minA = use.length ? Math.min(...use) : 1;
     let start;
-    if (NF >= 12) start = Math.max(1, maxA - NF + 1);
+    if (NF >= 12) start = Math.max(1, Math.max(capo, ...fretted, 1) - NF + 1);
     else { start = capo > 0 ? capo : (maxA <= NF ? 1 : Math.max(1, minA - (NF > 5 ? 1 : 0))); if (maxA > start + NF - 1) start = maxA - NF + 1; }
     start = Math.max(1, start);
     // fret spacing: real proportions (each fret ~6% narrower) when the whole neck shows, even spacing when zoomed in
@@ -840,21 +937,11 @@ const Fretboard = {
     const xOfFret = f => (lineX(f - start) + lineX(f - start + 1)) / 2;
     const fwAt = f => lineX(f - start + 1) - lineX(f - start);
     const used = new Set(fretted);
-    const nY0 = top - 22, nH = gap * 5 + 44;                       // the neck's box
-    // shared paint: rosewood, pearl inlays, taiko drum faces
-    const defs = el('defs', {});
-    defs.innerHTML = `<linearGradient id="fbRose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A2A1C"/><stop offset=".5" stop-color="#6B3F2A"/><stop offset="1" stop-color="#43261A"/></linearGradient>
-      <radialGradient id="fbPearl" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#E8E1F0"/><stop offset="1" stop-color="#BFB6CF"/></radialGradient>
-      <linearGradient id="fbFret" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E8A80"/><stop offset=".45" stop-color="#F4F1EA"/><stop offset="1" stop-color="#A8A397"/></linearGradient>
-      <linearGradient id="fbNut" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFDF6"/><stop offset="1" stop-color="#E4DAC2"/></linearGradient>
-      <pattern id="fbWound" width="4" height="6" patternUnits="userSpaceOnUse"><rect width="4" height="6" fill="#D8CFBC"/><rect width="2" height="6" fill="#9C927D"/></pattern>`;
-    svg.appendChild(defs);
     // the frets you need, lit from behind
-    for (let f = start; f < start + NF; f++) if (used.has(f)) svg.appendChild(el('rect', { x: Math.min(X(lineX(f - start)), X(lineX(f - start + 1))) + 3, y: nY0 - 10, width: fwAt(f) - 6, height: nH + 20, rx: 10, fill: 'rgba(255,206,58,.5)' }));
-    // neck: drop shadow, rosewood, grain streaks, cream binding
-    const nx = Math.min(X(x0 - 6), X(x1 + 16)), nw = x1 - x0 + 22;
-    svg.appendChild(el('rect', { x: nx + 5, y: nY0 + 7, width: nw, height: nH, rx: 12, fill: 'rgba(30,27,46,.35)' }));
-    svg.appendChild(el('rect', { x: nx, y: nY0, width: nw, height: nH, rx: 12, fill: 'url(#fbRose)', stroke: COL.ink, 'stroke-width': 4 }));
+    for (let f = start; f < start + NF; f++) if (used.has(f)) svg.appendChild(el('rect', { x: Math.min(X(lineX(f - start)), X(lineX(f - start + 1))) + 3, y: nY0 - 7, width: fwAt(f) - 6, height: nH + 14, rx: 10, fill: 'rgba(255,206,58,.75)' }));
+    // neck: rosewood, grain streaks, cream binding
+    const nx = neckX, nw = neckW;
+    svg.appendChild(el('rect', { x: nx, y: nY0, width: nw, height: nH, rx: 12, fill: 'url(#fbRose)' }));
     const gr = el('g', { opacity: .5, 'pointer-events': 'none' });
     for (let k = 0; k < 11; k++) { const gy = nY0 + 6 + k * (nH - 12) / 10 + ((k * 37) % 7) - 3, w1 = ((k * 53) % 9) - 4;
       gr.appendChild(el('path', { d: `M${nx + 4} ${gy} C ${nx + nw * 0.3} ${gy + w1}, ${nx + nw * 0.6} ${gy - w1}, ${nx + nw - 4} ${gy + w1 * 0.5}`, fill: 'none', stroke: k % 3 ? '#3A2016' : '#8A5638', 'stroke-width': k % 3 ? 1.6 : 1 })); }
@@ -879,17 +966,18 @@ const Fretboard = {
       const on = used.has(f);
       const mark = [3, 5, 7, 9, 12, 15, 17, 19, 21].includes(f);
       if (NF > 7 && !on && !mark) continue;                        // long neck: label the marker frets and the ones in use
-      svg.appendChild(el('text', { x: X(xOfFret(f)), y: top + gap * 5 + 24 + 20 * K, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': (on ? 19 : 15) * K, fill: on ? '#3E2616' : '#8A7657' }, NF > 7 ? String(f) : 'fret ' + f));
+      svg.appendChild(el('text', { x: X(xOfFret(f)), y: top + gap * 5 + 24 + 20 * K, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': (on ? 19 : 15) * K, fill: on ? '#FFE9A8' : '#B9AFCB', stroke: COL.ink, 'stroke-width': 4 * Math.min(K, 1.4), 'paint-order': 'stroke' }, NF > 7 ? String(f) : 'fret ' + f));
     }
-    // strings: a shadow line, the string, wound texture on the thick three; name tokens on the left light up
+    // strings: from the pegs on the headstock over the nut to the end of the neck; the pegs are the string-name tokens that light up
+    const tx = X(narrow ? 66 : 70);
     for (let i = 0; i < 6; i++) {
       const y = yOf(i), muted = v.frets[i] < 0, sw = 1.8 + (5 - i) * 0.7;
-      svg.appendChild(el('line', { x1: X(x0 - 6), x2: X(x1 + 14), y1: y + 3, y2: y + 3, stroke: 'rgba(0,0,0,.4)', 'stroke-width': sw }));
-      const line = el('line', { class: 'fstring', x1: X(x0 - 6), x2: X(x1 + 14), y1: y, y2: y, stroke: muted ? '#8C8474' : (i < 3 ? '#E2D8C2' : '#F4EEE0'), 'stroke-width': sw + 0.4, 'stroke-dasharray': muted ? '6 6' : undefined });
+      svg.appendChild(el('line', { x1: tx, x2: X(x1 + 14), y1: y + 3, y2: y + 3, stroke: 'rgba(0,0,0,.4)', 'stroke-width': sw }));
+      const line = el('line', { class: 'fstring', x1: tx, x2: X(x1 + 14), y1: y, y2: y, stroke: muted ? '#8C8474' : (i < 3 ? '#E2D8C2' : '#F4EEE0'), 'stroke-width': sw + 0.4, 'stroke-dasharray': muted ? '6 6' : undefined });
       svg.appendChild(line); this.strings.push(line);
-      if (!muted && i < 3) svg.appendChild(el('line', { x1: X(x0 - 6), x2: X(x1 + 14), y1: y, y2: y, stroke: 'rgba(90,80,60,.45)', 'stroke-width': sw * 0.7, 'stroke-dasharray': '1.5 2.5', 'pointer-events': 'none' }));
-      const tr = 16 * Math.min(K, 1.35), tx = X(narrow ? 70 : 76);
-      svg.appendChild(el('circle', { cx: tx + 2, cy: y + 3, r: tr, fill: 'rgba(30,27,46,.35)' }));
+      if (!muted && i < 3) svg.appendChild(el('line', { x1: tx, x2: X(x1 + 14), y1: y, y2: y, stroke: 'rgba(90,80,60,.45)', 'stroke-width': sw * 0.7, 'stroke-dasharray': '1.5 2.5', 'pointer-events': 'none' }));
+      const tr = 16 * Math.min(K, 1.35);
+      svg.appendChild(el('circle', { cx: tx + (lefty ? -2 : 2), cy: y + 3, r: tr, fill: 'rgba(30,27,46,.35)' }));
       const badge = el('circle', { class: muted ? undefined : 'flight', cx: tx, cy: y, r: tr, fill: muted ? '#EDE3CC' : '#FFF7E6', stroke: muted ? '#B9B09C' : COL.ink, 'stroke-width': 3, 'stroke-dasharray': muted ? '4 4' : undefined });
       const bt = el('text', { class: muted ? undefined : 'flt', x: tx, y: y + 6.5 * Math.min(K, 1.35), 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': 18 * Math.min(K, 1.35), fill: muted ? COL.mute : COL.ink, 'pointer-events': 'none' }, STRING_NAMES[i]);
       svg.appendChild(badge); svg.appendChild(bt);
@@ -898,8 +986,24 @@ const Fretboard = {
     if (capo > 0 && capo >= start && capo < start + NF) {
       const cx = X(xOfFret(capo));
       svg.appendChild(el('rect', { x: cx - 13, y: top - 26, width: 26, height: gap * 5 + 52, rx: 12, fill: COL.ink2, stroke: COL.ink, 'stroke-width': 3 }));
-      svg.appendChild(el('text', { x: cx, y: top - 31, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': 14, fill: COL.ink }, 'CAPO ' + capo));
+      svg.appendChild(el('text', { x: cx, y: top + gap * 5 + 44, 'text-anchor': 'middle', 'font-family': UI_FONT, 'font-weight': 800, 'font-size': 14 * Math.min(K, 1.4), fill: '#FFF7E6', stroke: COL.ink, 'stroke-width': 3, 'paint-order': 'stroke' }, 'CAPO ' + capo));
     }
+    const openX = X(narrow ? 116 : 118), KO = Math.min(K, 1.3);
+    // the next chord, greyed out: it fades in on the neck just before the change so the fingers can get ready
+    if (next && next.v && !next.rest) {
+      const gg = el('g', { class: 'fghost', 'pointer-events': 'none' }), nv = next.v;
+      const ghostDot = (cx, cy, R, fin) => { gg.appendChild(el('circle', { cx, cy, r: R, fill: 'rgba(235,230,245,.28)', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 3, 'stroke-dasharray': '6 4' }));
+        if (fin) gg.appendChild(el('text', { x: cx, y: cy + 7 * K, 'text-anchor': 'middle', 'font-family': DISPLAY_FONT, 'font-size': 21 * K, fill: 'rgba(255,255,255,.85)' }, fin === 5 ? 'T' : String(fin))); };
+      if (nv.barre) { const af = nv.barre.fret + capo; if (af >= start && af < start + NF) { const cx = X(xOfFret(af)), ya = Math.min(yOf(nv.barre.from), yOf(nv.barre.to)) - 20 * K, yb = Math.max(yOf(nv.barre.from), yOf(nv.barre.to)) + 20 * K;
+        gg.appendChild(el('rect', { x: cx - 17 * K, y: ya, width: 34 * K, height: yb - ya, rx: 17 * K, fill: 'rgba(235,230,245,.24)', stroke: 'rgba(255,255,255,.85)', 'stroke-width': 3, 'stroke-dasharray': '6 4' })); } }
+      for (let i = 0; i < 6; i++) { const f = nv.frets[i]; if (f <= 0) { if (f === 0 && v.frets[i] !== 0) gg.appendChild(el('circle', { cx: openX, cy: yOf(i), r: 13 * KO, fill: 'none', stroke: 'rgba(255,255,255,.8)', 'stroke-width': 3, 'stroke-dasharray': '5 4' })); continue; }
+        const af = f + capo; if (af < start || af >= start + NF) continue;
+        if (nv.barre && nv.fingers[i] === nv.barre.finger && f === nv.barre.fret) continue;
+        if (v.frets[i] === f) continue;                                  // same spot as now: keep that finger down
+        ghostDot(X(xOfFret(af)), yOf(i), Math.min(22 * K, fwAt(af) * 0.42), nv.fingers[i]); }
+      // its name rides along at the right end of the plate: "then C"
+      svg.appendChild(gg); this.ghostG = gg;
+    } else this.ghostG = null;
     if (v.barre) {
       const cx = X(xOfFret(v.barre.fret + capo));
       const ya = Math.min(yOf(v.barre.from), yOf(v.barre.to)) - 22 * K, yb = Math.max(yOf(v.barre.from), yOf(v.barre.to)) + 22 * K;
@@ -911,7 +1015,6 @@ const Fretboard = {
     }
     const flat = ev.shape && ev.shape.flat;
     const order = [0, 1, 2, 3, 4, 5].sort((a, b) => (v.fingers[a] || 9) - (v.fingers[b] || 9));
-    const openX = X(narrow ? 118 : 120), KO = Math.min(K, 1.3);
     for (let i = 0; i < 6; i++) {
       const y = yOf(i), f = v.frets[i];
       const midi = f >= 0 ? OPEN_MIDI[i] + capo + f + (typeof UI !== 'undefined' && UI.chart && UI.chart.tuning || 0) : null;
@@ -946,15 +1049,81 @@ const Fretboard = {
     this.wrongG = el('g', { class: 'fwrong-layer' }); svg.appendChild(this.wrongG);
     this.geo = { X, yOf, xOfFret, start, NF, capo, openX, x0, x1, fw, flat };
   },
-  // frets to show for the space the neck has
-  fretsToShow(){
-    if (window.innerWidth < 600) return 4;
-    const board = this.svg && this.svg.closest('.board');
-    const bw = board ? board.clientWidth : window.innerWidth;
-    const side = window.matchMedia && matchMedia('(orientation:landscape) and (min-width:761px)').matches ? 2 * 250 : 0;
-    const avail = bw - side - 150;
-    return Math.max(5, Math.min(12, Math.floor(avail / 78)));
+  // the next chord's ghost on the neck (Stage: shortly before the change; Practice: once most of this chord rings)
+  ghost(on){ on = !!(on && this.ghostG); if (on === this.ghostOn) return; this.ghostOn = on; this.svg.classList.toggle('ghost', on); },
+  // a card reached the strike line: the strings flash once
+  pulse(){ const s = this.svg; if (!s || reduceMotion) return; s.classList.remove('strum'); void s.getBoundingClientRect(); s.classList.add('strum'); },
+  // the timing lane, drawn every frame on a canvas laid over the lane in the svg: chord cards slide in from the neck's far end
+  // and dock into the plate on the headstock; the one you're playing is in colour, the ones coming up are greyed out
+  drawLane(G, now){
+    const cv = this.laneCv, Lg = this.laneGeo;
+    if (!cv || !Lg || !G.chart || !cv.offsetParent) return;
+    const cw = cv.clientWidth, chh = cv.clientHeight; if (!cw || !chh) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(chh * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(chh * dpr); }
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, cw, chh);
+    const u = cw / (Lg.cx1 - Lg.cx0), L = Lg.lefty, dir = L ? -1 : 1;
+    const sx = x => L ? cw - (x - Lg.cx0) * u : (x - Lg.cx0) * u, sy = y => (y - Lg.cy0) * u;
+    const hitX = sx(Lg.hit), endX = sx(Lg.xr), yT = sy(Lg.y0), yB = sy(Lg.y1), laneWpx = Math.abs(endX - hitX);
+    const ppb = Math.max(46, Math.min(130, laneWpx / (Lg.narrow ? 4.5 : 7)));
+    const curB = G.trackBeat, beats = G.chart.beats || 4, stage = G.mode === 'stage';
+    const strip = stage ? Math.max(9, (yB - yT) * 0.2) : 0;
+    const cy0 = yT + 2, chH = yB - yT - 4 - strip;
+    const bx = b => hitX + dir * (b - curB) * ppb;
+    c.save(); c.beginPath(); c.rect(Math.min(hitX, endX), yT - 2, laneWpx, yB - yT + 4); c.clip();
+    // beat ticks along the bottom edge (bars taller)
+    if (stage) {
+      const b0 = Math.floor(curB) - 1, b1 = Math.ceil(curB + laneWpx / ppb) + 1;
+      c.fillStyle = 'rgba(255,247,230,.45)';
+      for (let b = b0; b <= b1; b++) { const x = bx(b), bar = ((b % beats) + beats) % beats === 0; c.fillRect(x - (bar ? 1.5 : 1), yB - (bar ? strip : strip * 0.55), bar ? 3 : 2, bar ? strip : strip * 0.55); }
+      if (G.strumSteps && !Parts.active) {
+        const n = G.strumSteps.length, per = beats / n;
+        for (let b = Math.floor(b0 / beats) * beats; b <= b1; b += beats) for (let i = 0; i < n; i++) {
+          const ch = G.strumSteps[i]; if (ch !== 'D' && ch !== 'U') continue;
+          const x = bx(b + i * per), y = yB - strip * 0.5, a = Math.min(4.5, strip * 0.35);
+          c.fillStyle = '#FFF7E6'; c.beginPath(); if (ch === 'D') { c.moveTo(x - a, y - a * 0.8); c.lineTo(x + a, y - a * 0.8); c.lineTo(x, y + a * 0.8); } else { c.moveTo(x - a, y + a * 0.8); c.lineTo(x + a, y + a * 0.8); c.lineTo(x, y - a * 0.8); } c.fill();
+        }
+      }
+    }
+    // chord cards
+    const cur = this.cur, curI = G.trackEvents.indexOf(cur);
+    const fs = Math.round(Math.min(chH * 0.62, 30));
+    for (let i = 0; i < G.trackEvents.length; i++) {
+      const ev = G.trackEvents[i];
+      const a = bx(ev.tb), w = Math.max(28, ev.tl * ppb - 5), x0 = L ? a - w : a;
+      if (x0 > cw + 10 || x0 + w < -10) continue;
+      const isCur = ev === cur, past = curI >= 0 ? i < curI : ev.done, col = cardColor(ev.label);
+      const fill = isCur ? col : past ? '#4A4462' : '#8F88A6';
+      c.globalAlpha = past ? 0.7 : 1;
+      rr(c, x0, cy0, w, chH, Math.min(10, chH * 0.3)); c.fillStyle = fill; c.fill(); c.lineWidth = isCur ? 3.5 : 2.5; c.strokeStyle = COL.ink; c.stroke();
+      if (!isCur && !past) { c.fillStyle = 'rgba(255,255,255,.14)'; rr(c, x0 + 3, cy0 + 3, w - 6, chH * 0.32, 6); c.fill(); }
+      if (ev.result) { c.fillStyle = ev.result === 'miss' ? 'rgba(229,72,77,.5)' : 'rgba(43,182,115,.45)'; rr(c, x0, cy0, w, chH, Math.min(10, chH * 0.3)); c.fill(); }
+      c.font = `${fs}px ${DISPLAY_FONT}`; c.textBaseline = 'middle';
+      const tw = c.measureText(ev.label).width;
+      // the label stays readable at the strike line while the card slides through it
+      let lx = L ? x0 + w - 8 - tw : x0 + 8;
+      if (!L && x0 < hitX + 6 && x0 + w > hitX) lx = Math.max(x0 + 8, Math.min(hitX + 8, x0 + w - tw - 6));
+      if (L && x0 + w > hitX - 6 && x0 < hitX) lx = Math.min(x0 + w - 8 - tw, Math.max(hitX - 8 - tw, x0 + 6));
+      c.fillStyle = isCur ? textOn(col) : past ? 'rgba(255,247,230,.55)' : '#F4F0FF';
+      c.fillText(ev.label, lx, cy0 + chH / 2 + 2);
+      c.globalAlpha = 1;
+    }
+    c.restore();
+    // the strike line: where a card meets the plate. It thumps on the beat and flashes on a good hit
+    const ph = ((G.beatNow % 1) + 1) % 1, pulse = reduceMotion || !stage ? 0 : Math.pow(1 - ph, 3);
+    const fl = typeof Stage !== 'undefined' ? Stage.flash || 0 : 0;
+    if (fl > 0.02) { c.fillStyle = `rgba(255,244,184,${fl * 0.8})`; c.beginPath(); c.arc(hitX, (yT + yB) / 2, (yB - yT) * (0.5 + (1 - fl) * 0.7), 0, Math.PI * 2); c.fill(); }
+    const lw = 5 + pulse * 3;
+    c.fillStyle = 'rgba(255,255,255,.4)'; rr(c, hitX - 7, yT - 6, 14, yB - yT + 12, 7); c.fill();
+    c.lineWidth = lw; c.strokeStyle = COL.ink; c.stroke();
+    c.fillStyle = COL.coral; c.beginPath(); c.moveTo(hitX - 10, yT - 16); c.lineTo(hitX + 10, yT - 16); c.lineTo(hitX, yT - 4); c.closePath(); c.fill(); c.lineWidth = 3; c.stroke();
+    // bursts come out of the strike line
+    if (typeof Stage !== 'undefined' && Stage.cv && this.frameN++ % 20 === 0) {
+      const r = cv.getBoundingClientRect(), sr = Stage.cv.getBoundingClientRect();
+      Stage.hitPt = { x: r.left - sr.left + hitX, y: r.top - sr.top + yT };
+    }
   },
+  frameN: 0,
   // states[i]: '' waiting, 'heard' (green), 'miss' (red: this string isn't ringing)
   // wrong: [{string, fret (absolute), midi, open}] notes that shouldn't be there, drawn where they probably come from
   feedback(states, wrong){
@@ -967,6 +1136,8 @@ const Fretboard = {
         if (e.classList.contains('miss') !== (st === 'miss')) e.classList.toggle('miss', st === 'miss');
       }
     }
+    // Practice: once half the strings ring, the next chord's ghost shows so the fingers can get ready
+    if (typeof G !== 'undefined' && G.mode === 'practice') { const need = this.lights.filter(Boolean).length, got = states.filter(x => x === 'heard' || x === 1 || x === true).length; this.ghost(need > 0 && got * 2 >= need); }
     const g = this.wrongG, geo = this.geo; if (!g || !geo) return;
     g.textContent = '';
     const el = this.el;

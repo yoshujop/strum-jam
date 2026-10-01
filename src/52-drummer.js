@@ -8,9 +8,9 @@
    ahead so the stick lands on it. Coordinates are the 500 x 650 design box (floor at y = 522).          */
 const FunkDrummer = (() => {
   const INK = '#2b1a12', SKIN = '#a8683f', SKIN_D = '#87502b', SKIN_L = '#c98a5c', HAIR = '#2a1712', HAIR_L = '#5a3424',
-    GOLD = '#ffffff', GOLD_D = '#c9c5d4',     // (once gold: his trim, chains and teeth are white now)
+    GOLD = '#ffc93c', GOLD_D = '#c98a1e', GOLD_L = '#fff0a8', TEETH = '#ffffff', TEETH_D = '#c9c5d4', RIM = '#15131b', TIE = '#141219', TIE_L = '#34313f',   // gold chains, rings and hoops; white teeth; black shades rims
      PINK = '#ff4fa0', LIP = '#e2566f', MOUTH = '#5a0f1e', TONGUE = '#ff6f8e',
-    PURP = '#2A2633', PURP_D = '#17141F', PURP_L = '#443F52', SHIRT = '#F6F4FA', RED = '#9A96A6', RED_D = '#74707F',   // black suit, white shirt, grey drums
+    PURP = '#24222B', PURP_D = '#121117', PURP_L = '#3E3B4A', SHIRT = '#FAF9FD', SHIRT_D = '#D9D6E4', RED = '#9A96A6', RED_D = '#74707F',   // a sharp black suit, white shirt, black tie; grey drums
     CREAM = '#fff4d6', WOOD = '#f6dca8', CYM = '#ffc93c', CYM_D = '#e5a92a', CYM_L = '#fff3b0', CHROME = '#d9dde6', CHROME_D = '#b7bcc8', CYAN = '#8ff0ff';
   const LW = 6, LI = 3.5, STICK = 60, BUTT = 20, W_UP = 31, W_FO = 26;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t;
@@ -272,24 +272,32 @@ const FunkDrummer = (() => {
     c.fillStyle = PURP; c.fill(LAPEL_L); c.fill(LAPEL_R);
     c.fillStyle = PURP_D; c.fill(JACKET_SH);
     c.fillStyle = PURP_L; c.globalAlpha = 0.9; c.fill(JACKET_HI); c.globalAlpha = 1;
-    // the shirt: a fuzzy, airbrushed print of a black puppy sitting, with two grey smudges beside it
-    { const soft = (fn, col, blur) => { c.save(); c.fillStyle = col; if ('filter' in c) c.filter = `blur(${blur}px)`; c.beginPath(); fn(); c.fill(); c.restore(); };
-      soft(() => { c.ellipse(-20, -52, 5, 12, 0.35, 0, 7); c.ellipse(19, -46, 6, 9, -0.4, 0, 7); c.ellipse(4, -64, 9, 5, 0.1, 0, 7); }, '#7A7784', 1.6);
-      soft(() => { c.ellipse(0, -40, 7, 6, 0, 0, 7); c.ellipse(-6, -38, 3, 6, 0.3, 0, 7); c.ellipse(6, -38, 3, 6, -0.3, 0, 7);      // head + ears
-        c.ellipse(1, -24, 9, 11, 0, 0, 7); c.ellipse(-8, -12, 4, 3, 0, 0, 7); c.ellipse(9, -12, 4, 3, 0, 0, 7);                      // body + paws
-        c.ellipse(-12, -18, 6, 2, -0.4, 0, 7); }, '#1B1822', 0.8); }                                                                // tail
-    c.fillStyle = SKIN; c.fill(VNECK); c.strokeStyle = INK; c.lineWidth = LI; c.stroke(VNECK);
+    // the shirt: crisp white, a soft shade down one side, buttoned up to the collar
+    c.fillStyle = SHIRT_D; c.globalAlpha = 0.8; c.beginPath(); c.moveTo(6, -104); c.lineTo(22, -56); c.lineTo(28, 10); c.lineTo(10, 10); c.lineTo(4, -60); c.closePath(); c.fill(); c.globalAlpha = 1;
     c.restore();
+    // lapels: black with a satin facing along the edge (no trim, no stars: a nice black suit)
+    c.strokeStyle = PURP_L; c.lineWidth = 6; c.beginPath(); c.moveTo(-19, -99); c.lineTo(-25, -56); c.lineTo(-33, -2); c.moveTo(19, -99); c.lineTo(25, -56); c.lineTo(33, -2); c.stroke();
     c.strokeStyle = INK; c.lineWidth = LI; c.beginPath(); c.moveTo(-15, -103); c.lineTo(-21, -56); c.lineTo(-29, 4); c.moveTo(15, -103); c.lineTo(21, -56); c.lineTo(29, 4); c.stroke();
-    c.strokeStyle = GOLD; c.lineWidth = 5; c.beginPath(); c.moveTo(-18, -98); c.lineTo(-24, -56); c.lineTo(-31, -2); c.moveTo(18, -98); c.lineTo(24, -56); c.lineTo(31, -2); c.stroke();
-    c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(-58, -30); c.quadraticCurveTo(-50, -26, -46, -18); c.moveTo(56, -40); c.quadraticCurveTo(50, -34, 48, -26); c.stroke();
-    for (const [x, y] of [[-54, -62], [-44, -32], [-60, -24], [54, -62], [44, -32], [60, -24]]) { star(c, x, y, 7, 3, 0); c.fillStyle = GOLD; c.fill(); c.lineWidth = 2; c.stroke(); }
-    // neck, then the chains on the skin
+    c.lineWidth = 3; c.beginPath(); c.moveTo(-40, -86); c.lineTo(-26, -76); c.moveTo(40, -86); c.lineTo(26, -76); c.stroke();                 // the notch of each lapel
+    c.beginPath(); c.moveTo(-58, -30); c.quadraticCurveTo(-50, -26, -46, -18); c.moveTo(56, -40); c.quadraticCurveTo(50, -34, 48, -26); c.stroke();
+    // a white pocket square
+    c.fillStyle = SHIRT; c.beginPath(); c.moveTo(-56, -62); c.lineTo(-48, -70); c.lineTo(-42, -63); c.lineTo(-38, -68); c.lineTo(-36, -60); c.closePath(); c.fill(); c.lineWidth = 2.4; c.stroke();
+    c.beginPath(); c.moveTo(-60, -60); c.lineTo(-34, -60); c.stroke();
+    // neck, the shirt collar over it, the black tie, then the gold chains over the lot
     inked(c, [NECK], SKIN_D, 2.6);
-    const chain = (y1, w, lw1, lw2, d) => { c.strokeStyle = INK; c.lineWidth = lw1; c.beginPath(); c.moveTo(-w, -100); c.quadraticCurveTo(0, y1, w, -100); c.stroke(); c.strokeStyle = GOLD; c.lineWidth = lw2; c.setLineDash(d); c.stroke(); c.setLineDash([]); };
-    chain(-76, 16, 8, 4, [3, 2]); chain(-56, 24, 9, 5, [4, 2]);
+    const collar = sg => { c.beginPath(); c.moveTo(sg * 1, -101); c.lineTo(sg * 19, -108); c.lineTo(sg * 13, -88); c.closePath(); };
+    for (const sg of [-1, 1]) { collar(sg); c.fillStyle = SHIRT; c.fill(); c.lineWidth = 3.2; c.strokeStyle = INK; c.stroke(); }
+    const knot = new Path2D('M-7 -101 L7 -101 L5 -89 L-5 -89 Z'), blade = new Path2D('M-5 -90 L5 -90 L10 -24 L0 -12 L-10 -24 Z');
+    for (const q of [blade, knot]) { c.fillStyle = TIE; c.fill(q); c.lineWidth = 3.2; c.strokeStyle = INK; c.stroke(q); }
+    c.strokeStyle = TIE_L; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-2, -86); c.lineTo(-5, -30); c.stroke();
+    const chain = (y1, w, lw1, lw2, d) => { c.strokeStyle = INK; c.lineWidth = lw1; c.beginPath(); c.moveTo(-w, -100); c.quadraticCurveTo(0, y1, w, -100); c.stroke();
+      c.strokeStyle = GOLD; c.lineWidth = lw2; c.setLineDash(d); c.stroke(); c.strokeStyle = GOLD_L; c.lineWidth = Math.max(1.2, lw2 * 0.3); c.lineDashOffset = -1; c.stroke(); c.lineDashOffset = 0; c.setLineDash([]); };
+    chain(-76, 16, 8, 4.5, [3, 2]); chain(-56, 24, 9, 5.5, [4, 2]);
     c.save(); c.translate(0, -98); c.rotate(st.med.a); c.translate(0, 98);
-    chain(-26, 30, 10, 6, [5, 2]);
+    chain(-26, 30, 10, 6.5, [5, 2]);
+    // a gold medallion on the long chain
+    c.beginPath(); c.arc(0, -61, 8.5, 0, 7); c.fillStyle = GOLD; c.fill(); c.lineWidth = 3; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(-2, -63, 3, 0, 7); c.fillStyle = GOLD_L; c.fill();
     c.restore();
     c.restore();
     // --- head ---
@@ -346,14 +354,14 @@ const FunkDrummer = (() => {
     const seg = (a, b, w, t0, t1, off, col, lw) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy); if (l < 4) return; let nx = -dy / l, ny = dx / l; if (ny < 0) { nx = -nx; ny = -ny; }
       c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'butt'; c.beginPath(); c.moveTo(a[0] + dx * t0 + nx * off * w, a[1] + dy * t0 + ny * off * w); c.lineTo(a[0] + dx * t1 + nx * off * w, a[1] + dy * t1 + ny * off * w); c.stroke(); c.lineCap = 'round'; };
     seg(S, El, W_UP, 0.35, 0.92, 0.3, PURP_D, 11); seg(El, W, W_FO, 0.1, 0.85, 0.28, PURP_D, 9);
-    seg(S, El, W_UP, 0.3, 0.9, -0.18, GOLD, 4); seg(El, W, W_FO, 0.12, 0.8, -0.16, GOLD, 4);
+    seg(S, El, W_UP, 0.3, 0.9, -0.2, PURP_L, 3); seg(El, W, W_FO, 0.12, 0.8, -0.18, PURP_L, 3);
     // a crease on the inside of the elbow
     const v1 = [S[0] - El[0], S[1] - El[1]], v2 = [W[0] - El[0], W[1] - El[1]], l1 = Math.hypot(v1[0], v1[1]) || 1, l2 = Math.hypot(v2[0], v2[1]) || 1;
     const bis = [v1[0] / l1 + v2[0] / l2, v1[1] / l1 + v2[1] / l2], bl = Math.hypot(bis[0], bis[1]);
     if (bl > 0.25 && l2 > 14) { const bx = bis[0] / bl, by = bis[1] / bl, cx = El[0] + bx * 9, cy = El[1] + by * 9;
       c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(cx - by * 7, cy + bx * 7); c.quadraticCurveTo(El[0] + bx * 4, El[1] + by * 4, cx + by * 7, cy - bx * 7); c.stroke(); }
     // gold cuff, then the stick, then the fist around it
-    c.strokeStyle = GOLD; c.lineWidth = W_FO + 6; c.stroke(cuff);
+    c.strokeStyle = SHIRT; c.lineWidth = W_FO + 4; c.stroke(cuff);
     stickShape(c, h); fist(c, h);
   }
   function stickShape(c, h){
@@ -421,10 +429,10 @@ const FunkDrummer = (() => {
     // shades
     const tw = Math.floor(real * 8) % 2;
     c.save(); c.translate(250, 182 + shY); c.rotate(shR - (shY < -30 ? 0.06 : 0)); c.translate(-250, -182);
-    c.strokeStyle = INK; c.lineWidth = 6; c.beginPath(); c.moveTo(196, 176); c.lineTo(178, 170); c.moveTo(304, 176); c.lineTo(322, 170); c.stroke();
+    c.strokeStyle = RIM; c.lineWidth = 7; c.beginPath(); c.moveTo(196, 176); c.lineTo(178, 170); c.moveTo(304, 176); c.lineTo(322, 170); c.stroke();
     { const parts = [[222, 182, 30, 24], [278, 182, 30, 24], [250, 177, 22, 12], [250, 187, 22, 12]].map(([x, y, rx, ry]) => { const q = new Path2D(); q.ellipse(x, y, rx, ry, 0, 0, 7); return q; });
       c.strokeStyle = INK; c.lineWidth = 16; for (const q of parts) c.stroke(q);
-      c.strokeStyle = GOLD; c.lineWidth = 9; for (const q of parts) c.stroke(q);
+      c.strokeStyle = RIM; c.lineWidth = 9; for (const q of parts) c.stroke(q);
       c.fillStyle = PINK; for (const q of parts) c.fill(q); }
     c.strokeStyle = '#fff'; c.lineWidth = 5; c.globalAlpha = 0.85; c.beginPath(); c.moveTo(204, 176); c.lineTo(216, 164); c.moveTo(260, 176); c.lineTo(272, 164); c.stroke(); c.globalAlpha = 1;
     c.strokeStyle = '#ff9cc9'; c.lineWidth = 4; c.beginPath(); c.moveTo(212, 190); c.lineTo(232, 170); c.moveTo(268, 190); c.lineTo(288, 170); c.stroke();
@@ -445,15 +453,15 @@ const FunkDrummer = (() => {
       if (tongue) { const bob = rm ? 0 : Math.sin(real * 11) * 2.2 * (k || 0), ty = tongue + (1 - (k || 1)) * 14 + bob;
         c.fillStyle = TONGUE; c.beginPath(); c.ellipse(250, ty, 18, 10 + (k || 0) * 2, 0, 0, 7); c.fill();
         c.strokeStyle = 'rgba(90,15,30,.45)'; c.lineWidth = 2; c.beginPath(); c.moveTo(250, ty - 6); c.lineTo(250, ty + 3); c.stroke(); }
-      if (teethH) { c.fillStyle = GOLD; c.fillRect(200, 215, 100, teethH); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(200, 215 + teethH); c.lineTo(300, 215 + teethH); c.stroke(); } c.restore(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(shape); };
-    if (m === 'grin') { c.save(); c.clip(M.grin); c.fillStyle = MOUTH; c.fillRect(200, 220, 100, 60); c.fillStyle = GOLD; c.fillRect(200, 220, 100, 29); c.strokeStyle = GOLD_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [222, 236, 264, 278]) { c.moveTo(x, 238); c.lineTo(x, 249); } c.stroke(); c.restore(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke(M.grin); }
+      if (teethH) { c.fillStyle = TEETH; c.fillRect(200, 215, 100, teethH); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(200, 215 + teethH); c.lineTo(300, 215 + teethH); c.stroke(); } c.restore(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke(shape); };
+    if (m === 'grin') { c.save(); c.clip(M.grin); c.fillStyle = MOUTH; c.fillRect(200, 220, 100, 60); c.fillStyle = TEETH; c.fillRect(200, 220, 100, 29); c.strokeStyle = TEETH_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [222, 236, 264, 278]) { c.moveTo(x, 238); c.lineTo(x, 249); } c.stroke(); c.restore(); c.lineWidth = 5; c.strokeStyle = INK; c.stroke(M.grin); }
     else if (m === 'smirk') { c.beginPath(); c.moveTo(226, 240); c.quadraticCurveTo(256, 252, 282, 234); c.stroke(); c.lineWidth = 4; c.beginPath(); c.moveTo(280, 230); c.quadraticCurveTo(288, 234, 286, 242); c.stroke(); }
     else if (m === 'pucker') { c.fillStyle = MOUTH; c.fill(M.pucker); c.lineWidth = 7; c.strokeStyle = LIP; c.stroke(M.pucker); c.lineWidth = 4; c.strokeStyle = INK; c.stroke(M.pucker);
       if (!rm) { const cyc = (real * 1.5) % 1; c.globalAlpha = 1 - cyc; c.lineWidth = 3; c.beginPath(); c.arc(300 + cyc * 30, 238 - cyc * 20, 6 + cyc * 6, -1, 1); c.stroke(); c.globalAlpha = 1; } }
     else if (m === 'oh') open(M.oh, 0, 258);
     else if (m === 'yell') open(M.yell, 24, 266);
     else if (m === 'laugh') open(M.laugh, 26, 268);
-    else if (m === 'grit') { c.save(); c.clip(M.grit); c.fillStyle = GOLD; c.fillRect(200, 225, 100, 40); c.strokeStyle = GOLD_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [228, 239, 250, 261, 272]) { c.moveTo(x, 230); c.lineTo(x, 258); } c.stroke(); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(214, 245); c.lineTo(286, 245); c.stroke(); c.restore(); c.lineWidth = 5; c.stroke(M.grit); }
+    else if (m === 'grit') { c.save(); c.clip(M.grit); c.fillStyle = TEETH; c.fillRect(200, 225, 100, 40); c.strokeStyle = TEETH_D; c.lineWidth = 2.5; c.beginPath(); for (const x of [228, 239, 250, 261, 272]) { c.moveTo(x, 230); c.lineTo(x, 258); } c.stroke(); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.moveTo(214, 245); c.lineTo(286, 245); c.stroke(); c.restore(); c.lineWidth = 5; c.stroke(M.grit); }
   }
 
   function drawKit(c, s){
@@ -473,7 +481,7 @@ const FunkDrummer = (() => {
     { const { x, y } = KIT.tom, q = env(dTom, 0.07); c.strokeStyle = INK; c.lineWidth = 5; c.beginPath(); c.moveTo(x - 36, y + 40); c.lineTo(x - 42, 522); c.moveTo(x + 36, y + 40); c.lineTo(x + 42, 522); c.stroke();
       c.save(); c.translate(x, y + 50); c.scale(1 + 0.05 * q, 1 - 0.1 * q); c.translate(-x, -y - 50);
       c.fillStyle = RED; c.fillRect(x - 44, y, 88, 50); c.fillStyle = RED_D; c.fillRect(x + 16, y, 28, 50); c.lineWidth = 5; c.strokeStyle = INK; c.strokeRect(x - 44, y, 88, 50);
-      c.strokeStyle = GOLD; c.lineWidth = 4; c.beginPath(); c.moveTo(x - 42, y + 12); c.lineTo(x + 42, y + 12); c.stroke();
+      c.strokeStyle = CHROME; c.lineWidth = 4; c.beginPath(); c.moveTo(x - 42, y + 12); c.lineTo(x + 42, y + 12); c.stroke();
       c.beginPath(); c.ellipse(x, y + 50, 44, 10, 0, 0, Math.PI); c.fillStyle = RED_D; c.fill(); c.strokeStyle = INK; c.lineWidth = 5; c.stroke();
       c.beginPath(); c.ellipse(x, y, 44, 11, 0, 0, 7); c.fillStyle = '#fffaf0'; c.fill(); c.stroke(); c.restore(); }
     // snare, peeking over the bass drum

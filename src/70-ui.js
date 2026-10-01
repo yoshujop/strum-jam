@@ -814,7 +814,7 @@ const UI = {
     Settings.lefty = !!on; saveSettings();
     this.setSeg('seg-hand', on ? '1' : '0'); $('chk-lefty').checked = !!on;
     if (this.song && this.screen === 'song') this.renderSong();
-    if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty); const i = G.list.indexOf(ev); this.sideUpdate(ev, G.list[i + 1] || null); } }
+    if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { const i = G.list.indexOf(ev); Fretboard.render(ev, this.chart.capo, Settings.lefty, G.list[i + 1] || null); this.sideUpdate(ev, G.list[i + 1] || null); } }
   },
   musicBtn(){ const b = $('btn-music'); b.setAttribute('aria-pressed', String(Settings.musicOn)); b.textContent = Settings.musicOn ? '♪ Music on' : '♪ Music off'; },
   // song and career codes: text anyone can paste, or a link that opens straight into the game
@@ -951,7 +951,7 @@ const UI = {
     $('btn-stage').onclick = () => this.startGame('stage');
     $('seg-easy').addEventListener('change', e => { Settings.shapes = e.target.value; Settings.easy = e.target.value === 'easy'; saveSettings(); this.recompile(); this.renderSong(); });
     $('seg-view').addEventListener('change', e => { Settings.fbView = e.target.value; saveSettings(); this.renderSong(); });
-    $('chk-notes').onchange = e => { Settings.showNotes = e.target.checked; saveSettings(); if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) Fretboard.render(ev, this.chart.capo, Settings.lefty); } };
+    $('chk-notes').onchange = e => { Settings.showNotes = e.target.checked; saveSettings(); if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) Fretboard.render(ev, this.chart.capo, Settings.lefty, G.list[G.list.indexOf(ev) + 1] || null); } };
     $('btn-tune-title').onclick = () => this.openTune(null);
     $('chk-phones').onchange = e => { Settings.headphones = e.target.checked; saveSettings(); };
     $('btn-mic-cal').onclick = () => this.micSetup();
@@ -971,7 +971,7 @@ const UI = {
     window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => {
       const c = (innerWidth < 560 ? 'n' : '') + Fretboard.fretsToShow();
       if (c === fbCompact) return; fbCompact = c;
-      if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty); G.fbKey = null; } }
+      if (G.running) { const ev = G.mode === 'practice' ? G.cur() : G.shownEv; if (ev) { Fretboard.render(ev, this.chart.capo, Settings.lefty, G.list[G.list.indexOf(ev) + 1] || null); G.fbKey = null; } }
     }, 150); });
 
     $('btn-again').onclick = () => this.startGame(G.mode, true);
@@ -1058,7 +1058,7 @@ const UI = {
       if (Splash.on) Splash.frame();
       Fx.frame();
       if (this.screen === 'title') this.titleFrame();
-      if (this.screen === 'game') { const f = $('hype-fill'), w = Math.round((G.hype || 0) * 100) + '%'; if (f.style.height !== w) f.style.height = w; }
+      if (this.screen === 'game') { const f = $('hype-fill'), w = Math.round((G.hype || 0) * 100) + '%'; if (f.style.width !== w) f.style.width = w; }
       Mic.analyze((this.screen === 'game' && G.running && !G.paused && !G.tapMode) || this.openModal === 'm-mic');
       const now = AudioEngine.ctx ? AudioEngine.ctx.currentTime : performance.now() / 1000;
       if (this.screen === 'game') { G.frame(now); Stage.draw(G, now); }
@@ -1269,18 +1269,13 @@ const TitleArt = {
     // (a soft ellipse that fades out all round, so it has no edge of its own)
     c.save(); c.translate(W / 2, top); c.scale(1, 0.32); const g = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.46); g.addColorStop(0, 'rgba(255,236,170,.5)'); g.addColorStop(1, 'rgba(255,236,170,0)');
     c.fillStyle = g; c.beginPath(); c.arc(0, 0, W * 0.46, 0, Math.PI * 2); c.fill(); c.restore();
-    // deck: the menu's own wave pattern (seigaiha), white on black, squashed into the deck's perspective
+    // deck: plain gloss black, with a soft pool of light where the band stands and a sheen along the front edge
     const dx0 = x0 + W * 0.03, dx1 = x1 - W * 0.03;
     const deckPath = () => { c.beginPath(); c.moveTo(dx0, top); c.lineTo(dx1, top); c.lineTo(x1, top + deck); c.lineTo(x0, top + deck); c.closePath(); };
-    deckPath(); c.fillStyle = '#1E1B2E'; c.fill();
+    { const g2 = c.createLinearGradient(0, top, 0, top + deck); g2.addColorStop(0, '#0E0D14'); g2.addColorStop(1, '#1D1A28'); deckPath(); c.fillStyle = g2; c.fill(); }
     c.save(); deckPath(); c.clip();
-    const wstep = Math.max(24, deck * 2), sq = 0.42;          // waves shrink toward the back of the stage
-    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.6;
-    for (let row = 0, y = top + deck + wstep * sq; y > top - wstep * sq; row++, y -= wstep * sq * 0.5) {
-      const v = Math.max(0, Math.min(1, (y - top) / deck)), k = 0.75 + 0.25 * v, r0 = wstep * 0.9 * k;
-      for (let x = x0 - r0 * 2 + (row % 2) * r0; x < x1 + r0 * 2; x += r0 * 2) for (const f of [1, 0.66, 0.33]) {
-        c.beginPath(); c.ellipse(x, y, r0 * f, r0 * f * sq, 0, Math.PI, 0); c.stroke(); }
-    }
+    c.save(); c.translate(W / 2, top + deck * 0.55); c.scale(1, 0.22); const pg = c.createRadialGradient(0, 0, 0, 0, 0, W * 0.3); pg.addColorStop(0, 'rgba(255,240,200,.22)'); pg.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = pg; c.beginPath(); c.arc(0, 0, W * 0.3, 0, Math.PI * 2); c.fill(); c.restore();
+    c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(x0, top + deck - 3, x1 - x0, 1.5);
     c.restore();
     deckPath(); c.lineWidth = 3.5; c.strokeStyle = COL.ink; c.stroke();
     // riser front: black with a gold trim and chase-light bulbs that run on the beat

@@ -157,8 +157,9 @@ const G = {
     this.needFresh = !!(prev && prev.label === ev.label);          // same chord again: wait for a new strum
     this.lastSeq = Mic.anSeq;
     this.sectionIndex = ev.sec;
-    Fretboard.render(ev, this.chart.capo, Settings.lefty);
-    UI.sideUpdate(ev, this.list[this.idx + 1] || (this.opts.loop ? this.list[0] : null));
+    const nx = this.list[this.idx + 1] || (this.opts.loop ? this.list[0] : null);
+    Fretboard.render(ev, this.chart.capo, Settings.lefty, nx);
+    UI.sideUpdate(ev, nx);
     UI.hint(this.tapMode ? 'Tap the stage or press Space when you have the chord.' : 'Strum the chord. Strings turn green when I hear them and red when they’re missing.');
   },
   practiceSuccess(now, how){
@@ -348,8 +349,9 @@ const G = {
     const ev = this.list[Math.max(0, i - 1)];
     if (ev && ev !== this.shownEv) {
       this.shownEv = ev;
-      Fretboard.render(ev, this.chart.capo, Settings.lefty);
-      UI.sideUpdate(ev, this.list[this.list.indexOf(ev) + 1] || null);
+      const nx = this.list[this.list.indexOf(ev) + 1] || null;
+      Fretboard.render(ev, this.chart.capo, Settings.lefty, nx);
+      UI.sideUpdate(ev, nx);
     }
     return ev;
   },
@@ -401,6 +403,12 @@ const G = {
       if (ev.timing && now > ev.t + (listening ? ev.earWin + 0.05 : ev.noteWin)) this.finalize(ev);
     }
     const shown = this.showStageChord(now);
+    if (shown && !Parts.active) {
+      // the next chord's ghost shows on the neck a beat or so before the change; the strings flash as the card hits the line
+      const nx = this.list[this.list.indexOf(shown) + 1];
+      Fretboard.ghost(nx && now >= nx.t - this.lead - Math.max(0.55, Math.min(1.3, cfg.beatDur * 1.5)));
+      if (shown.t <= now && this.pulsedEv !== shown) { this.pulsedEv = shown; Fretboard.pulse(); }
+    }
     if (shown) {
       if (listening && shown.t <= now) {
         const f = this.feedbackState(shown, now, shown.heardAtS || [], shown.missAtS || [], shown.wrongSeenS || {});
