@@ -125,3 +125,16 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
 ## Build
 `python3 build.py [hosted_url]` writes `dist/index.html` (fragment) and `dist/strum-jam.html`
 (full standalone page). `dist/` is gitignored.
+
+## 3D engine (foundation for the 3D rebuild; the 2D game does not use it yet)
+- `src/50-gfx.js` (`GFX`: renderer, tiers low/medium/high with auto-degrade, shadow map, floor mirror, bloom/grade/vignette),
+  `src/50-gfx-toon.js` (`Toon`: the cel shader keyed by ASSET SPEC material names + inverted-hull ink outlines),
+  `src/51-assets.js` (`Assets`: embedded `vendor/models/*.glb` -> templates -> `spawn()` instances with bones, face canvas),
+  `src/53-stagekit.js` (`StageKit`: light rigs, spots + cones, floor, backdrop, blob shadows), `src/54-vfx.js` (`VFX`).
+  Each file starts with its API and a usage example. Nothing runs at load; `GFX.init(canvas)` starts it.
+- `vendor/three.bundle.min.js` = three r187 + GLTFLoader + SkeletonUtils as one classic script (`tools/build-three.sh`,
+  only when the three version or `tools/three-entry.js` changes). `build.py` embeds it and every `vendor/models/*.glb`.
+- `node test/modelshot.js <name-or-path.glb> <outdir>`: any model through the real engine (turntable sheet, close-ups,
+  in-game size on a lit stage at 1280x665 and 390x844, spec warnings). `node test/gfxdemo.js [outdir]`: writes
+  `dist/gfxdemo.html` (band, crowd, lights, VFX) and screenshots it per tier. Both are slow (software GL): give them minutes.
+- Test models: `/opt/sj-bpy/bin/python test/fixtures/mk_fixtures.py` -> `test/fixtures/models/*.glb` (not shipped).
