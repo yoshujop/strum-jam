@@ -30,6 +30,7 @@
 //       shadows land on it, default true), spots (stage spots light it, default true), side, map (face canvas),
 //       opacity, unique (do not share the cached instance), floor:{gloss, grid, gridStrength, sky}
 //   Toon.mesh(geometry, { cls, color, outline:true|{px, color}, cast:true })   mesh + outline in one call
+//   Toon.instanced(geometry, count, { cls, color, outline })   InstancedMesh + shared-matrix outline (crowds)
 //   Toon.addOutline(mesh, { px:3, color:'#1E1B2E', min:0.004, max:0.03, scale:1 })   -> the outline mesh
 //   Toon.prepGeometry(geometry, { cls:'toon', noline:false })  adds _sjout / _sjoutw / _sjcls when missing
 //   Toon.ink = '#1E1B2E'; Toon.linePx = 3.2                    defaults for new outlines
@@ -46,7 +47,7 @@ const Toon = {
   cls: {
     toon:  { shade: '#ffffff', rim: 1.0, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
     skin:  { shade: '#ffd3c4', rim: 0.9, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
-    hair:  { shade: '#f0eaff', rim: 1.2, spec: [0, 0, 0.4],     sheen: [0.86, 0.3], term: 0,    emit: 0,   beat: 0 },
+    hair:  { shade: '#f0eaff', rim: 1.2, spec: [0, 0, 0.4],     sheen: [0.9, 0.22], term: 0,    emit: 0,   beat: 0 },
     cloth: { shade: '#ffffff', rim: 0.8, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
     metal: { shade: '#b9b4d6', rim: 1.4, spec: [0.2, 1.5, 1],   sheen: [0.6, 0.55], term: 0.05, emit: 0,   beat: 0 },
     gloss: { shade: '#e6e0f5', rim: 1.2, spec: [0.2, 1.15, 2.6], sheen: [0.3, 0.1],  term: 0,    emit: 0,   beat: 0 },
@@ -219,7 +220,7 @@ const Toon = {
     const mat = o.material || this.outlineMaterial(o);
     let ol;
     if (mesh.isSkinnedMesh) { ol = new T.SkinnedMesh(g, mat); ol.bind(mesh.skeleton, mesh.bindMatrix); ol.boundingSphere = mesh.boundingSphere; }
-    else if (mesh.isInstancedMesh) { ol = new T.InstancedMesh(g, mat, mesh.count); ol.instanceMatrix = mesh.instanceMatrix; ol.count = mesh.count; ol.boundingSphere = mesh.boundingSphere; }
+    else if (mesh.isInstancedMesh) { ol = new T.InstancedMesh(g, mat, mesh.count); ol.instanceMatrix = mesh.instanceMatrix; ol.count = mesh.count; ol.boundingSphere = mesh.boundingSphere; ol.onBeforeRender = () => { ol.count = mesh.count; }; }
     else ol = new T.Mesh(g, mat);
     if (mesh.morphTargetInfluences) { ol.morphTargetInfluences = mesh.morphTargetInfluences; ol.morphTargetDictionary = mesh.morphTargetDictionary; }
     ol.name = (mesh.name || 'mesh') + '_ink'; ol.frustumCulled = mesh.frustumCulled; ol.userData.sjInk = true;
@@ -234,7 +235,20 @@ const Toon = {
     const m = new THREE.Mesh(geometry, o.material || this.material(o));
     if (o.outline !== false && o.cls !== 'emit' && o.cls !== 'glass') this.addOutline(m, o.outline === true || o.outline == null ? {} : o.outline);
     if (o.cast !== false && typeof GFX !== 'undefined') m.layers.enable(GFX.CAST);
-    if (typeof GFX !== 'undefined' && o.reflect !== false) { m.layers.enable(GFX.REFLECT); if (m.userData.sjOutline) m.userData.sjOutline.layers.enable(GFX.REFLECT); }
+    if (typeof GFX !== 'undefined' && o.reflect !== false) { m.layers.enable(GFX.REFLECT); if (m.userData.sjOutline) m.userData.sjOutline.layers.enable(GFX.REFLECT_INK); }
+    return m;
+  },
+    // An instanced crowd / prop field: ONE fill draw + ONE ink draw for all copies. Set matrices with
+  // mesh.setMatrixAt(i, m) (+ mesh.instanceMatrix.needsUpdate = true) and colours with mesh.setColorAt(i, c);
+  // the outline shares the instance matrices. opts: Toon.material opts + outline + cast (default false: crowds
+  // use blob shadows or none).
+  instanced(geometry, count, o){
+    o = o || {};
+    this.prepGeometry(geometry);
+    const m = new THREE.InstancedMesh(geometry, o.material || this.material(o), count);
+    m.frustumCulled = false;
+    if (o.outline !== false) this.addOutline(m, o.outline === true || o.outline == null ? {} : o.outline);
+    if (o.cast === true && typeof GFX !== 'undefined') m.layers.enable(GFX.CAST);
     return m;
   },
   dispose(){
@@ -415,10 +429,7 @@ void main() {
 	// --- stage spots: hard cone (two steps), hard N.L
 	#if SJ_SPOTS > 0
 		vec3 sp = vec3( 0.0 );
-		#ifdef SJ_FLOOR
-			vec3 Rf = reflect( - V, N );
-			vec3 streak = vec3( 0.0 );
-		#endif
+		
 		for ( int i = 0; i < SJ_SPOTS; i ++ ) {
 			if ( i >= uSpotN ) break;
 			vec3 Lv = uSpotPos[ i ].xyz - vWP;
@@ -429,12 +440,7 @@ void main() {
 			float c = 0.5 * smoothstep( uSpotDir[ i ].w - cw, uSpotDir[ i ].w + cw, cone ) + 0.5 * smoothstep( uSpotCol[ i ].w - cw, uSpotCol[ i ].w + cw, cone );
 			float att = clamp( 1.0 - d2 * uSpotPos[ i ].w, 0.0, 1.0 );
 			sp += uSpotCol[ i ].rgb * ( c * att * sjStep( 0.08, dot( N, L ), 0.0 ) );
-			#ifdef SJ_FLOOR
-				vec3 dl = L - Rf;
-				dl.y *= 0.3;
-				float sd = length( dl );
-				streak += uSpotCol[ i ].rgb * ( ( 1.0 - sjStep( 0.16, sd, 0.02 ) ) * 0.6 + ( 1.0 - sjStep( 0.07, sd, 0.01 ) ) * 0.6 );
-			#endif
+			
 		}
 		col += mix( base, vec3( 1.0 ), uSpotWash ) * sp;
 	#endif
@@ -452,18 +458,19 @@ void main() {
 	// --- rim band from the back light
 	float fr = 1.0 - max( dot( N, V ), 0.0 );
 	float rv = fr * clamp( dot( N, uRimDir ) * 1.6 + 0.35, 0.0, 1.0 );
-	col += uRimCol * ( sjStep( uRim.x, rv, 0.0 ) * uRim.y * cA.a );
+	// only on rounded forms: a flat face would light up whole (its normal does not change across the pixel)
+	float curved = clamp( length( fwidth( N ) ) * 300.0, 0.0, 1.0 );
+	col += uRimCol * ( sjStep( uRim.x, rv, 0.0 ) * uRim.y * cA.a * curved );
 
 	#ifdef SJ_FLOOR
 		float fres = pow( fr, 3.0 );
-		col = mix( col, uFloorSky, fres * uFloor.x * 0.5 );
+		col = mix( col, uFloorSky, fres * uFloor.x * 0.35 );
 		#ifdef SJ_MIRROR
-			vec4 mir = texture2DProj( uMirror, vMir );
-			col = mix( col, mir.rgb, mir.a * uFloor.w * ( 0.45 + 0.55 * fres ) );
+			vec4 mir = texture2D( uMirror, vMir.xy / vMir.w, 1.3 );          // a mip down: soft, hides the half-size target
+			float mk = uFloor.w * ( 0.5 + 0.5 * fres );
+			col = col * ( 1.0 - mir.a * mk ) + mir.rgb * mk;
 		#endif
-		#if SJ_SPOTS > 0
-			col += streak * uFloor.x * 0.35;
-		#endif
+		
 		if ( uFloor.y > 0.0 ) {
 			float gx = vWP.x / uFloor.y;
 			float ln = 1.0 - min( abs( fract( gx - 0.5 ) - 0.5 ) / max( fwidth( gx ), 1e-5 ) * 0.7, 1.0 );
@@ -515,6 +522,9 @@ void main() {
 	#endif
 	mvPosition = modelViewMatrix * mvPosition;
 	vec3 n = normalize( transformedNormal );
+	#ifdef FLIP_SIDED
+		n = - n;                                       // three flips normals of BackSide materials; the hull must grow outward
+	#endif
 	// world units covered by one pixel at this depth, then: constant pixel width between two world-space clamps
 	float wpp = ( isOrthographic ? 2.0 : - 2.0 * mvPosition.z ) / ( projectionMatrix[ 1 ][ 1 ] * uView.y );
 	float w = clamp( uOut.x * uView.z * wpp, uOut.y, uOut.z ) * _sjoutw * uOut.w;

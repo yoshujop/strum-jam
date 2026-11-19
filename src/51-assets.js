@@ -255,7 +255,7 @@ const Assets = {
       if (m.userData.sjLine != null && o.outline !== false) {
         if (!inst._ink) { inst._ink = Toon.outlineMaterial({ color: o.ink, px: o.linePx }); inst._mats.push(inst._ink); }
         const ol = Toon.addOutline(m, { material: inst._ink }, t.lines[m.userData.sjLine]);
-        if (o.reflect !== false) ol.layers.enable(GFX.REFLECT);
+        if (o.reflect !== false) ol.layers.enable(GFX.REFLECT_INK);
         inst.outlines.push(ol);
       }
     }

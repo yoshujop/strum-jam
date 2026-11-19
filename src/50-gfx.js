@@ -15,7 +15,7 @@
 // ---- frame --------------------------------------------------------------------------------------------------
 //   updaters (StageKit, VFX, yours: GFX.addUpdater(fn(dt, time)))
 //   -> shadow map of the key light (objects on layer GFX.CAST; medium / high)
-//   -> floor mirror (objects on layer GFX.REFLECT; high)
+//   -> floor mirror at half size (layer GFX.REFLECT; medium: fills only, high: fills + ink; needs StageKit.floor)
 //   -> the scene into an HDR, multisampled target        (no tone mapping: flat colours stay exactly as authored)
 //   -> bloom chain fed by values above 1 (sj_emit, hard speculars)     -> one final pass: bloom, grade, vignette, dither
 //
@@ -35,20 +35,30 @@
 //   GFX.dispose()
 //
 // ---- budget (what a full stage may cost; see GFX.stats) ------------------------------------------------------
-//   medium (recent phone, 60 fps): <= 120 draw calls, <= 300k triangles submitted over all passes, <= 2.2 MP,
-//     4 stage spots in the toon shader, 1-tap hard shadow map, bloom on 1/4 of the pixels.
-//   low (old phone, 30 fps): <= 70 draw calls, <= 160k triangles, <= 0.9 MP, 2 spots, blob shadows, no bloom.
+//   medium (recent phone, 60 fps): <= 130 draw calls, <= 450k triangles submitted over ALL passes, <= 2.2 MP,
+//     MSAA 4x, 4 stage spots in the toon shader, 1-tap hard shadow map (1024), half-size floor mirror (fills only),
+//     bloom from 1/4 of the pixels down. A character is drawn 4 times: fill, ink, shadow, mirror.
+//   low (old phone, 30 fps): <= 70 draw calls, <= 250k triangles, <= 0.9 MP, MSAA 2x, 2 spots, blob shadows,
+//     no mirror, no bloom, no float targets. A character is drawn twice: fill, ink.
+//   high (desktop): 2048 shadow map with 4 taps, 6 spots, ink in the mirror, 5 bloom levels.
+//   Measured on the demo stage (test/gfxdemo.js: 5 x 11.6k-triangle characters, venue, 2 amps, props, 140-bean
+//   crowd, 6 spots + cones, VFX): see the numbers the test prints (GFX.stats).
 //   How it holds: a character is 1 fill draw + 1 ink draw (+ face decal, + glass) because Assets merges its
-//   material classes into one buffer; crowds, light cones, glows, blob shadows and all VFX are one instanced
-//   draw each; materials share a handful of programs; ink hulls share the skeleton of their mesh.
+//   material classes into one buffer; a crowd is 2 draws (Toon.instanced); light cones, flares + blob shadows
+//   and all VFX are one instanced draw each; every opaque surface uses ONE shader program per tier (class is
+//   per-vertex data), so there are no program switches; ink hulls share the skeleton (bones computed once per frame,
+//   one bone texture upload); shaders have no dynamic branches beyond the spot loop and take no texture samples
+//   except the shadow map (1 tap on medium) and the face decal.
+//   Keep crowds, venues and VFX off the CAST / REFLECT layers unless they must be there.
 // ============================================================================================================
 const GFX = {
-  CAST: 1, REFLECT: 2,                 // layers: shadow casters, things the floor mirror shows
+  CAST: 1, REFLECT: 2, REFLECT_INK: 3, // layers: shadow casters, things the floor mirror shows, ink hulls (mirrored on high only)
   TIERS: {
-    //        dpr cap, pixel cap, MSAA, HDR target, bloom levels (0 off), bloom start divisor, shadow map size + taps, toon spots, floor mirror, VFX pool
-    low:    { dpr: 1.5, pixels: 0.9e6, msaa: 2, hdr: false, bloom: 0, bloomDiv: 2, shadow: 0,    taps: 0, spots: 2, mirror: false, vfx: 512,  fps: 30 },
-    medium: { dpr: 2,   pixels: 2.2e6, msaa: 4, hdr: true,  bloom: 4, bloomDiv: 2, shadow: 1024, taps: 1, spots: 4, mirror: false, vfx: 1536, fps: 60 },
-    high:   { dpr: 2,   pixels: 4.2e6, msaa: 4, hdr: true,  bloom: 5, bloomDiv: 2, shadow: 2048, taps: 4, spots: 6, mirror: true,  vfx: 3072, fps: 60 }
+    //        dpr cap, pixel cap, MSAA, HDR target, bloom levels (0 off), bloom start divisor, shadow map size + taps, toon spots,
+    //        floor mirror (0 off, 1 fills only, 2 fills + ink; half size), VFX pool
+    low:    { dpr: 1.5, pixels: 0.9e6, msaa: 2, hdr: false, bloom: 0, bloomDiv: 2, shadow: 0,    taps: 0, spots: 2, mirror: 0,     vfx: 512,   fps: 30 },
+    medium: { dpr: 2,   pixels: 2.2e6, msaa: 4, hdr: true,  bloom: 4, bloomDiv: 2, shadow: 1024, taps: 1, spots: 4, mirror: 1,     vfx: 1536, fps: 60 },
+    high:   { dpr: 2,   pixels: 4.2e6, msaa: 4, hdr: true,  bloom: 5, bloomDiv: 2, shadow: 2048, taps: 4, spots: 6, mirror: 2,     vfx: 3072, fps: 60 }
   },
   r: null, canvas: null, scene: null, camera: null, caps: null,
   tierName: 'medium', tier: null, auto: true, lost: false, time: 0, w: 0, h: 0, dpr: 1, scale: 1,
@@ -121,7 +131,7 @@ const GFX = {
   removeUpdater(f){ const i = this._upd.indexOf(f); if (i >= 0) this._upd.splice(i, 1); },
   beat(a){ this._beat = Math.max(this._beat, a == null ? 1 : a); },
   setCast(o, on){ o.traverse(c => { if (c.isMesh && !c.userData.sjInk) { if (on === false) c.layers.disable(this.CAST); else c.layers.enable(this.CAST); } }); },
-  setReflect(o, on){ o.traverse(c => { if (c.isMesh) { if (on === false) c.layers.disable(this.REFLECT); else c.layers.enable(this.REFLECT); } }); },
+  setReflect(o, on){ o.traverse(c => { if (c.isMesh) { const l = c.userData.sjInk ? this.REFLECT_INK : this.REFLECT; if (on === false) c.layers.disable(l); else c.layers.enable(l); } }); },
 
   // ---- size ---------------------------------------------------------------------------------------------------
   // Call with nothing to follow the canvas's CSS box (render() does that every frame), or with a CSS size.
@@ -166,7 +176,7 @@ const GFX = {
       Toon.U.uShadowMap.value = d; Toon.U.uShadowP.value.x = 1 / t.shadow;
     }
     if (t.mirror && this.mirror.on) {
-      R.mirror = new T.WebGLRenderTarget(Math.max(2, w >> 1), Math.max(2, h >> 1), { colorSpace: T.SRGBColorSpace, depthBuffer: true, stencilBuffer: false,
+      R.mirror = new T.WebGLRenderTarget(Math.max(2, w >> 1), Math.max(2, h >> 1), { colorSpace: T.SRGBColorSpace, depthBuffer: true, stencilBuffer: false, samples: Math.min(t.msaa, this.caps.maxSamples),
         minFilter: T.LinearMipmapLinearFilter, magFilter: T.LinearFilter, generateMipmaps: true });
       Toon.U.uMirror.value = R.mirror.texture;
     }
@@ -234,7 +244,8 @@ const GFX = {
   _mirrorPass(scene, camera){
     const T = THREE, r = this.r, R = this._rt, U = Toon.U, y0 = this.mirror.y;
     let vc = this._mirCam;
-    if (!vc) { vc = this._mirCam = new T.PerspectiveCamera(); vc.layers.set(this.REFLECT); vc.matrixAutoUpdate = false; this._mv = [new T.Vector3(), new T.Vector3(), new T.Vector3(), new T.Vector3()]; }
+    if (!vc) { vc = this._mirCam = new T.PerspectiveCamera(); vc.matrixAutoUpdate = false; this._mv = [new T.Vector3(), new T.Vector3(), new T.Vector3(), new T.Vector3()]; }
+    vc.layers.set(this.REFLECT); if (this.tier.mirror > 1) vc.layers.enable(this.REFLECT_INK);
     const [p, f, u, tg] = this._mv, e = camera.matrixWorld.elements;
     p.setFromMatrixPosition(camera.matrixWorld); f.set(-e[8], -e[9], -e[10]); u.set(e[4], e[5], e[6]);
     p.y = 2 * y0 - p.y; f.y = -f.y; u.y = -u.y;
