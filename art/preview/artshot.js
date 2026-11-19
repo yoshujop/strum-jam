@@ -110,7 +110,7 @@ function faceCanvas() {            // a test face: the character's LEFT eye (vie
 const faceTex = faceCanvas();
 function mats(name, hasUv, hasOut) {
   const spec = name === 'sj_metal' ? 1.0 : name === 'sj_gloss' ? 0.55 : 0.0;
-  const shade = { sj_skin: [0.80, 0.60, 0.66], sj_hair: [0.62, 0.58, 0.78], sj_cloth: [0.66, 0.62, 0.82], sj_metal: [0.55, 0.56, 0.72] }[name] || [0.66, 0.62, 0.80];
+  const shade = { sj_skin: [0.80, 0.60, 0.66], sj_face: [0.80, 0.60, 0.66], sj_hair: [0.62, 0.58, 0.78], sj_cloth: [0.66, 0.62, 0.82], sj_metal: [0.55, 0.56, 0.72] }[name] || [0.66, 0.62, 0.80];
   const u = () => ({ uLight: { value: new THREE.Vector3(-0.42, 0.62, 0.66).normalize() }, uShade: { value: new THREE.Vector3(...shade) }, uInk: { value: INK },
     uSpec: { value: spec }, uUnlit: { value: name === 'sj_emit' ? 1 : 0 }, uLine: { value: 0.01 }, uFace: { value: faceTex } });
   const defs = {}; if (name === 'sj_face' && hasUv && OPT.face) defs.USE_UV0 = 1;
@@ -173,7 +173,7 @@ function draw() {
   const Hm = sz.y, line = OPT.line / 100 * Math.max(Hm, 0.4);
   const o = OPT;
   if (SHEET === 'turn') {
-    const h = o.h, w = Math.round(h * 0.52), cw = Math.round(h * 0.56), full = Hm * 1.08;
+    const h = o.h, w = Math.round(h * 0.70), cw = Math.round(h * 0.56), full = Hm * 1.08;
     const views = [['front 3/4', 28, 6], ['front', 0, 4], ['side', 90, 4], ['back 3/4', 152, 6]];
     size(w * views.length + cw, h);
     views.forEach(([n, az, el], i) => { panel(i * w, 0, w, h, cam(ctr, full, az, el, w / h), line); label(i * w, 0, n); });
@@ -183,6 +183,11 @@ function draw() {
     const hl = bones.middle1_L ? bones.middle1_L.getWorldPosition(new THREE.Vector3()) : ctr;
     panel(x, hh, cw / 2, hh, cam(hl, Hm * 0.17, 62, 28, cw / 2 / hh), line); label(x, hh, 'hand (back)');
     panel(x + cw / 2, hh, cw / 2, hh, cam(hl, Hm * 0.17, -20, -30, cw / 2 / hh), line); label(x + cw / 2, hh, 'hand (palm)');
+  } else if (SHEET === 'hands') {
+    const h = o.h, w = h; const V = [['back', 62, 28], ['palm', -20, -30], ['thumb side', 0, 5], ['pinky side', 170, 10], ['tips', 60, -50], ['above', 100, 70]]; size(w * 3, h * 2);
+    const b = new THREE.Box3(); for (const n of ['hand_L', 'middle2_L', 'thumb2_L', 'pinky2_L', 'index2_L']) b.expandByPoint(bones[n].getWorldPosition(new THREE.Vector3()));
+    const t = b.getCenter(new THREE.Vector3());
+    V.forEach(([n, az, el], i) => { const x = (i % 3) * w, y = Math.floor(i / 3) * h; panel(x, y, w, h, cam(t, Hm * 0.16, az, el, 1), line); label(x, y, n); });
   } else if (SHEET === 'one') {
     const h = o.h, w = Math.round(h * (o.aspect || 0.6)); size(w, h);
     const t = o.at && bones[o.at] ? bones[o.at].getWorldPosition(new THREE.Vector3()) : ctr;
@@ -214,9 +219,9 @@ function draw() {
     list.forEach((fr, r) => { setTime(fr / 24); spots.forEach(([nm, bn, s, az, el], k) => { const t = bones[bn].getWorldPosition(new THREE.Vector3());
       panel(k * w, r * h, w, h, cam(t, Hm * s * 0.6, az, el, 1), line); label(k * w, r * h, 'pose ' + fr + ' ' + nm); }); });
   } else {  // prop
-    const h = o.h, w = Math.round(h * 1.25); const s = Math.max(sz.x, sz.y, sz.z) * 1.12; size(w * 2, h * 2);
+    const h = o.h, w = Math.round(h * 1.6); const s = Math.max(sz.x / 1.6, sz.y, sz.z) * 1.12; size(w * 2, h * 2); const lw = o.lw || 0.006;   // lw: ink width in metres (a 1.8 m character's line is 0.009)
     [['3/4', 30, 18], ['front', 0, 0], ['back 3/4', 205, 14], ['top / edge', 0, 80]].forEach(([n, az, el], i) => { const x = (i % 2) * w, y = Math.floor(i / 2) * h;
-      panel(x, y, w, h, cam(ctr, s, az, el, w / h), line); label(x, y, n); });
+      panel(x, y, w, h, cam(ctr, s, az, el, w / h), lw); label(x, y, n); });
   }
   window.stats = stats;
 }

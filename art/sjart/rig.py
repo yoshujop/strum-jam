@@ -273,7 +273,7 @@ class Poser:
         """Mirror-symmetric rotation of bone_L and bone_R."""
         ax = Vector(axis)
         self.rot(bone + '_L', ax, degrees)
-        self.rot(bone + '_R', Vector((ax.x, -ax.y, -ax.z)), -degrees)
+        self.rot(bone + '_R', Vector((ax.x, -ax.y, -ax.z)), degrees)   # mirrored rotation: the axis is a pseudo-vector
         return self
 
     def lift(self, dx=0, dy=0, dz=0):

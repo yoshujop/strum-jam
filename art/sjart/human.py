@@ -22,9 +22,9 @@ FINGERS = ('pinky', 'middle', 'index')  # palm order, pinky side -> thumb side
 @dataclass
 class HumanSpec:
     """Proportions of a character, in metres (angles in degrees). Defaults: the neutral mannequin."""
-    height: float = 1.76
+    height: float = 1.80
     # --- head (chin to crown; the face is a 2D decal, see face.py)
-    head_h: float = 0.305
+    head_h: float = 0.300
     head_w: float = 0.262
     head_d: float = 0.272
     jaw: float = 0.80          # jaw width / head width: 0.6 pointed chin .. 1.0 square
@@ -38,8 +38,8 @@ class HumanSpec:
     neck_len: float = 0.09     # shoulder joint height -> chin
     neck_r: float = 0.045
     # --- torso (hip joint -> shoulder joint)
-    torso_len: float = 0.47
-    shoulder_w: float = 0.36   # between the shoulder joints
+    torso_len: float = 0.455
+    shoulder_w: float = 0.372   # between the shoulder joints
     chest_w: float = 0.30
     chest_d: float = 0.195
     waist_w: float = 0.245
@@ -50,24 +50,25 @@ class HumanSpec:
     bust: float = 0.0          # extra depth in front of the chest
     butt: float = 0.012        # extra depth behind the hips
     torso_e: float = 2.35      # cross-section boxiness of the torso
+    trap: float = 0.0          # 0 = square shoulders .. 1 = heavy sloping trapezius up to the neck
     # --- arms (rest pose: A-pose, `apose` degrees below horizontal)
     apose: float = 40.0
     elbow_bend: float = 9.0    # relaxed forward bend at the elbow in the rest pose
     upperarm_len: float = 0.275
     forearm_len: float = 0.255
     r_shoulder: float = 0.046
-    r_bicep: float = 0.040
-    r_elbow: float = 0.033
-    r_forearm: float = 0.037
-    r_wrist: float = 0.026
+    r_bicep: float = 0.039
+    r_elbow: float = 0.032
+    r_forearm: float = 0.038
+    r_wrist: float = 0.0255
     upperarm_rings: tuple = (0.20, 0.44, 0.66, 0.86)   # ring positions along the bone (0..1)
     forearm_rings: tuple = (0.14, 0.36, 0.62, 0.86)
     # --- hands (wrist -> tip of the middle finger). 4-finger cartoon hand.
-    hand_len: float = 0.20
-    hand_w: float = 0.104
-    hand_t: float = 0.036      # palm thickness
+    hand_len: float = 0.228
+    hand_w: float = 0.122
+    hand_t: float = 0.041      # palm thickness
     palm: float = 0.50         # palm length / hand length
-    finger_r: float = 0.0158
+    finger_r: float = 0.0188
     finger_splay: float = 8.0  # fan between neighbouring fingers at rest
     finger_curl: float = 7.0   # relaxed curl at rest
     finger_len: tuple = (0.80, 1.0, 0.93)   # pinky, middle, index (relative)
@@ -75,15 +76,15 @@ class HumanSpec:
     # --- legs
     knee: float = 0.50         # knee position, as a fraction of hip joint -> ankle
     stance: float = 1.0        # 1 = feet under the hip joints
-    r_thigh: float = 0.074
+    r_thigh: float = 0.076
     r_midthigh: float = 0.066
-    r_knee: float = 0.049
-    r_calf: float = 0.053
-    r_ankle: float = 0.035
+    r_knee: float = 0.047
+    r_calf: float = 0.054
+    r_ankle: float = 0.033
     thigh_rings: tuple = (0.50, 0.74, 0.90)            # after the automatic top ring
     shin_rings: tuple = (0.10, 0.30, 0.62, 0.88)
     # --- feet (bare foot form; shoes are built round it by outfit.py)
-    foot_len: float = 0.275
+    foot_len: float = 0.280
     foot_w: float = 0.108
     foot_h: float = 0.088      # ankle joint height
     # --- build
@@ -99,7 +100,7 @@ class HumanSpec:
         for f in self.__dataclass_fields__:
             v = getattr(self, f)
             if f in ('jaw', 'chin', 'cheek', 'face_e', 'skull_e', 'ear', 'nose', 'apose', 'elbow_bend', 'palm',
-                     'finger_splay', 'finger_curl', 'thumb_len', 'knee', 'stance', 'torso_e', 'levels'):
+                     'finger_splay', 'finger_curl', 'thumb_len', 'knee', 'stance', 'torso_e', 'trap', 'levels'):
                 continue
             if isinstance(v, float):
                 d[f] = v * k
@@ -204,7 +205,7 @@ class Human:
             R('chest', hz + 0.735 * TL, chest, sp.chest_d * 0.52 + sp.bust, sp.chest_d * 0.48, 0.0),
             R('upchest', hz + 0.885 * TL, lerp(chest, sp.shoulder_w / 2, 0.55), sp.chest_d * 0.47 + sp.bust * 0.3, sp.chest_d * 0.47, 0.002),
             R('shoulder', sz + 0.040, sp.shoulder_w / 2 - 0.016, sp.chest_d * 0.34, sp.chest_d * 0.40, 0.006, ef=2.2),
-            R('neckbase', sz + 0.066, nr * 1.62, nr * 1.22, nr * 1.42, 0.012, ef=2.0, part='neck'),
+            R('neckbase', sz + 0.066 + 0.035 * sp.trap, nr * (1.62 + 0.7 * sp.trap), nr * (1.22 + 0.25 * sp.trap), nr * (1.42 + 0.5 * sp.trap), 0.012, ef=2.0, part='neck'),
             R('neck', lerp(sz + 0.066, cz + 0.03, 0.55), nr, nr, nr * 1.02, 0.016, ef=2.0, part='neck'),
             R('necktop', cz + 0.034, nr * 1.04, nr * 1.05, nr * 1.05, 0.022, ef=2.0, part='neck'),
             # head: jaw ring is pitched so the chin dips and the skull base rises
@@ -454,14 +455,17 @@ class Human:
                 (0.68, 0.97, {b2: 1.0}), (0.88, 0.93, {b2: 1.0}), (0.985, 0.60, {b2: 1.0})]
         prev = base
         first = True
+        perm = [0, 1, 2, 3]
         for f, s, w in rows:
             u_, w_ = (fu, fw) if f < jf else (unit(fu + fu2), unit(fw + fw2)) if f == jf else (fu2, fw2)
             ce = centre(f)
             hh = h * s
             pts = [ce - fv * hh + w_ * hh, ce + fv * hh + w_ * hh, ce + fv * hh - w_ * hh, ce - fv * hh - w_ * hh]
-            ring = c.add(pts, w=w, part='hand_L', digit=name, s=f)
+            ring = c.add([pts[i] for i in perm], w=w, part='hand_L', digit=name, s=f)
             if first and auto:
-                _, ring = c.bridge_auto(prev, ring, part='hand_L', digit=name, zone='web')
+                _, ring2 = c.bridge_auto(prev, ring, part='hand_L', digit=name, zone='web')
+                perm = [ring.index(i) for i in ring2]
+                ring = ring2
             else:
                 c.bridge(prev, ring, part='hand_L', digit=name, zone='web' if first else 'digit')
             prev = ring

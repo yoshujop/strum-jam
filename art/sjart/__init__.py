@@ -11,7 +11,8 @@ __version__ = '1.0'
 
 try:  # everything below needs Blender
     import bpy as _bpy  # noqa: F401
-    from . import bl, color, rig, outline, export
+    from . import bl, color, rig, outline, export, shapes, outfit
+    from .character import Character
     from .bl import reset
     from .color import paint
     from .export import export_glb, export_fbx, validate, SpecError
