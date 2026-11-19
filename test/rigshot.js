@@ -7,7 +7,8 @@
 //            rig-big-<n>.png: four of them large, rig-face.png: head close-ups on 8 beats
 //   stage    rig-stage-1280x665-<n>.png / rig-stage-390x844-<n>.png: real in-game size on the lit stage (beats 0, 2.33, 6.67, 7)
 //   poses    rig-poses.png: every pose of Rig.POSES held (the library at a glance), rig-hands.png: the hand presets
-//   perf     prints the cost of rig.update + face.update for five characters (ms per frame, in this browser)
+//   perf     prints the cost of rig.update + face.update for five characters (ms per frame, in this browser) and checks
+//            the rig stays finite and bounded at random frame rates (20..240 fps, a 1 s hitch, kicks and bounces)
 // Also writes dist/rigdemo.html: the live demo (open it in a browser).
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
@@ -46,15 +47,15 @@ Shot.sheet = async (CW, CH) => {
   const sheet = document.createElement('canvas'); sheet.width = CW * 6; sheet.height = CH * 4; const cx = sheet.getContext('2d'), outs = {};
   const faces = document.createElement('canvas'); faces.width = 300 * 8; faces.height = 300; const fx = faces.getContext('2d');
   const fcam = new T.PerspectiveCamera(14, 1, 0.1, 50), hp = new T.Vector3();
-  const big = { 0: 'contact', 7: 'offbeat', 20: 'windup', 21: 'pump' };
+  const big = { 0: '0-contact', 1: '1-rebound', 2: '2-windup', 3: '3-contact', 20: '6-windup', 21: '7-pump', 22: '8-hold' };
   for (let f = 0; f < 24; f++) {
     D.scene.updateMatrixWorld(true);
     cx.drawImage(GFX.snapshot(D.scene, D.cam, CW, CH), (f % 6) * CW, Math.floor(f / 6) * CH);
     cx.fillStyle = '#1E1B2E'; cx.font = '600 20px sans-serif'; cx.fillText('beat ' + (f / 3).toFixed(2), (f % 6) * CW + 10, Math.floor(f / 6) * CH + 26);
-    if (f in big) outs['rig-big-' + big[f]] = Shot.png(GFX.snapshot(D.scene, D.cam, 1400, 1000));
-    if (f % 3 === 1) { D.chars[0].rig.worldPos('head', hp); fcam.position.set(hp.x + 0.5, hp.y + 0.12, hp.z + 3.4); fcam.lookAt(hp.x, hp.y + 0.1, hp.z); fcam.updateMatrixWorld(true);
+    if (f in big) outs['rig-big-' + big[f]] = Shot.png(GFX.snapshot(D.scene, D.cam, 1200, 860));
+    if (f % 3 === 1) { D.chars[0].rig.worldPos('head', hp); fcam.position.set(hp.x + 0.5, hp.y + 0.2, hp.z + 2.6); fcam.lookAt(hp.x, hp.y + 0.14, hp.z); fcam.updateMatrixWorld(true);
       fx.drawImage(GFX.snapshot(D.scene, fcam, 300, 300), Math.floor(f / 3) * 300, 0); }
-    for (let i = 0; i < 20; i++) D.step(dt, false);                        // 1/3 of a beat at 120 bpm
+    for (let i = 0; i < 10; i++) D.step(dt, false);                        // 1/3 of a beat at 120 bpm
   }
   outs['rig-sheet'] = Shot.png(sheet); outs['rig-face'] = Shot.png(faces);
   return { outs, errors: D.errors, redraws: D.chars.map(c => c.face.redraws) };
@@ -97,7 +98,11 @@ Shot.perf = async () => {
   const t1 = performance.now();
   for (let i = 0; i < N; i++) { beat += dt * 2; for (const c of list) c.rig.update(beat, dt); }
   const t2 = performance.now();
-  return { fiveCharsRigAndFaceMs: +((t1 - t0) / N).toFixed(4), fiveCharsRigOnlyMs: +((t2 - t1) / N).toFixed(4), faceRedrawsPerSecondPerChar: +((list.reduce((a, c) => a + c.face.redraws, 0) - r0) / 5 / (N / 60)).toFixed(2), bones: list[0].rig.nb };
+  // variable frame rate: 20..240 fps at random, a 1 s hitch, then every bone must still be finite and the springs bounded
+  let rnd = 7, ok = true; const R = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 4000; i++) { const d = i === 2000 ? 1 : 1 / (20 + R() * 220); beat += d * 2; if (i % 97 === 0) for (const c of list) { c.rig.bounce(-0.08); c.rig.kick(2); } for (const c of list) c.rig.update(beat, d); }
+  for (const c of list) for (const b of c.rig.bones) { const q = b.quaternion, s = b.scale; if (!(isFinite(q.x + q.y + q.z + q.w + b.position.x + s.x + s.y + s.z)) || s.x > 3 || s.y > 3 || s.x < 0.3) ok = false; }
+  return { stableAtVariableDt: ok, fiveCharsRigAndFaceMs: +((t1 - t0) / N).toFixed(4), fiveCharsRigOnlyMs: +((t2 - t1) / N).toFixed(4), faceRedrawsPerSecondPerChar: +((list.reduce((a, c) => a + c.face.redraws, 0) - r0) / 5 / (N / 60)).toFixed(2), bones: list[0].rig.nb };
 };
 `;
 (async () => {
@@ -115,7 +120,7 @@ RigDemo.init({ tier: new URLSearchParams(location.search).get('tier') || 'medium
   const save = (name, dataUrl) => { const f = path.join(out, name + '.png'); fs.writeFileSync(f, Buffer.from(dataUrl.split(',')[1], 'base64')); console.log(f); };
   if (what.includes('faces')) { const p = await open(800, 600); const o = await p.evaluate(() => Shot.faces()); for (const k in o) save(k, o[k]); await p.close(); }
   if (what.includes('sheet')) { const p = await open(1280, 800); const [cw, ch] = (process.env.CELL || '560x480').split('x').map(Number);
-    const r = await p.evaluate(a => Shot.sheet(a[0], a[1]), [cw, ch]); for (const k in r.outs) save(k, r.outs[k]); console.log('face redraws over 16 beats:', r.redraws, r.errors.length ? r.errors : ''); await p.close(); }
+    const r = await p.evaluate(a => Shot.sheet(a[0], a[1]), [cw, ch]); for (const k in r.outs) save(k, r.outs[k]); console.log('face redraws over 24 beats (12 s):', r.redraws, r.errors.length ? r.errors : ''); await p.close(); }
   if (what.includes('poses')) { const p = await open(1280, 800); const o = await p.evaluate(() => Shot.poses()); for (const k in o) save(k, o[k]); await p.close(); }
   if (what.includes('stage')) for (const [w, h] of [[1280, 665], [390, 844]]) {
     const p = await open(w, h); await p.evaluate(t => Shot.stage(t), process.env.TIER || 'medium');

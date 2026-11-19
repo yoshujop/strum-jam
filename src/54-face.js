@@ -12,7 +12,8 @@
 //   face.set('hype');                              // a named expression (FaceDecal.PRESETS), 2 in-betweens
 //   face.set({ mouth: 'oh', browY: 0.8 }, { snap: true });      // or raw parameters on top of the neutral face
 //   face.mouth('ah');                              // lip-sync / singing: only the mouth changes, at once
-//   face.look(rig.look.eyeX, -rig.look.eyeY);      // pupils follow a target (-1..1, +x = the viewer's right, +y down)
+//   face.look(rig.look.eyeX, -rig.look.eyeY);      // pupils follow a target (-1..1, +x = the viewer's right, +y down);
+//                                                  // they move in steps, at most ~5 times a second (each is a texture upload)
 //   every frame: face.update(dt);                  // blinks, in-betweens; redraws + uploads only when needed
 //
 // ---- canvas ------------------------------------------------------------------------------------------------
@@ -23,7 +24,8 @@
 //   Lines are thick on purpose (spec.line, 7.5 units = 3 % of the face): a face on a phone is about 40 px wide.
 //
 // ---- face spec (all optional; FaceDecal.SPEC holds the defaults, FaceDecal.SPECS a few ready-made faces) ------
-//   { ink: '#1E1B2E', line: 7.5,
+//   { ink: '#1E1B2E', line: 7.5, scale: 1.16 (everything, about the point between the eyes: big graphic features read at
+//     stage distance; the numbers below are before this scale),
 //     eyes:  { shape: 'oval' | 'round' | 'almond' | 'half' | 'rect' | 'dot', x: 44 (half the spacing), y: 0, w: 21, h: 27
 //              (radii), tilt: degrees (outer corners up), white: '#fff', iris: null | colour, pupil: 0.56 (of the eye),
 //              shine: true, lash: 0..3, lidLine: 1 (weight of the lid line, x line) },
@@ -63,7 +65,7 @@
 const FaceDecal = (function(){
   const TAU = Math.PI * 2, DEG = Math.PI / 180;
   const SPEC = {
-    ink: '#1E1B2E', line: 7.5,
+    ink: '#1E1B2E', line: 7.5, scale: 1.16,
     eyes: { shape: 'oval', x: 44, y: 0, w: 21, h: 27, tilt: 0, white: '#ffffff', iris: null, pupil: 0.56, shine: true, lash: 0, lidLine: 1 },
     brows: { style: 'taper', x: 44, y: -42, w: 22, thick: 9, color: null },
     mouth: { y: 68, w: 29, inner: '#6b1730', tongue: '#ff6f91', teeth: 'top', teethColor: '#ffffff', lip: null },
@@ -133,7 +135,7 @@ const FaceDecal = (function(){
     this.respec(spec);
     this.cur = resolve('idle'); this.from = resolve('idle'); this.to = resolve('idle'); this.base = this.to; this.shown = resolve('idle');
     this.stage = 3; this.t = 0; this.frames = 2; this.holdT = 0;
-    this.lx = 0; this.ly = 0; this.qx = 0; this.qy = 0; this.lookSet = false;
+    this.lx = 0; this.ly = 0; this.qx = 0; this.qy = 0; this.lookSet = false; this.lookT = 0;
     this.autoBlink = true; this.bt = 1.5 + Math.random() * 3; this.bs = 0; this.bk = 1;
     this.mo = null; this.dirty = true; this.redraws = 0; this.seed = (o.seed || 1) * 7919 % 233280;
   }
@@ -156,9 +158,10 @@ const FaceDecal = (function(){
     mouth(m){ this.mo = m == null ? null : mouthOf(m); this.dirty = true; return this; },
     look(x, y){ this.lx = Math.max(-1, Math.min(1, x || 0)); this.ly = Math.max(-1, Math.min(1, y || 0)); this.lookSet = true;
       // pupils move in steps, with hysteresis: a head that bobs does not make them (and the texture upload) flicker
-      if (Math.abs(this.lx - this.qx) > 0.2 || Math.abs(this.ly - this.qy) > 0.25) { this.qx = Math.round(this.lx * 4) / 4; this.qy = Math.round(this.ly * 3) / 3; this.dirty = true; } return this; },
+      if (this.lookT <= 0 && (Math.abs(this.lx - this.qx) > 0.3 || Math.abs(this.ly - this.qy) > 0.4)) { this.qx = Math.round(this.lx * 4) / 4; this.qy = Math.round(this.ly * 3) / 3; this.lookT = 0.18; this.dirty = true; } return this; },
     blink(){ if (this.bs === 0) { this.bs = 1; this.bq = 0; this.bk = 0.45; this.dirty = true; } return this; },
     update(dt){
+      if (this.lookT > 0) this.lookT -= dt;
       if (this.stage < 3) { this.t += dt; const step = 0.045;
         if (this.t >= step) { this.t = 0; this.stage++; if (this.stage >= 2) this.stage = 3; this._stage(); this.dirty = true; } }
       else if (this.holdT > 0) { this.holdT -= dt; if (this.holdT <= 0) this.set(this.base); }
@@ -175,7 +178,7 @@ const FaceDecal = (function(){
       const c = this.ctx, S = this.size, sp = this.spec, e = this.cur, u = S / 256, sh = this.shown;
       mix(e, e, 1, sh); if (this.mo) for (const k of MK) sh.mouth[k] = this.mo[k];
       sh.lx = this.lookSet ? this.qx : e.lx; sh.ly = this.lookSet ? this.qy : e.ly;
-      c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, S, S); c.setTransform(u, 0, 0, u, S / 2, S / 2);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, S, S); { const k = u * (sp.scale || 1); c.setTransform(k, 0, 0, k, S / 2, S / 2); }
       c.lineCap = 'round'; c.lineJoin = 'round'; c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
       const shades = sp.extras.find(x => x.type === 'shades');
       if (!shades) { this._eye(c, -1, sh.eoR * this.bk, sh); this._eye(c, 1, sh.eoL * this.bk, sh); }

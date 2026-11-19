@@ -34,12 +34,14 @@
 //   HANDS (Rig.HANDS): open, relax, fist, pick, fret, stick, mic, point, rock.  Per finger [curl1, curl2] with
 //     1 = fully curled; thumb = [oppose, curl]; spread in degrees.
 //   KEY (how a layer gets to a pose):  { pose, in: beats the move takes (it ENDS on the beat), ease, antic, over,
-//       settle, follow, delay: { bone | group: beats }, tag }
+//       settle, follow, lead, delay: { bone | group: beats }, tag }
 //     ease: 'snap' (shoots out, cushions in: the default) | 'hit' (accelerates into contact) | 'smooth' |
 //           'linear' | 'step' (holds, then pops on the beat)
 //     antic: 0..1 pulls back first, away from the pose (wind-up)       over: 0..1 overshoots; the extreme lands ON the
 //     beat and settles over `settle` beats (rebound)                   follow: beats of delay per joint down the
 //     chain from the layer's root-most bone (follow-through / drag)    tag: passed to rig.onKey when the key lands
+//     lead: true = with follow, the END of the chain (the fist, the stick hand) is what lands on the beat and the joints
+//     above it go early; without it the root-most bone lands on the beat and the rest trails (a body bob)
 //
 // ---- API ----------------------------------------------------------------------------------------------------
 //   Rig.create(instance, { size }) -> rig                 instance from Assets.spawn (needs .bones, .rest, .root)
@@ -58,15 +60,17 @@
 //       THREE.Vector3 added to the target (strums, hits). ik.weight 0..1.
 //   rig.plant('foot_L', weight = 1) -> ik     keeps the foot where it rests, flat (ik.offset lifts it for a stomp)
 //   rig.lookAt(target | null, { weight, yaw, pitch, neck, speed })   head + neck within limits; rig.look.eyeX / eyeY
-//       (-1..1, +x = the character's left) is what is left for the pupils (FaceDecal.look)
+//       (-1..1, +x = the character's left) is what the head cannot reach, left for the pupils (FaceDecal.look)
 //   rig.aim(bone, target, axis, weight) -> aim      the bone's model-space rest axis points at the target (sticks)
 //   Rig.aimObject(object3d, worldTarget, axis)      same for a loose prop (its local axis)
 //   rig.hand('L' | 'R', preset | null, weight)      override the fingers of a hand whatever the layers say
 //   rig.spring(chain | '*', { freq, damp, gravity, limit })   tune spr_<chain>_* (Hz, damping ratio, g, degrees)
+//       defaults 6.5 Hz, 0.42, 0.1 g, 18 degrees per bone: a bouncy tuft that never flops over the face. Fixed 120 Hz sub-steps.
 //   rig.kick(amount, [x, y, z])    impulse to every spring chain (m/s, default downwards)
 //   rig.bounce(amount)             whole-body squash impulse: -0.08 = squash 8 % then spring back (volume preserving)
 //   rig.squash = { body, head }    extra stretch factors you can drive yourself (on top of poses and bounce)
-//   rig.smear = { on, trail, v0, v1, max, bones }   speed-stretch of fast hands / feet; trail: ribbon ghosts (Rig.Trails)
+//   rig.smear = { on, trail, v0, v1, max, trailAt, width, color, bones }   speed-stretch of fast hands / feet (v0..v1 m/s ->
+//       0..max extra length); trail: a ribbon ghost (Rig.Trails) once the smear amount passes trailAt (big moves only)
 //   rig.update(beat, dt)           beat: the music clock in beats; dt: seconds since the last frame (springs)
 //   rig.onKey = (tag, layer, key) => {}             a key with a tag landed (expressions, VFX)
 //   rig.pos(bone, outVec3) -> model-space position after update;  rig.worldPos(bone, outVec3)
@@ -219,14 +223,14 @@ const Rig = (function(){
     this.q = []; this.pat = null; this.patLen = 1; this.patStart = 0; this.pi = 0; this.pc = 0;
   }
   Layer.prototype = {
-    _relist(){ this.n = 0; let d0 = 99; for (let i = 0; i < this.c.nb; i++) if (this.mask[i] > 0) { this.list[this.n++] = i; d0 = Math.min(d0, this.c.depth[i]); } this.d0 = d0 === 99 ? 0 : d0; },
+    _relist(){ this.n = 0; let d0 = 99, d1 = 0; for (let i = 0; i < this.c.nb; i++) if (this.mask[i] > 0) { this.list[this.n++] = i; d0 = Math.min(d0, this.c.depth[i]); d1 = Math.max(d1, this.c.depth[i]); } this.d0 = d0 === 99 ? 0 : d0; this.span = Math.max(0, d1 - this.d0); },
     _key(pose, k){
       k = k || {}; const c = this.c, p = c.pose(pose);
       if (this.auto) { let ch = false; for (let i = 0; i < c.nb; i++) if (p.has[i] && !this.mask[i]) { this.mask[i] = 1; ch = true; } if (ch) this._relist(); }
       let delays = null;
       if (k.delay) { delays = maskWeights(c, null); for (const n in k.delay) { const w = maskWeights(c, n); for (let i = 0; i < c.nb; i++) if (w[i]) delays[i] = k.delay[n]; } }
       return { pose: p, in: k.in == null ? 0.25 : k.in, ease: EASE[k.ease] || 0, antic: k.antic || 0, over: k.over || 0, settle: k.settle == null ? 0.35 : k.settle,
-        follow: k.follow || 0, delays, tag: k.tag == null ? null : k.tag, at: k.at || 0, beat: k.beat, sq: k.in };
+        follow: k.follow || 0, lead: !!k.lead, delays, tag: k.tag == null ? null : k.tag, at: k.at || 0, beat: k.beat, sq: k.in };
     },
     to(pose, k){ const key = this._key(pose, k); key.beat = k && k.beat != null ? k.beat : this.c.beat + key.in; this._queue(key); return this; },
     at(beat, pose, k){ const key = this._key(pose, k); key.beat = beat; this._queue(key); return this; },
@@ -242,19 +246,20 @@ const Rig = (function(){
       this.key = key; this.kBeat = beat; this.done = false; this.landed = false; this.used = true;
       key.sq = beat - key.in < now - 1e-6 ? Math.max(0, beat - now) : key.in;      // late: squeeze the move so it still lands on the beat
       const c = this.c, d = this.delay;
-      for (let j = 0; j < this.n; j++) { const i = this.list[j]; d[i] = key.follow * Math.max(0, c.depth[i] - this.d0) + (key.delays ? key.delays[i] : 0); }
+      const pre = key.lead ? key.follow * this.span : 0;       // lead: the END of the chain lands on the beat, the rest goes early
+      for (let j = 0; j < this.n; j++) { const i = this.list[j]; d[i] = key.follow * Math.max(0, c.depth[i] - this.d0) + (key.delays ? key.delays[i] : 0) - pre; }
     },
     update(now){
       // start whatever is due (a key's move starts `in` beats before it lands)
       let guard = 0;
       while (this.pat && guard++ < 64) {
         const k = this.pat[this.pi], kb = this.patStart + this.pc * this.patLen + k.at;
-        if (now < kb - k.in) break;
+        if (now < kb - k.in - (k.lead ? k.follow * this.span : 0)) break;
         if (now - kb < this.patLen) this._begin(k, kb, now);
         if (++this.pi >= this.pat.length) { this.pi = 0; this.pc++; }
       }
       if (guard >= 64) this.pc = Math.floor((now - this.patStart) / this.patLen);
-      while (this.q.length && now >= this.q[0].beat - this.q[0].in) { const k = this.q.shift(); this._begin(k, k.beat, now); }
+      while (this.q.length && now >= this.q[0].beat - this.q[0].in - (this.q[0].lead ? this.q[0].follow * this.span : 0)) { const k = this.q.shift(); this._begin(k, k.beat, now); }
       const key = this.key; if (!key || this.done) return;
       const K = Layer._k; K.in = key.sq; K.ease = key.ease; K.antic = key.antic; K.over = key.over; K.settle = key.settle;
       const tb0 = now - this.kBeat, fq = this.fq, cq = this.cq, tq = key.pose.q, fp = this.fp, cp = this.cp, tp = key.pose.p, d = this.delay;
@@ -345,7 +350,7 @@ const Rig = (function(){
     this.squash = { body: 1, head: 1 }; this._bx = 0; this._bv = 0; this._body = 1; this.bounceFreq = 3.4; this.bounceDamp = 0.32;
     this.look = { target: null, weight: 1, yaw: 62, pitch: 32, neck: 0.38, speed: 16, eyeX: 0, eyeY: 0, _y: 0, _p: 0 };
     this.handOv = { L: null, R: null, wL: 0, wR: 0 };
-    this.smear = { on: true, trail: true, v0: 2.2, v1: 9, max: 0.9, color: null, bones: ['hand_L', 'hand_R', 'foot_L', 'foot_R'].filter(n => n in idx) };
+    this.smear = { on: true, trail: true, v0: 2.6, v1: 9, max: 0.5, trailAt: 0.3, width: 0.05, color: null, bones: ['hand_L', 'hand_R', 'foot_L', 'foot_R'].filter(n => n in idx) };
     this._sm = this.smear.bones.map(n => ({ i: idx[n], px: 0, py: 0, pz: 0, amt: 0, slot: -1, ok: false }));
     this._rootInv = new T.Matrix4(); this._m = new T.Matrix4(); this._m2 = new T.Matrix4(); this._v = new T.Vector3(); this._v2 = new T.Vector3(); this._q = new T.Quaternion(); this._s = new T.Vector3(1, 1, 1);
     this._rq = new F([0, 0, 0, 1]); this._rp = new F(3); this._rs = 1; this._bs = new F([1, 1, 1]);
@@ -455,7 +460,7 @@ const Rig = (function(){
       c.names.forEach((n, i) => { const m = /^spr_(.+)_(\d+)$/.exec(n); if (m) (chains[m[1]] = chains[m[1]] || []).push([+m[2], i]); });
       for (const name in chains) {
         const list = chains[name].sort((a, b) => a[0] - b[0]).map(e => e[1]), n = list.length;
-        const ch = { name, n, b: new Int16Array(list), len: new F(n), tv: new F(n * 3), x: new F(n * 3), v: new F(n * 3), freq: 3.4, damp: 0.3, gravity: 0.25, limit: 55, init: false };
+        const ch = { name, n, b: new Int16Array(list), len: new F(n), tv: new F(n * 3), x: new F(n * 3), v: new F(n * 3), freq: 6.5, damp: 0.42, gravity: 0.1, limit: 18, init: false };
         for (let j = 0; j < n; j++) { const i = list[j]; let len = 0.07;
           if (j + 1 < n) { const k = list[j + 1]; len = Math.hypot(c.off[k * 3], c.off[k * 3 + 1], c.off[k * 3 + 2]); const s = 1 / (len || 1); ch.tv[j * 3] = c.off[k * 3] * s; ch.tv[j * 3 + 1] = c.off[k * 3 + 1] * s; ch.tv[j * 3 + 2] = c.off[k * 3 + 2] * s; }
           else { if (j > 0) len = ch.len[j - 1]; vrot(S, 48, c.M, i * 4, 0, 1, 0); ch.tv[j * 3] = S[48]; ch.tv[j * 3 + 1] = S[49]; ch.tv[j * 3 + 2] = S[50]; }   // the last bone runs along its own +Y
@@ -569,7 +574,7 @@ const Rig = (function(){
           yaw = Math.max(-L.yaw, Math.min(L.yaw, ry)) * L.weight; pitch = Math.max(-L.pitch, Math.min(L.pitch, rp)) * L.weight;
         }
         const k = 1 - Math.exp(-L.speed * dt); L._y += (yaw - L._y) * k; L._p += (pitch - L._p) * k;
-        if (L.target) { L.eyeX = Math.max(-1, Math.min(1, (ry - L._y) / 30)); L.eyeY = Math.max(-1, Math.min(1, (rp - L._p) / 22)); } else { L.eyeX = 0; L.eyeY = 0; }
+        if (L.target) { L.eyeX = Math.max(-1, Math.min(1, (ry - yaw) / 30)); L.eyeY = Math.max(-1, Math.min(1, (rp - pitch) / 22)); } else { L.eyeX = 0; L.eyeY = 0; }
         if (Math.abs(L._y) > 0.05 || Math.abs(L._p) > 0.05) {
           const iN = c.iNeck, ns = iN !== undefined ? L.neck : 0;
           if (iN !== undefined) { qeuler(S, 0, 0, L._y * ns, 0); qeuler(S, 4, -L._p * ns, 0, 0); qmul(S, 0, S, 0, S, 4); qmul(S, 4, G, par[iN] * 4, S, 0); qmul(G, iN * 4, S, 4, d, iN * 4);
@@ -636,7 +641,7 @@ const Rig = (function(){
         if (sm.trail && Trails.mesh) { if (s.slot < 0) s.slot = Trails.slot();
           if (s.slot >= 0) { vrot(S, 52, G, i * 4, c.dir[i * 3] * 0.07 * c.size, c.dir[i * 3 + 1] * 0.07 * c.size, c.dir[i * 3 + 2] * 0.07 * c.size);
             vrot(S, 48, rq, 0, (P[i * 3] + S[52]) * c._bs[0] * rs, (P[i * 3 + 1] + S[53]) * c._bs[1] * rs, (P[i * 3 + 2] + S[54]) * c._bs[2] * rs);
-            Trails.feed(s.slot, S[48] + rp0[0], S[49] + rp0[1], S[50] + rp0[2], want > 0.12, sm.color, 0.085 * c.size * rs); } }
+            Trails.feed(s.slot, S[48] + rp0[0], S[49] + rp0[1], S[50] + rp0[2], want > sm.trailAt, sm.color, sm.width * c.size * rs); } }
       }
     }
   };
@@ -657,7 +662,7 @@ const Rig = (function(){
         vertexShader: 'attribute vec4 color; varying vec4 vC; void main(){ vC = color; gl_Position = projectionMatrix * viewMatrix * vec4( position, 1.0 ); }',
         fragmentShader: 'varying vec4 vC; void main(){ gl_FragColor = vC; }' });
       const m = this.mesh = new T.Mesh(g, mat); m.frustumCulled = false; m.renderOrder = 20; m.name = 'rig_trails'; m.visible = false;
-      this.ink = new T.Color(typeof Toon !== 'undefined' && Toon.ink ? Toon.ink : '#1E1B2E'); this._c = new T.Color(); this._cam = new T.Vector3();
+      this.ink = new T.Color(typeof Toon !== 'undefined' && Toon.ink ? Toon.ink : '#1E1B2E'); this._c = new T.Color(); this._w = new T.Color(1, 1, 1); this._cam = new T.Vector3();
       this._upd = dt => this.update(dt); if (!(o && o.manual) && typeof GFX !== 'undefined' && GFX.addUpdater) GFX.addUpdater(this._upd);
       return m;
     },
@@ -666,7 +671,7 @@ const Rig = (function(){
     feed(i, x, y, z, fast, color, w){
       const s = this.s[i], K = this.K; if (!fast && !s.live) { s.p[s.h * 3] = x; s.p[s.h * 3 + 1] = y; s.p[s.h * 3 + 2] = z; s.t[s.h] = this.time; return; }   // idle: keep one fresh point
       s.h = (s.h + 1) % K; s.p[s.h * 3] = x; s.p[s.h * 3 + 1] = y; s.p[s.h * 3 + 2] = z; s.t[s.h] = this.time; s.live = true; s.w = w;
-      if (fast) { s.on = true; s.last = this.time; if (color) { this._c.set(color); s.col[0] = this._c.r; s.col[1] = this._c.g; s.col[2] = this._c.b; } }
+      if (fast) { s.on = true; s.last = this.time; if (color) { this._c.set(color).lerp(this._w, 0.45); s.col[0] = this._c.r; s.col[1] = this._c.g; s.col[2] = this._c.b; } }
     },
     update(dt, cam){
       if (!this.mesh) return; this.time += dt; cam = cam || (typeof GFX !== 'undefined' && GFX.camera); if (!cam) return;
@@ -686,11 +691,11 @@ const Rig = (function(){
           const x = p[jp * 3] * w0 + p[ja * 3] * w1 + p[jb * 3] * w2 + p[jn * 3] * w3, y = p[jp * 3 + 1] * w0 + p[ja * 3 + 1] * w1 + p[jb * 3 + 1] * w2 + p[jn * 3 + 1] * w3, z = p[jp * 3 + 2] * w0 + p[ja * 3 + 2] * w1 + p[jb * 3 + 2] * w2 + p[jn * 3 + 2] * w3;
           let tx = p[jb * 3] - p[ja * 3], ty = p[jb * 3 + 1] - p[ja * 3 + 1], tz = p[jb * 3 + 2] - p[ja * 3 + 2];
           const vx = cx - x, vy = cy - y, vz = cz - z; let sx = ty * vz - tz * vy, sy = tz * vx - tx * vz, sz = tx * vy - ty * vx; const sn = Math.hypot(sx, sy, sz) || 1;
-          const wd = s.w * Math.pow(u, 0.75) * (1 - 0.25 * u), wi = wd + (u > 0.02 ? 0.014 : 0); sx /= sn; sy /= sn; sz /= sn;
+          const wd = s.w * Math.pow(u, 0.75) * (1 - 0.25 * u), wi = wd + (u > 0.02 ? 0.011 : 0), al = u < 0.6 ? u / 0.6 : 1; sx /= sn; sy /= sn; sz /= sn;
           let o = (base + k * 2) * 3; pos[o] = x + sx * wi; pos[o + 1] = y + sy * wi; pos[o + 2] = z + sz * wi; pos[o + 3] = x - sx * wi; pos[o + 4] = y - sy * wi; pos[o + 5] = z - sz * wi;
           o = (base + (SEG + 1) * 2 + k * 2) * 3; pos[o] = x + sx * wd; pos[o + 1] = y + sy * wd; pos[o + 2] = z + sz * wd; pos[o + 3] = x - sx * wd; pos[o + 4] = y - sy * wd; pos[o + 5] = z - sz * wd;
-          let c4 = (base + k * 2) * 4; col[c4] = ik.r; col[c4 + 1] = ik.g; col[c4 + 2] = ik.b; col[c4 + 3] = 1; col[c4 + 4] = ik.r; col[c4 + 5] = ik.g; col[c4 + 6] = ik.b; col[c4 + 7] = 1;
-          c4 = (base + (SEG + 1) * 2 + k * 2) * 4; col[c4] = s.col[0]; col[c4 + 1] = s.col[1]; col[c4 + 2] = s.col[2]; col[c4 + 3] = 1; col[c4 + 4] = s.col[0]; col[c4 + 5] = s.col[1]; col[c4 + 6] = s.col[2]; col[c4 + 7] = 1;
+          let c4 = (base + k * 2) * 4; col[c4] = ik.r; col[c4 + 1] = ik.g; col[c4 + 2] = ik.b; col[c4 + 3] = al; col[c4 + 4] = ik.r; col[c4 + 5] = ik.g; col[c4 + 6] = ik.b; col[c4 + 7] = al;
+          c4 = (base + (SEG + 1) * 2 + k * 2) * 4; col[c4] = s.col[0]; col[c4 + 1] = s.col[1]; col[c4 + 2] = s.col[2]; col[c4 + 3] = al; col[c4 + 4] = s.col[0]; col[c4 + 5] = s.col[1]; col[c4 + 6] = s.col[2]; col[c4 + 7] = al;
         }
       }
       const g = this.mesh.geometry; g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true; this.mesh.visible = any;
