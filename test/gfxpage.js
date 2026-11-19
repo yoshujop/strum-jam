@@ -3,7 +3,7 @@
 // models embedded the way build.py embeds them (<script id="sj-model-<name>">), and test/gfxstage.js (GfxTest).
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
-const ENGINE = ['50-gfx-toon.js', '50-gfx.js', '51-assets.js', '53-stagekit.js', '54-vfx.js'];
+const ENGINE = ['50-gfx-toon.js', '50-gfx.js', '51-assets.js', '53-stagekit.js', '54-vfx.js', '53-rig.js', '54-face.js'];
 
 // 'hero' -> vendor/models/hero.glb, else test/fixtures/models/hero.glb; or a path to a .glb
 function findModel(nameOrPath){
