@@ -12,6 +12,24 @@ test harness, and the TODO list in priority order.
 - He judges results at in-game size, so always check renders at real stage/menu size before shipping.
 - Note recognition works well now. Don't regress it (see HANDOFF.md).
 
+## Shipping changes (the protocol, every time)
+1. Work from a fresh clone of this repo (main). Never copy the old `strum-jam/` files from the claude.ai Project over it.
+2. Build (`python3 build.py "https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39"`) and check at in-game size, including
+   Joshua's laptop (Chrome viewport 1280x665) and a phone (390x844).
+3. Ask Joshua before publishing or committing anything.
+4. Preview: publish `dist/index.html` to https://claude.ai/artifact/VAQ8bke6yPhBQZJN1Ndx39.
+5. GitHub: always a **pull request from a `claude/<topic>` branch**, never a commit straight to main, so the history reads
+   "Merge pull request #N from yoshujop/claude/<topic>". In Joshua's Chrome (Claude in Chrome, signed in):
+   - open `https://github.com/yoshujop/strum-jam/upload/main/<folder>` (e.g. `src`), attach the changed files with the
+     `file_upload` tool using their paths in the cloud workspace (e.g. `/home/claude/strumjam-repo/src/50-render.js`;
+     paths on the laptop are refused), write the commit message, pick "Create a new branch for this commit and start a
+     pull request", name it `claude/<topic>`, click "Propose changes";
+   - files in other folders: `https://github.com/yoshujop/strum-jam/upload/claude/<topic>/<folder>`, commit to that branch;
+   - on the "Open a pull request" page: a title saying what changed, a short description, then "Create pull request".
+6. Send Joshua the pull request as a clickable link labelled with its number, e.g. [#16](https://github.com/yoshujop/strum-jam/pull/16).
+   He merges it; "Deploy to Pages" rebuilds https://yoshujop.github.io/strum-jam/ in about a minute. Check it's live.
+7. If GitHub shows him signed out, stop and tell him. Never type passwords or tokens.
+
 ## Layout
 - `src/`: game source, concatenated by `build.py` in a fixed order (`01-head.html` + numbered JS files).
   `src/drummer.svg` is no longer used.
@@ -42,7 +60,33 @@ test harness, and the TODO list in priority order.
   song suggestions, a two-player battle end to end, ready-made careers + career share links.
 
 - `node test/cardshot.js <outdir>`: the mode buttons at 9 screen sizes; flags anything cut off and a menu that scrolls.
+- `node test/uishot.js <outdir>` (`SIZES=1280x665,...`, `NOSTAGE=1` for the menu only): menu + Stage at laptop, desktop and phone sizes.
+  Joshua's laptop Chrome is 1280x665 (screen 1280x800 at 200%).
+- `node test/ghostshot.js <outdir> [WxH] [lefty] [practice]`: the game overlay over time (lane cards, the next chord's ghost).
+- `node test/iconshot.js <outdir>`: every scene of the Play & Learn and Online icons, blown up.
 - `node test/menushot.js <outdir>`: menu backdrop close-up, each mode button's hover effect, a click burst.
+
+## Game screen (2026-09-30)
+- The venue canvas (`#stage`) fills the whole screen. The HUD (`#hud`: pause + song, the hype bar in the middle, the score)
+  floats over its top; the guitar (`#board` > `.fb-card`) floats over its bottom with no frame round it. `Stage.lay()`
+  measures the HUD's bottom and the board's top (every 10 frames) and puts the band's floor just above the board, the crowd
+  in front of the stage with their bodies going down behind the guitar. The street stage floor is black (`streetSVG`).
+- The guitar is one SVG (`Fretboard.render(ev, capo, lefty, next)`): an orange headstock with a cream plate showing the chord to
+  play, the timing lane along the top of the neck, the neck. Wide screens: a tall plate beside the neck. Phones and upright
+  tablets (`Fretboard.isNarrow()`): the plate sits in the lane's row, 4 frets. `metrics()` holds the geometry; `fretsToShow()`
+  picks the most frets that fit the height budget (`avail()`), and render sets the svg's pixel size so the HTML laid over it
+  (hear stamp, capo note, status sticker, skip) is placed in % of the viewBox.
+- The lane's cards are drawn every frame on `#fb-lane`, a canvas laid over the lane (`Fretboard.drawLane`): the chord being
+  played is in colour, the ones coming up are grey, they slide into the plate at the strike line, beat ticks + strum arrows
+  along the bottom edge. `Stage.hitPt` (bursts) comes from there.
+- The next chord's ghost (grey dashed dots, and "→ C" on the plate): `Fretboard.ghost(on)`. Stage: from about a beat and a half
+  before the neck switches (G.updateStage); Practice: once half the chord's strings ring (Fretboard.feedback). The strings
+  flash as a card reaches the strike line (`Fretboard.pulse`).
+- Bass / Piano / Drums / Vocals keep their lane on the stage canvas, floating just above their panel.
+- Menu icons (68-menubg.js `ModeIcons`): Play & Learn swings between guitar, vocals, bass, keys, drums; Online between battle,
+  record, share (`swing()`, 2.6 s per scene, like Story's tour).
+- The drummer wears a black suit (satin lapels, white pocket square), a white shirt with a black tie, gold chains with a
+  medallion, gold hoops and ring, black rims on his pink shades.
 
 ## Instruments
 - The song screen's instrument row (`src/71-inst.js`) picks Guitar / Vocals / Bass / Piano / Drums (Practice is guitar only). Non-guitar Stage runs

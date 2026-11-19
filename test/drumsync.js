@@ -1,7 +1,7 @@
 // Does each stick land on its drum hit (and the kick foot on the kick)? Measures, per heard hit, when the hand is at its contact pose.
 const { chromium } = require('playwright');
 (async()=>{const b=await chromium.launch({args:['--use-fake-ui-for-media-stream','--use-fake-device-for-media-stream','--autoplay-policy=no-user-gesture-required']});const p=await b.newPage({viewport:{width:1280,height:760}});const errs=[];p.on('pageerror',e=>errs.push(e.message));
-await p.goto('file://'+__dirname+'/../dist/strum-jam.html');await p.waitForTimeout(800);await p.click('#btn-start',{force:true});await p.waitForTimeout(1500);
+await p.goto('file://'+__dirname+'/../dist/strum-jam.html');await p.waitForTimeout(800);await p.click('#btn-start',{force:true});await p.waitForTimeout(3500);await p.click('#btn-play',{force:true});await p.waitForTimeout(900);
 await p.click('text=Chord Drill: G, C, D');await p.waitForTimeout(400);await p.evaluate(()=>Settings.tuneFirst=false);await p.click('#btn-stage');await p.waitForTimeout(2500);
 for (const L of [0, 2, 4]) {
   await p.evaluate(L => { G.hype = [0.05,0.45,0.5,0.7,0.95][L]; G.setLevel(L); window.__rec = []; window.__hits = [];
