@@ -2,3 +2,6 @@ dist/
 bg-options.png
 bg-options-2.png
 bg-options-2-phone.png
+.claude/worktrees/
+__pycache__/
+node_modules/
