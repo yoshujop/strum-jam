@@ -183,12 +183,23 @@ const UI = {
     st.innerHTML = `<span class="thinking"><span class="eq"><i></i><i></i><i></i><i></i></span> Finding recordings of “${esc(q)}”…</span>`;
     Sfx.searchStart();
     try {
-      const recs = await Lookup.itunes(q, { signal: ctl.signal, limit: 15 });
+      // the songs built into the page show at once (and are all there is with no connection); Apple's recordings follow
+      const builtIn = h => this.recCard({ ...h.track, album: h.src === 'pack' ? 'Starter pack' : 'Built-in chords', year: 0, durationMs: 0, previewUrl: '', art: '' }, true, 0);
+      const sr = await Lookup.search(q, { signal: ctl.signal, limit: 15, onLocal: hits => { if (ctl.signal.aborted || !hits.length) return; hits.forEach(h => box.appendChild(builtIn(h))); st.textContent = 'Ready to play (built in). Looking for more recordings…'; } });
       if (ctl.signal.aborted) return;
-      if (!recs.length) { st.textContent = local.length ? 'No recordings found in Apple’s catalogue, but these are in your songs.' : `No recordings found for “${q}”. Check the spelling, or add the artist’s name.`; Sfx.fail(); return; }
+      const recs = sr.online;
+      if (!recs.length) {
+        if (sr.local.length) { st.textContent = sr.offline ? 'No connection, so these are the built-in songs that match:' : sr.error ? 'Apple’s song search didn’t answer. These built-in songs match:' : 'Built-in songs that match:'; Sfx.found(); return; }
+        if (sr.error) throw sr.error;
+        st.textContent = sr.offline ? `No connection, and “${q}” isn’t one of the built-in songs. Check the spelling, or go online to search every recording.` : local.length ? 'No recordings found in Apple’s catalogue, but these are in your songs.' : `No recordings found for “${q}”. Check the spelling, or add the artist’s name.`; Sfx.fail(); return;
+      }
       st.textContent = 'Pick the exact recording:';
       const cached = new Set(Object.keys(Store.get('charts', {}) || {}));
-      recs.slice(0, 12).forEach((r, i) => box.appendChild(this.recCard(r, cached.has(Chart.cacheKey(r)), i)));
+      // a built-in song that Apple also lists is shown once, as the recording (it has the cover, the length and the lyrics timing)
+      const same = (h, r) => Lookup.normTitle(r.title).some(x => Lookup.normTitle(h.title).includes(x)) && Lookup.artistVariants(r.artist).some(x => Lookup.artistVariants(h.artist).includes(x));
+      box.textContent = '';
+      sr.local.filter(h => !recs.some(r => same(h, r))).slice(0, 3).forEach(h => box.appendChild(builtIn(h)));
+      recs.slice(0, 12).forEach((r, i) => box.appendChild(this.recCard(r, cached.has(Chart.cacheKey(r)) || sr.local.some(h => same(h, r)), i)));
       st.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
       Sfx.found();
     } catch (e) {
@@ -247,7 +258,7 @@ const UI = {
       if (e && (e.name === 'AbortError' || e.code === 'cancelled')) { msg.textContent = 'Stopped.'; return null; }
       console.warn(e);
       const needKey = e && e.code === 'not_in_dataset' && !this.inViewer && !Settings.apiKey;
-      msg.innerHTML = esc(this.lookupErr(e, 'chart')) + (needKey ? ' <button class="btn btn-sm btn-teal" type="button" data-key>Add API key</button>' : '') + (['not_in_dataset', 'web_nf', 'no_web', 'web_search_off', 'filtered'].includes(e && e.code) || /^shared_/.test(e && e.code || '') ? ' <button class="btn btn-sm" type="button" data-paste>Paste a chord sheet</button>' : '');
+      msg.innerHTML = esc(this.lookupErr(e, 'chart')) + (needKey ? ' <button class="btn btn-sm btn-teal" type="button" data-key>Add API key</button>' : '') + (['not_in_dataset', 'offline_nf', 'unverified', 'web_nf', 'no_web', 'web_search_off', 'filtered'].includes(e && e.code) || /^shared_/.test(e && e.code || '') ? ' <button class="btn btn-sm" type="button" data-paste>Paste a chord sheet</button>' : '');
       const pb = msg.querySelector('[data-paste]'); if (pb) pb.onclick = () => this.openImport({ title: track.title, artist: track.artist });
       const kb = msg.querySelector('[data-key]'); if (kb) kb.onclick = () => { $('btn-settings').click(); setTimeout(() => $('api-key').focus(), 50); };
       Sfx.fail();
@@ -261,6 +272,9 @@ const UI = {
   lookupErr(e, where){
     const c = e && e.code;
     if (c === 'not_in_dataset') return this.inViewer ? 'This song isn’t in the chord dataset. Reading chord sites on the web needs the phone/desktop version with your API key (this preview can’t search the web).' : 'This song isn’t in the chord dataset. Add your Anthropic API key in Settings so Claude can read chord sources on the web for it, or paste a chord sheet.';
+    if (c === 'offline') return 'This song is in the chord data, but the data couldn’t be reached just now (no connection, or the server didn’t answer). Check your connection and try again.';
+    if (c === 'offline_nf') return 'No connection, and this song isn’t one of the built-in ones. Go online to look it up, or paste a chord sheet.';
+    if (c === 'unverified') return 'A chart turned up, but it couldn’t be confirmed as this song (the title check didn’t answer), so it wasn’t used. Try again in a moment, or paste a chord sheet.';
     if (c === 'no_index') return 'The chord index didn’t load in this page. Reload and try again.';
     if (c === 'web_nf') return 'Claude couldn’t find two chord sources for this recording.';
     if (c === 'shared_daily_limit') return 'Today’s free song lookups are used up. Try again tomorrow, or add your own Anthropic API key in Settings.';
@@ -437,7 +451,7 @@ const UI = {
     $('song-title').textContent = s.title;
     $('song-artist').textContent = s.artist || '';
     const pr = s.prov || null;
-    const src = pr && pr.src === 'dataset' ? ['Dataset' + (pr.checked ? ' ✓ checked' : ''), 'src-data'] : pr && pr.src === 'hooktheory' ? ['Dataset (parts only)' + (pr.checked ? ' ✓ checked' : ''), 'src-data'] : pr && pr.src === 'web' ? ['Web sources', 'src-web'] : [{ library: 'Library', claude: 'Charted by Claude (old)', code: 'From a song code', paste: 'Pasted chord sheet' }[s.source] || '', ''];
+    const src = pr && pr.src === 'dataset' ? ['Dataset' + (pr.checked ? ' ✓ checked' : ''), 'src-data'] : pr && pr.src === 'hooktheory' ? ['Transcribed passages' + (s.approx ? ' · structure approximate' : ''), 'src-data'] : pr && pr.src === 'pack' ? ['Starter pack', 'src-data'] : pr && pr.src === 'web' ? ['Web sources', 'src-web'] : [{ library: 'Library', claude: 'Charted by Claude (old)', code: 'From a song code', paste: 'Pasted chord sheet' }[s.source] || '', ''];
     const needs = pr && pr.issues && pr.issues.length && pr.status !== 'confirmed' ? ['Needs confirming', 'src-confirm'] : null;
     const d = this.difficulty(s);
     const pills = [[`${s.bpm} BPM`], [ch.timeLabel], [s.key && 'Key ' + s.key], [STYLE_NAMES[s.style] || s.style], [s.feel === 'swing' && 'Swing feel'], [ch.capo ? 'Capo ' + ch.capo : 'No capo'],
@@ -452,8 +466,9 @@ const UI = {
     const htNote = pr && pr.ht ? ` · key${pr.htFix && pr.htFix.fixed ? ', ' + pr.htFix.fixed + ' chord' + (pr.htFix.fixed > 1 ? 's' : '') : ''} and timing cross-checked with ${htLink}` : '';
     const checkNote = pr && pr.checked ? (pr.pitchFrom === 'hooktheory' ? ' · pitch checked against Hooktheory’s transcription of this recording' : ` · checked against the recording’s preview${pr.offset ? '' : ' (same key)'}`) : pr && pr.audioErr ? ` · not checked against the recording: ${esc(pr.audioErr)}` : '';
     if (pr && pr.src === 'dataset') srcLine = `Chords: <a href="${Lookup.CREDIT_URL}" target="_blank" rel="noopener">Chordonomicon</a> dataset (Kantarelis et al., 2024), CC BY-NC 4.0` + checkNote + htNote + ` · timing from ${esc(pr.bpmFrom || 'defaults')}.`;
-    else if (pr && pr.src === 'hooktheory') srcLine = `Chords: ${htLink}, a transcription of this recording. It has only parts of the song (${pr.ht ? pr.ht.clips : 'a few'} passage${pr.ht && pr.ht.clips === 1 ? '' : 's'}), so the chart is shorter than the record` + checkNote + '.' + (pr.webErr ? ` The web backup didn’t work: ${esc(this.lookupErr({ code: pr.webErr }))}` : this.inViewer || !Settings.apiKey ? ' Add your API key in Settings to get the whole song from web sources.' : '');
+    else if (pr && pr.src === 'hooktheory') srcLine = `Chords: ${htLink}, a transcription of this recording. It has only parts of the song (${pr.ht ? pr.ht.clips : 'a few'} passage${pr.ht && pr.ht.clips === 1 ? '' : 's'}); the chart ${pr.form === 'anchored' ? 'places them where they are played and fills the bars between' : 'repeats them in a usual song form'}, so the order and repeats are approximate` + checkNote + (pr.easy ? ` · written in easier shapes with a capo on fret ${pr.easy.capo}` : '') + '.' + (pr.webErr ? ` The web backup didn’t work: ${esc(this.lookupErr({ code: pr.webErr }))}` : this.inViewer || !Settings.apiKey ? ' Add your API key in Settings to get the whole song from web sources.' : '');
     else if (pr && pr.src === 'web') srcLine = (pr.auto ? `The dataset chart only matched ${Math.round((pr.auto.fit || 0) * 100)}% of the recording, so ` : '') + `Chords read from web sources by Claude: ${pr.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(this.host(u) || 'source ' + (i + 1))}</a>`).join(', ') || 'sources not listed'}.` + (pr.checked ? ' Checked against the recording’s preview.' : '') + (pr.ht ? ` Key${pr.htFix && pr.htFix.fixed ? ', ' + pr.htFix.fixed + ' chord' + (pr.htFix.fixed > 1 ? 's' : '') : ''} and timing cross-checked with ${htLink}.` : '');
+    if (pr && pr.src === 'pack') srcLine = 'Starter-pack arrangement: the usual beginner chords, written by hand. Section lengths are close to the record, not exact.';
     $('song-src').innerHTML = srcLine;
     $('song-note').hidden = !s.note; $('song-note').textContent = s.note || '';
     this.setSeg('seg-easy', Settings.shapes);

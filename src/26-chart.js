@@ -11,11 +11,21 @@ const Chart = {
   // and how much the recording's key profile weighs against the chords' own
   OFFSET_MARGIN: 0.01, OFFSET_MARGIN_FIRM: 0.04, W_AUDIO: 2, W_PV: 1, W_CH: 1, W_HT: 3, W_WEB: 1, TIMING: 'context',
   /* ---------- cache ---------- */
-  cacheKey(track){ return 'it' + track.trackId; },
-  cached(track){ const c = Store.get('charts', {}) || {}; const o = c[this.cacheKey(track)]; if (!o) return null; try { return validateSong(o, o.source || 'dataset'); } catch (e) { return null; } },
+  workKey(track){ return 'w:' + (Lookup.normTitle(track.title)[0] || '') + '|' + (Lookup.artistVariants(track.artist)[0] || ''); },
+  cacheKey(track){ return track.trackId ? 'it' + track.trackId : this.workKey(track); },
+  cached(track){
+    const c = Store.get('charts', {}) || {};
+    let o = c[this.cacheKey(track)];
+    if (!o && track.title) { const w = c[this.workKey(track)]; o = typeof w === 'string' ? c[w] : w; }   // the same song under another recording id
+    if (!o || typeof o !== 'object') return null;
+    try { return validateSong(o, o.source || 'dataset'); } catch (e) { return null; }
+  },
   remember(track, song){
-    const c = Store.get('charts', {}) || {}; c[this.cacheKey(track)] = song;
-    const keys = Object.keys(c); if (keys.length > 80) keys.sort((a, b) => (c[a].savedAt || 0) - (c[b].savedAt || 0)).slice(0, keys.length - 80).forEach(k => delete c[k]);
+    const c = Store.get('charts', {}) || {}, k = this.cacheKey(track); c[k] = song;
+    const t = track.title ? track : song; if (t.title && k !== this.workKey(t)) c[this.workKey(t)] = k;
+    const keys = Object.keys(c).filter(x => typeof c[x] === 'object');
+    if (keys.length > 80) keys.sort((a, b) => (c[a].savedAt || 0) - (c[b].savedAt || 0)).slice(0, keys.length - 80).forEach(x => delete c[x]);
+    for (const x of Object.keys(c)) if (typeof c[x] === 'string' && !c[c[x]]) delete c[x];
     Store.set('charts', c);
   },
 
@@ -30,10 +40,19 @@ const Chart = {
     opts = opts || {};
     const step = (k, t) => opts.onStep && opts.onStep(k, t);
     const signal = opts.signal, canWeb = opts.web != null ? !!opts.web : !!opts.ai;
+    // the starter pack: hand-written full arrangements, ready at once and with no network
+    if (!opts.forceWeb && !opts.noPack) {
+      const p = Lookup.findPack(track);
+      if (p) { step('build', 'This one is in the starter pack.'); return this.fromPack(p, track); }
+    }
+    const offline = !!opts.offline || !!track.local || Lookup.isOffline();
     step('find', 'Looking the song up in the chord datasets…');
     let found = { rows: [] };
-    if (!opts.forceWeb) {
-      try { found = await Lookup.findRows(track, { signal }); } catch (e) { if (e.name === 'AbortError') throw e; found = { rows: [], error: String(e && e.message || e) }; }
+    if (!opts.forceWeb && !offline) {
+      try { found = await Lookup.findRows(track, { signal }); } catch (e) { if (e.name === 'AbortError') throw e; found = { rows: [], error: String(e && e.message || e), failed: 1, hits: 1 }; }
+    } else if (offline && !opts.forceWeb) {
+      const tv = Lookup.normTitle(track.title), av = Lookup.artistVariants(track.artist);
+      found = { rows: [], offline: true, hits: tv.some(t => av.some(a => Lookup.findKey(t + '|' + a).length)) ? 1 : 0, failed: 1 };
     }
     // the second dataset (Hooktheory): parts of the song with their real lengths and the recording's key
     let ht = null;
@@ -48,14 +67,17 @@ const Chart = {
       if (canWeb && await tryWeb(ht ? 'Only parts of this song are in the datasets. Asking Claude to read chord sources on the web for the rest…' : 'Not in the chord datasets. Asking Claude to read chord sources on the web…')) {
         src = 'web'; cands = [{ sections: web.sections, web: true }];
       } else if (ht) {
-        src = 'hooktheory'; cands = [{ sections: this.htSections(ht), ht: true }];
+        src = 'hooktheory'; cands = [this.htArrange(ht, track)];
       } else if (webErr) throw webErr;
-      else throw Object.assign(new Error('not in dataset'), { code: found.note === 'no-index' ? 'no_index' : 'not_in_dataset' });
+      else throw this.notFound(found, offline);
     }
     // the recording: tempo, beats, key, and where each chart sits against it
     step('listen', 'Listening to the preview to check the key and chords…');
     let pcm = null, frames = null, audioErr = '';
-    if (track.previewUrl && typeof Analyze !== 'undefined') {
+    // a Hooktheory chart is a transcription of this recording with its own tempo: nothing to wait for
+    const skipListen = offline || (src === 'hooktheory' && cands[0].bpmKnown && !opts.listen);
+    if (skipListen) audioErr = offline ? 'Offline.' : '';
+    else if (track.previewUrl && typeof Analyze !== 'undefined') {
       try { pcm = opts.pcm || await Analyze.fetchPcm(track.previewUrl, signal); }
       catch (e) { if (e.name === 'AbortError') throw e; audioErr = e && e.code === 'preview_http' ? 'The preview couldn’t be downloaded.' : /decode/i.test(String(e && e.message)) || e && e.name === 'EncodingError' ? 'This browser couldn’t decode the preview.' : 'The preview couldn’t be read from this page (blocked by the browser).'; }
       if (pcm && typeof Listen !== 'undefined') {
@@ -66,6 +88,17 @@ const Chart = {
     const analyse = c => { if (!pcm || c.an !== undefined) return; try { c.an = Analyze.run(pcm, frames, { secs: c.sections }, { bpm: web && web.bpm }); } catch (e) { console.warn('analyze', e); c.an = null; } };
     const ratio = c => c.an ? c.an.fit / (c.an.free || 1) : null;
     cands.slice(0, 4).forEach(analyse);
+    // a dataset row whose title couldn't be checked (the index is hashed: 1 key in 200 hits a stranger) needs a second
+    // opinion before it is used: the recording's preview or Hooktheory's transcription must agree with it
+    if (src === 'dataset') {
+      const agrees = c => c.verified !== false || (c.an && ratio(c) >= 0.6) || !!(ht && (m => m.score >= 0.6 && m.margin >= 0.1)(Lookup.htMatch(ht, c.sections)));
+      const ok = cands.filter(agrees);
+      if (ok.length) cands = ok;
+      else if (ht) { src = 'hooktheory'; cands = [this.htArrange(ht, track)]; }
+      else throw Object.assign(new Error('unverified'), { code: 'unverified' });
+    }
+    // Hooktheory had no tempo for this song but the preview does: arrange again on the recording's clock
+    if (src === 'hooktheory' && !cands[0].bpmKnown && cands[0].an && cands[0].an.bpm) { const an0 = cands[0].an; cands = [this.htArrange(ht, track, { bpm: an0.bpm })]; cands[0].an = an0; }
     // several dataset versions of the same song: keep the one that fits the recording best (then the fullest)
     const len = c => c.sections.reduce((a, s) => a + s.chords.length, 0);
     cands.sort((a, b) => (b.an ? b.an.fit + b.an.margin * 2 : 0) - (a.an ? a.an.fit + a.an.margin * 2 : 0) || len(b) - len(a));
@@ -100,8 +133,26 @@ const Chart = {
     }
     step('build', 'Laying the chords into bars…');
     const song = this.build(track, pick, an, timing, src, web, audioErr, found, { htm, auto, webErr, htFix });
+    if (opts.raw) return song;
     if (typeof window !== 'undefined' && window.SJ_DEBUG && an) song.debug = { cn: pick.sections.map(x => ({ name: x.name, type: x.type, chords: x.chords })), hist: an.hist, histBass: an.histBass, kf: song._kf, ak: an.key && an.key.scores.map(x => [x.tonic, x.minor, +x.s.toFixed(4)]), beatTop: an.beatTop, visits: an.visits, offsets: an.offsets, bpm: an.bpm, key: an.key && [an.key.tonic, an.key.minor, an.key.margin], chordFit: an.chordFit, durations: an.durations, triplet: an.triplet, triple: an.triple, cands: cands.map(c => ({ row: c.row, fit: c.an && c.an.fit, margin: c.an && c.an.margin, n: len(c) })), ks: song._ks, htm: htm && { h: htm.h, score: htm.score, margin: htm.margin } };
     return song;
+  },
+  // why there is no chart: the data couldn't be reached ('offline': retry), the row couldn't be confirmed
+  // ('unverified'), or the song really isn't in the data ('not_in_dataset': paste a sheet / web lookup)
+  notFound(found, offline){
+    if (found.note === 'no-index') return Object.assign(new Error('no index'), { code: 'no_index' });
+    if (found.hits && (found.failed || found.error)) return Object.assign(new Error('chord data unreachable'), { code: 'offline', inIndex: true });
+    if (offline) return Object.assign(new Error('offline, not in the built-in songs'), { code: 'offline_nf' });
+    return Object.assign(new Error('not in dataset'), { code: 'not_in_dataset' });
+  },
+  // a starter-pack entry as a finished song
+  fromPack(p, track){
+    const o = packSong(p);
+    return finishChart({ ...o, title: track.trackId ? track.title : o.title, artist: track.trackId ? track.artist : o.artist, album: track.album || '', year: track.year || p.y || 0,
+      trackId: String(track.trackId || ''), durationMs: track.durationMs || 0, previewUrl: track.previewUrl || '', art: track.art || '',
+      id: track.trackId ? 'rec-' + track.trackId : 'pk-' + slug(o.title + '-' + o.artist),
+      prov: { src: 'pack', checked: false, verified: true, status: 'ok', issues: [], form: 'source', tempo: { raw: o.bpm, rule: '', from: 'pack', conf: 'high' }, bpmFrom: 'starter pack' }, savedAt: Date.now() },
+      { easy: false, hint: p });
   },
   // Hooktheory as a second opinion on the chart's chords: each clip is lined up with the stretch of the chart it
   // transcribes (local alignment on root + major/minor); where the two disagree on a chord, the Hooktheory chord (a
@@ -162,6 +213,167 @@ const Chart = {
     }).filter(s => s.chords.length);
   },
 
+  // chords with lengths in felt beats -> whole bars. Each chord's start goes to the nearest beat; a start half a beat
+  // early is a push and moves onto the beat it anticipates; chords squeezed to nothing are dropped.
+  barsOf(chords, beats, bpb){
+    let pos = 0; const it = [];
+    chords.forEach((name, i) => { let st = Math.round(pos * 2) / 2; if (st % 1) st = Math.ceil(st); it.push({ name, st, len: beats[i] }); pos += beats[i]; });
+    const end = Math.max(1, Math.round(pos / bpb)) * bpb, keep = [];
+    for (const x of it) {
+      if (x.st >= end) break;
+      const last = keep[keep.length - 1];
+      if (last && last.st === x.st) { if (x.len > last.len) keep[keep.length - 1] = x; continue; }
+      if (last && last.name === x.name) continue;
+      keep.push(x);
+    }
+    if (!keep.length) return [];
+    keep[0].st = 0;
+    const lens = keep.map((x, i) => (i + 1 < keep.length ? keep[i + 1].st : end) - x.st);
+    // every bar names its chord (a bar that only holds the last one repeats it), so any slice of bars stands by itself
+    let last = keep[0].name;
+    return Lookup.layout([{ name: '', chords: keep.map(x => x.name), beats: lens }], bpb)[0].bars.map(b => {
+      const t = b.split(' '); if (t[0] === '.') t[0] = last;
+      for (const x of t) if (x !== '.') last = x;
+      return t.length > 1 && t.slice(1).every(x => x === '.') ? t[0] : t.join(' ');
+    });
+  },
+  // A full, playable song from Hooktheory's clips. The clips are passages of the recording with their start times, so
+  // when the recording's length is known the chart is laid along the recording: each passage sits at its own bar, and
+  // the bars between are filled by cycling the passages (verse, chorus, verse...). Without times it follows a plain
+  // song form. Either way the order and repeats are a best guess: approx is set and every filled section is marked.
+  // o: { bpm } the recording's tempo when Hooktheory has none.
+  htArrange(ht, track, o){
+    o = o || {};
+    const hint = typeof songHint === 'function' ? songHint(track.title, track.artist) : null;
+    // 1. each clip: chords + lengths, felt tempo and metre
+    let clips = ht.clips.map(c => {
+      const chords = [], beats = [];
+      for (const x of c.chords) {
+        if (x.name === 'N') { if (beats.length) beats[beats.length - 1] += x.beats; continue; }   // a gap lets the chord ring on
+        if (chords.length && chords[chords.length - 1] === x.name) beats[beats.length - 1] += x.beats; else { chords.push(x.name); beats.push(x.beats); }
+      }
+      const nt = normalizeTempo(c.bpm, c.time, beats);
+      return { start: c.start, raw: c.bpm, chords, beats, felt: nt.bpm, time: nt.time, scale: nt.scale, rule: nt.rule, total: beats.reduce((a, b) => a + b, 0) };
+    }).filter(c => c.chords.length);
+    // the metre most of the music is in
+    const tw = {}; clips.forEach(c => tw[c.time] = (tw[c.time] || 0) + c.total * c.scale);
+    const time = Object.keys(tw).sort((a, b) => tw[b] - tw[a])[0] || '4/4';
+    const T = parseTime(time), bpb = T.beats;
+    // one tempo: the median clip, the others folded to its octave (their beat counts are theirs: only x2 or /2, never rescaled)
+    const med = () => { const f = clips.filter(c => c.felt > 0).map(c => c.felt).sort((a, b) => a - b); return f.length ? f[(f.length - 1) >> 1] : 0; };
+    const rules = new Set();
+    let ref = med();
+    for (const c of clips) {
+      if (c.rule) rules.add(c.rule);
+      if (!(c.felt > 0) || !ref) continue;
+      const k = [0.5, 1, 2].sort((x, y) => Math.abs(Math.log2(c.felt * x / ref)) - Math.abs(Math.log2(c.felt * y / ref)))[0];
+      if (k !== 1) { c.felt *= k; c.scale *= k; rules.add('clip folded'); }
+    }
+    ref = Math.round(med());                                       // the median again, now that they agree on the octave
+    let bpm = ref, bpmFrom = 'hooktheory';
+    if (!bpm) { bpm = o.bpm ? Math.round(o.bpm) : hint && hint.bpm ? hint.bpm : 0; bpmFrom = o.bpm ? 'recording' : bpm ? 'hint' : 'default'; }
+    const bpmKnown = bpm > 0; if (!bpm) bpm = 100;
+    // a hint that is the same tempo at another octave wins the octave (the rule is right most of the time, not always)
+    // and a hint that disagrees outright is believed for the tempo (the bars stay as transcribed)
+    if (hint && hint.bpm && ref) {
+      const r = hint.bpm / bpm, k = [0.5, 2].find(x => Math.abs(Math.log2(r / x)) < 0.17);
+      if (k) { clips.forEach(c => { c.scale *= k; }); bpm = Math.round(bpm * k); rules.add('octave from the song notes'); }
+      else if (!hint.soft && Math.abs(Math.log2(r)) > 0.17) { bpm = hint.bpm; bpmFrom = 'hint'; rules.add('tempo from the song notes'); }
+    }
+    // 2. bars; clips with the same bars are the same passage
+    const parts = [], occ = [];
+    clips.sort((a, b) => (a.start < 0 ? 1e9 : a.start) - (b.start < 0 ? 1e9 : b.start));
+    for (const c of clips) {
+      const bars = this.barsOf(c.chords, c.beats.map(b => b * c.scale), bpb); if (!bars.length) continue;
+      const sig = bars.join('|');
+      let p = parts.find(x => x.sig === sig || x.sig.startsWith(sig + '|') || sig.startsWith(x.sig + '|'));
+      if (!p) parts.push(p = { sig, bars, chords: c.chords, beats: c.beats.map(b => b * c.scale) });
+      else if (sig.length > p.sig.length) { p.sig = sig; p.bars = bars; p.chords = c.chords; p.beats = c.beats.map(b => b * c.scale); }
+      occ.push({ part: p, start: c.start });
+    }
+    if (!parts.length) return { ht: true, sections: [], laid: [], bpm, time, bpmKnown };
+    // 3. roles: in order of appearance verse, chorus, bridge; a short passage right at the top of a 3+ part song is the intro
+    const one = parts.length === 1;
+    let rest = parts.slice();
+    if (parts.length >= 3 && occ[0].start >= 0 && occ[0].start < 8 && occ[0].part.bars.length <= 8 && occ.filter(x => x.part === occ[0].part).length === 1) { occ[0].part.role = 'intro'; rest = parts.filter(p => p !== occ[0].part); }
+    rest.forEach((p, i) => { p.role = ['verse', 'chorus', 'bridge'][i] || 'interlude'; });
+    const main = rest.filter(p => p.role === 'verse' || p.role === 'chorus');
+    const segs = [];
+    const push = (part, bars, role, approx, at) => { if (bars.length) segs.push({ part, bars, role: role || part.role, approx: !!approx, at }); };
+    const cyc = (p, n, from) => Array.from({ length: n }, (_, i) => p.bars[((from || 0) + i) % p.bars.length]);
+    // fill n bars by cycling the main passages, starting after `prev`
+    const fill = (n, prev) => {
+      let i = prev ? (main.indexOf(prev) + 1) % main.length : 0;
+      while (n > 0) {
+        const p = main[i % main.length], take = Math.min(p.bars.length, n), last = segs[segs.length - 1];
+        if (take < Math.min(4, p.bars.length) && last) last.bars.push(...cyc(last.part, take, last.bars.length));   // a stub: the section before runs on
+        else push(p, p.bars.slice(0, take), null, true);
+        n -= take; i++;
+      }
+    };
+    const barSec = bpb * 60 / bpm, dur = track.durationMs ? track.durationMs / 1000 : 0, MAXB = 228;
+    const timed = occ.filter(x => x.start >= 0);
+    let form, anchors = null;
+    if (dur > 30 && bpmKnown && timed.length) {
+      // along the recording
+      form = 'anchored';
+      const total = Math.min(MAXB, Math.max(8, Math.round(dur / barSec)));
+      const placed = [];
+      for (const x of timed) { const bar = Math.round(x.start / barSec); if (bar < total - 1 && (!placed.length || bar > placed[placed.length - 1].bar)) placed.push({ ...x, bar }); }
+      const lead = placed.length ? placed[0].bar : total;
+      if (lead > 0) {
+        const p0 = placed.length ? placed[0].part : main[0], n = lead <= 8 ? lead : (lead % p0.bars.length) || Math.min(4, p0.bars.length);
+        push(p0, cyc(p0, n, p0.bars.length * 8 - n), 'intro', true);       // the bars that lead into the passage
+        if (lead > n) fill(lead - n, null);
+      }
+      placed.forEach((x, j) => {
+        const end = j + 1 < placed.length ? placed[j + 1].bar : total, n = Math.min(x.part.bars.length, end - x.bar);
+        const prev = segs[segs.length - 1];
+        // the lead-in bars and the transcribed intro are one intro
+        if (j === 0 && x.part.role === 'intro' && prev && prev.role === 'intro' && segs.length === 1) { prev.bars.push(...x.part.bars.slice(0, n)); prev.at = { start: x.start, lead: lead }; }
+        else push(x.part, x.part.bars.slice(0, n), null, false, x);
+        if (end - x.bar - n > 0) fill(end - x.bar - n, main.includes(x.part) ? x.part : null);
+      });
+      const lastSeg = segs[segs.length - 1];
+      if (lastSeg && lastSeg.approx && lastSeg.bars.length <= 4 && segs.length > 2) lastSeg.role = 'outro';
+      anchors = [[0, 0]];
+      let bar = 0;
+      for (const sg of segs) { const b = (bar + (sg.at && sg.at.lead || 0)) * bpb; if (sg.at && sg.at.start > anchors[anchors.length - 1][0] + 1 && b > anchors[anchors.length - 1][1]) anchors.push([sg.at.start, b]); bar += sg.bars.length; }
+      if (dur > anchors[anchors.length - 1][0] + 1 && Math.round(dur / barSec) <= MAXB) anchors.push([dur, bar * bpb]);
+    } else {
+      // a plain song form, about as long as the recording (or 2:45 when that isn't known)
+      form = one ? 'loop' : 'template';
+      const target = Math.min(MAXB, Math.max(16, Math.round((dur > 30 ? dur : 165) / barSec)));
+      const V = main[0], C = main[1] || main[0], B = rest.find(p => p.role === 'bridge'), I = parts.find(p => p.role === 'intro');
+      let n = 0; const add = (p, bars, role) => { push(p, bars, role, true); n += bars.length; };
+      if (I) add(I, I.bars, 'intro'); else add(V, cyc(V, Math.min(4, V.bars.length)), 'intro');
+      const order = one ? [V] : [V, C];
+      let i = 0, bridged = !B;
+      while (n + order[i % order.length].bars.length / 2 < target && segs.length < 30) {
+        const p = order[i % order.length]; add(p, p.bars); i++;
+        if (!bridged && i >= 4 && i % 2 === 0) { add(B, B.bars); bridged = true; i++; }       // verse chorus verse chorus BRIDGE chorus
+      }
+      if (i < 2) add(order[i % order.length], order[i % order.length].bars);
+    }
+    // 4. names: Verse 1, Chorus 1, Verse 2... A one-passage song is honest about it: "Round n"
+    const NM = { intro: 'Intro', verse: 'Verse', chorus: 'Chorus', bridge: 'Bridge', interlude: 'Interlude', outro: 'Outro' };
+    const count = {}, seen = {};
+    const label = sg => one && (sg.role === 'verse' || sg.role === 'chorus') ? 'Round' : NM[sg.role];
+    segs.forEach(sg => { const l = label(sg); count[l] = (count[l] || 0) + 1; });
+    let flip = 0;
+    const laid = segs.slice(0, 40).map(sg => {
+      const l = label(sg); seen[l] = (seen[l] || 0) + 1;
+      // a one-passage song still builds: alternate rounds hit like a verse and like a chorus
+      const type = l === 'Round' ? (flip++ % 2 ? 'chorus' : 'verse') : sg.role;
+      return { name: l + (count[l] > 1 ? ' ' + seen[l] : ''), type, bars: sg.bars, approx: sg.approx };
+    });
+    const nClips = ht.clips.length;
+    const note = one ? `Only one passage of this song has been transcribed (${parts[0].bars.length} bars). The chart repeats it for the length of the song, so the structure is approximate.`
+      : `Built from ${parts.length} transcribed passages of the recording${form === 'anchored' ? ', placed where they are played' : ''}. The bars between them and the repeats are a best guess, so the structure is approximate.`;
+    return { ht: true, laid, form, anchors, approx: true, note, bpm, time, bpmKnown, bpmFrom, tempoRaw: clips.map(c => c.raw).filter(x => x > 0).sort((a, b) => a - b)[0] || 0, tempoRule: [...rules].join(', '),
+      sections: parts.map((p, i) => ({ name: NM[p.role] || 'Part ' + (i + 1), type: p.role === 'interlude' ? 'verse' : p.role, chords: p.chords, beats: p.beats, htBeats: true })), clips: nClips, parts: parts.length };
+  },
+
   /* ---------- timing ---------- */
   // a chord for the timing tables: root + major/minor/diminished (so "A7" and "A" share what's been seen)
   cid(name){ const c = parseChord(name); return c ? c.root * 3 + (/^m(?!aj)/.test(c.quality) ? 1 : /dim|m7b5/.test(c.quality) ? 2 : 0) : -1; },
@@ -176,20 +388,20 @@ const Chart = {
       if (bpm) { const r = snapOct(bpm, tb); bpm = Math.abs(Math.log2(r / tb)) < 0.08 ? r : tb; }
       else bpm = tb;
     }
-    const htb = extra.htChart ? secs.map(s => s.bpm).filter(x => x > 0).sort((x, y) => x - y) : [];
-    if (htb.length) bpm = htb[Math.floor(htb.length / 2)];          // Hooktheory's own tempo (its lengths are counted in it)
+    // no recording and no web timing: Hooktheory's tempo for this recording (felt), else worked out from the length below
+    let bpmFrom = an && an.bpm ? 'recording' : tb ? 'timing' : '', htTime = '';
+    if (!bpm && extra.htm) {
+      const cs = extra.htm.ht.clips.filter(c => c.bpm > 0).map(c => normalizeTempo(c.bpm, c.time, c.chords.filter(x => x.name !== 'N').map(x => x.beats))).sort((x, y) => x.bpm - y.bpm);
+      if (cs.length) { const c = cs[(cs.length - 1) >> 1]; bpm = c.bpm; htTime = c.time; bpmFrom = 'hooktheory'; }
+    }
+    const unknown = !bpm;
     if (!bpm) bpm = fallbackBpm || 100;
-    if (extra.htChart && TIMES.includes(secs[0] && secs[0].time)) time = secs[0].time;
-    else if (timing && TIMES.includes(timing.time)) time = timing.time;
+    if (timing && TIMES.includes(timing.time)) time = timing.time;
+    else if (htTime && !(an && an.bpm)) time = htTime;
     else if (an && an.triple) time = '3/4';
     else if (an && an.triplet && bpm < 80) time = '12/8';
     const T = parseTime(time), bpb = T.beats;
     let from = { audio: 0, claude: 0, hooktheory: 0, default: 0 };
-    // Hooktheory clips as the chart: their own lengths, scaled to one tempo
-    if (extra.htChart) {
-      const out = secs.map(s => { const f = s.bpm > 0 ? bpm / s.bpm : 1; from.hooktheory += s.chords.length; return { ...s, beats: s.beats.map(b => b * f) }; });
-      return { secs: out, bpm: Math.round(bpm), time, from };
-    }
     // beats per chord, as seen in the recording's preview and in the Hooktheory clips
     const ratio = an && an.bpm ? bpm / an.bpm : 1;     // the analysis counted beats at its own tempo
     const obs = new Map(), obs2 = new Map(), obsSec = new Map();
@@ -209,7 +421,10 @@ const Chart = {
       const h = extra.htm.h;
       for (const cl of extra.htm.ht.clips) {
         if (!(cl.bpm > 0)) continue;
-        const f = bpm / cl.bpm;                                     // its beats, counted at our tempo
+        // its beats, counted at our tempo: the same pulse, or a clean multiple of it (its transcriber counted in
+        // eighths, or in bars of three). Never a free rescale: that smears every chord across the bar lines.
+        const f = [1 / 3, 0.5, 1, 2, 3].sort((x, y) => Math.abs(Math.log2(bpm / cl.bpm / x)) - Math.abs(Math.log2(bpm / cl.bpm / y)))[0];
+        if (!unknown && Math.abs(Math.log2(bpm / cl.bpm / f)) > 0.2) continue;   // a different tempo altogether: its lengths don't apply
         const toks = [];
         for (const x of cl.chords) {
           if (x.name === 'N') { if (toks.length) toks[toks.length - 1].beats += x.beats; continue; }
@@ -245,7 +460,16 @@ const Chart = {
       });
       return { ...s, beats };
     });
-    return { secs: out, bpm: Math.round(bpm), time, from };
+    // no tempo from anywhere: the chart has to last as long as the recording, so the length gives the tempo. When that
+    // comes out absurd the chords last two bars each (or half a bar), not one.
+    if (unknown && extra.durSec > 30) {
+      const beats = out.reduce((a, s) => a + s.beats.reduce((x, y) => x + y, 0), 0);
+      let est = beats * 60 / extra.durSec, k = 1;
+      if (est < 56) k = 2; else if (est > 176) k = 0.5;
+      est *= k;
+      if (est >= 56 && est <= 176 && (k !== 0.5 || bpb % 2 === 0)) { bpm = est; bpmFrom = 'length'; if (k !== 1) out.forEach(s => { s.beats = s.beats.map(b => Math.max(1, b * k)); }); }
+    }
+    return { secs: out, bpm: Math.round(bpm), time, from, bpmFrom: bpmFrom || 'default' };
   },
   async askTiming(track, secs, opts){
     const p = timingPrompt(track, secs);
@@ -286,7 +510,8 @@ const Chart = {
   build(track, pick, an, timing, src, web, audioErr, found, extra){
     extra = extra || {};
     const secs = pick.sections, htm = extra.htm || null;
-    const m = this.merge(secs, an, timing || (web ? { bpm: web.bpm, time: web.time } : null), 100, { htm: pick.ht ? null : htm, htChart: !!pick.ht });
+    const m = pick.ht ? { secs, bpm: pick.bpm, time: pick.time, bpmFrom: pick.bpmFrom, from: { audio: 0, claude: 0, hooktheory: secs.reduce((a, x) => a + x.chords.length, 0), default: 0 } }
+      : this.merge(secs, an, timing || (web ? { bpm: web.bpm, time: web.time } : null), 100, { htm, durSec: track.durationMs ? track.durationMs / 1000 : 0 });
     const T = parseTime(m.time);
     const flat = [];
     m.secs.forEach(s => s.chords.forEach((c, i) => flat.push({ name: c, beats: s.beats[i], start: i === 0 })));
@@ -332,12 +557,12 @@ const Chart = {
     const shapeKey = Lookup.keyOf(flat, keyTerm);
     const kfx = typeof window !== 'undefined' && window.SJ_DEBUG ? Lookup.keyFeatures(flat) : null;
     const issues = [];
-    let capo = capo0, tuning = 0, checked = false;
+    let capo = capo0, tuning = 0, checked = false, checkedAudio = false, checkedHT = false;
     const fitRatio = an ? (an.free ? an.fit / an.free : 1) : null;
     const t = tPitch;
-    if (an && an.offset != null) { checked = true; if (fitRatio < 0.72) issues.push({ id: 'fit', kind: 'fit', ratio: fitRatio }); }
+    if (an && an.offset != null) { checked = checkedAudio = true; if (fitRatio < 0.72) issues.push({ id: 'fit', kind: 'fit', ratio: fitRatio }); }
     if (t != null) {
-      checked = true;
+      checked = true; if (pitchFrom === 'hooktheory') checkedHT = true;
       if (t !== 0) {
         const shapesKey = shapeKey ? shapeKey.label : '';
         const snd = shapeKey ? Lookup.keyLabel((shapeKey.tonic + capo + t) % 12, shapeKey.minor) : '';
@@ -351,7 +576,7 @@ const Chart = {
     if (an) for (const cf of (an.chordFit || [])) if (cf.beats >= 6 && cf.alt - cf.own > 0.2) issues.push({ id: 'chord:' + cf.name, kind: 'chord', name: cf.name, alt: cf.altName.replace('♯', '#').replace('♭', 'b'), own: cf.own, altScore: cf.alt });
     if (web) for (const s of web.sections) if (s.conf !== 'high') issues.push({ id: 'sec:' + s.name, kind: 'section', name: s.name, conf: s.conf });
     // sections into bars
-    const laid = Lookup.layout(m.secs, T.beats);
+    const laid = pick.laid || Lookup.layout(m.secs, T.beats).map((x, i) => ({ ...x, conf: m.secs[i].conf, type: m.secs[i].type && SECTION_TYPES.includes(m.secs[i].type) ? m.secs[i].type : undefined }));
     const row = pick.data || {};
     const style = (timing && STYLES.includes(timing.style)) ? timing.style : Lookup.styleFor(row.genres, row.main_genre || track.genre);
     const o = {
@@ -359,11 +584,13 @@ const Chart = {
       previewUrl: track.previewUrl, art: track.art, bpm: m.bpm, time: m.time, feel: timing && timing.feel === 'swing' ? 'swing' : (an && an.triplet && T.sub !== 3 ? 'swing' : 'straight'),
       style, capo, tuning, strum: timing && timing.strum, drums: timing && timing.drums,
       key: shapeKey ? Lookup.keyLabel((shapeKey.tonic + capo) % 12, shapeKey.minor) : '',
-      sections: laid.map((s, i) => ({ name: s.name, bars: s.bars, conf: m.secs[i].conf })),
-      id: 'rec-' + track.trackId,
+      sections: laid.map(s => ({ name: s.name, bars: s.bars, conf: s.conf, type: s.type, approx: s.approx })),
+      approx: !!pick.approx, anchors: pick.anchors || undefined, note: pick.note || '',
+      id: track.trackId ? 'rec-' + track.trackId : 'loc-' + slug(track.title + '-' + track.artist),
       prov: {
-        src, checked, audioErr: checked ? '' : audioErr, route: pick.route || '', row: pick.row != null ? pick.row : null, spotifyId: pick.spotifyId || '',
-        rows: (found.rows || []).map(r => r.row), sources: web ? web.sources : [], timing: m.from, bpmFrom: an && an.bpm ? (timing && timing.bpm ? 'recording + Claude' : 'recording') : timing && timing.bpm ? 'Claude' : 'default',
+        src, checked, checkedAudio, checkedHT, verified: pick.verified == null ? null : pick.verified !== false, audioErr: checkedAudio ? '' : audioErr,
+        form: pick.form || 'source', tempo: { raw: pick.tempoRaw || 0, rule: pick.tempoRule || '', from: m.bpmFrom || '', conf: ['default', 'length'].includes(m.bpmFrom) ? 'low' : 'high' }, route: pick.route || '', row: pick.row != null ? pick.row : null, spotifyId: pick.spotifyId || '',
+        rows: (found.rows || []).map(r => r.row), sources: web ? web.sources : [], timing: m.from, bpmFrom: an && an.bpm ? (timing && timing.bpm ? 'recording + Claude' : 'recording') : timing && timing.bpm ? 'Claude' : m.bpmFrom === 'hooktheory' ? 'Hooktheory' : m.bpmFrom === 'length' ? 'the recording’s length' : m.bpmFrom === 'hint' ? 'the song notes' : 'default',
         offset: an ? an.offset : null, fit: an ? +(an.fit / (an.free || 1)).toFixed(3) : null, audioKey: an ? Lookup.keyLabel(an.key.tonic, an.key.minor) : '', margin: an ? +an.margin.toFixed(4) : null,
         shapeKey: shapeKey ? shapeKey.label : '', status: issues.length ? 'confirm' : 'ok', issues, pitchFrom,
         ht: htm ? { id: htm.ht.id, clips: htm.ht.clips.length, h: htm.h, match: +htm.score.toFixed(2), key: htKey ? Lookup.keyLabel((htKey.tonic + htm.h) % 12, htKey.minor) : '' } : null,
@@ -371,6 +598,10 @@ const Chart = {
       },
       savedAt: Date.now(),
     };
+    // what the source left out: style, strum family, section types, level; and the beginner capo pass, unless the
+    // player is about to be asked about pitch / capo anyway (then the answer decides)
+    const fin = finishChart(o, { easy: !issues.some(i => i.kind === 'pitch'), styleUnknown: !(timing && STYLES.includes(timing.style)) && !row.genres && !row.main_genre && !track.genre });
+    Object.assign(o, fin);
     if (kfx) { o._kf = kfx.cands.map(c => [c.tonic, c.minor, c.f.map(v => +v.toFixed(4))]); o._ks = shapeKey && shapeKey.scores.slice(0, 4).map(x => [x.tonic, x.minor, +x.s.toFixed(3)]); }
     return o;
   },
