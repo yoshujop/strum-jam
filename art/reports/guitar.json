@@ -1,0 +1,120 @@
+{
+ "animations": [],
+ "bounds": {
+  "max": [
+   0.7762,
+   0.1745,
+   0.0416
+  ],
+  "min": [
+   -0.2315,
+   -0.1617,
+   -0.022
+  ]
+ },
+ "bytes": 339928,
+ "draw_calls": 9,
+ "errors": [],
+ "extras": {
+  "guitar": {
+   "sj_asset": "prop",
+   "sj_frets": 20,
+   "sj_scale_length": 0.63
+  },
+  "string_1": {
+   "sj_scale": 0.633
+  },
+  "string_2": {
+   "sj_scale": 0.633
+  },
+  "string_3": {
+   "sj_scale": 0.633
+  },
+  "string_4": {
+   "sj_scale": 0.633
+  },
+  "string_5": {
+   "sj_scale": 0.633
+  },
+  "string_6": {
+   "sj_scale": 0.633
+  }
+ },
+ "file": "guitar.glb",
+ "kind": "prop",
+ "materials": [
+  "sj_gloss",
+  "sj_metal",
+  "sj_toon"
+ ],
+ "max_influences": 0,
+ "nodes": 14,
+ "primitives": [
+  {
+   "material": "sj_gloss",
+   "mesh": "guitar_body",
+   "outline_agree": 0.944,
+   "tris": 2220,
+   "verts": 1530
+  },
+  {
+   "material": "sj_toon",
+   "mesh": "guitar_body",
+   "outline_agree": 0.638,
+   "tris": 1662,
+   "verts": 1993
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "guitar_body",
+   "outline_agree": 0.683,
+   "tris": 1788,
+   "verts": 2522
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_1",
+   "outline_agree": 0.87,
+   "tris": 26,
+   "verts": 15
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_2",
+   "outline_agree": 0.871,
+   "tris": 26,
+   "verts": 15
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_3",
+   "outline_agree": 0.87,
+   "tris": 26,
+   "verts": 15
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_4",
+   "outline_agree": 0.87,
+   "tris": 26,
+   "verts": 15
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_5",
+   "outline_agree": 0.872,
+   "tris": 26,
+   "verts": 15
+  },
+  {
+   "material": "sj_metal",
+   "mesh": "string_6",
+   "outline_agree": 0.872,
+   "tris": 26,
+   "verts": 15
+  }
+ ],
+ "triangles": 5826,
+ "vertices": 6135,
+ "warnings": []
+}

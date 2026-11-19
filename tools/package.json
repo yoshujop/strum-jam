@@ -1,0 +1,9 @@
+{
+  "name": "strum-jam-tools",
+  "private": true,
+  "description": "Build-time tools for Strum Jam's 3D runtime (the three.js bundle). Not needed to build the game: vendor/three.bundle.min.js is committed.",
+  "dependencies": {
+    "esbuild": "0.28.2",
+    "three": "0.187.0"
+  }
+}
