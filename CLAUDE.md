@@ -137,4 +137,11 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
 - `node test/modelshot.js <name-or-path.glb> <outdir>`: any model through the real engine (turntable sheet, close-ups,
   in-game size on a lit stage at 1280x665 and 390x844, spec warnings). `node test/gfxdemo.js [outdir]`: writes
   `dist/gfxdemo.html` (band, crowd, lights, VFX) and screenshots it per tier. Both are slow (software GL): give them minutes.
+- Character animation: `src/53-rig.js` (`Rig`: plain-data poses as model-space deltas, layers + masks, pose-to-pose keys
+  on the music clock in BEATS with snap / hit easing, anticipation, overshoot, follow-through and `lead`, two-bone IK with
+  poles, foot plants, look-at, aim, hand presets, `spr_*` spring chains, squash & stretch, smears + `Rig.Trails` ribbons,
+  `Rig.channel` for single numbers) and `src/54-face.js` (`FaceDecal`: face spec + expression parameters drawn in ink on
+  the `sj_face` canvas, presets, blinks, 2-frame expression changes, stepped pupils; redraws only on change).
+  `node test/rigshot.js <outdir> [faces,sheet,stage,poses,perf]`: expression sheets, a 24-frame contact sheet of the
+  demo band (`test/rigdemo.js`, 120 bpm), in-game size stage shots, the pose library, cost + stability; writes `dist/rigdemo.html`.
 - Test models: `/opt/sj-bpy/bin/python test/fixtures/mk_fixtures.py` -> `test/fixtures/models/*.glb` (not shipped).
