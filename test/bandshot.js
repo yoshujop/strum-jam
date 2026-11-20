@@ -18,6 +18,7 @@ const out = process.argv[2] || '/tmp/band'; require('fs').mkdirSync(out, { recur
       const cur = () => Parts.targets.find(t => !t.result && nowJ() >= t.t0 - 0.02 && nowJ() <= t.t1);
       Parts.bassPitch = () => { const t = on() && cur(); return t ? { m: t.m + 12.05, rms: 0.05 } : null; };
       Parts.heardPcs = () => { const t = on() && cur(); return { pcs: new Set(t ? t.pcs : []), midi: false }; };
+      Object.defineProperty(Hear, 'ready', { get: () => false });       // the notes are simulated here, not heard: piano takes the path without the note model (test/hear/parts.js plays real audio)
       const iv = setInterval(() => { if (!Parts.active) return; if (!on()) return clearInterval(iv);
         for (const t of Parts.targets) if (!t.result && t.lane && !t.sent && AudioEngine.now() >= t.t0 + 0.01) { t.sent = 1; Parts.drumHit(t.lane, t.t0 + 0.03, 'key'); } }, 10);
     });

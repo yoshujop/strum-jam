@@ -23,13 +23,15 @@
    Hear.chordVerdict(t0, t1, midis, strictness) -> null while the model has
         not yet heard up to t1 (ask again next frame), else
         { ok, notesOk, fresh, frac, heard[], missing[], wrong[], attempt, detune, noteState }
-   Hear.spanVerdict(tA, tB, midis, strictness, { at, end }) -> null | verdict + { t }
-        the same, tried on every strum the model found between tA and tB
+   Hear.spanVerdict(tA, tB, midis, strictness, { at, end }) -> null | verdict + { t, strum }
+        the same, tried on every strum the model found between tA and tB, nearest the middle first
+        (t = the strum it was judged on, strum = the model confirmed a strum there)
    Hear.covered(t)                has the model heard up to t?
    Hear.ownSound(t, span)         the game is about to make a sound the mic will hear at t (onsets there get own: true)
    Hear.timed(t0, early, late, test, now) -> null | { ok, t }   a timed chord:
         timing from the fast onset, pitch classes from the model after the fact
    Hear.tuning() -> { cents, state: 'ok'|'flat'|'sharp'|'unknown', n, corrected }
+   Hear.onTuning(cb) -> off()     cb(Hear.tuning()) when the state changes (the UI can say "you're flat, tune up")
    Hear.latency  -> { onset: { n, median, p90, max } (ms), model: { lag, look } (ms),
                       capture: { mode, gaps, gapFrames, blocks }, clipping }
    ===================================================================== */
@@ -39,6 +41,8 @@ const Hear = {
   get ready(){ return Listen.ready && Listen.linked; },
   onOnset(cb){ this.onsetCbs.add(cb); return () => this.onsetCbs.delete(cb); },
   onStrum(cb){ this.strumCbs.add(cb); return () => this.strumCbs.delete(cb); },
+  tuneCbs: new Set(),
+  onTuning(cb){ this.tuneCbs.add(cb); return () => this.tuneCbs.delete(cb); },
   now(){ const c = Capture.ctx; return c ? c.currentTime : 0; },
   // from Capture: one detected attack (e.f = sample frame), delivered at frame `at`
   fastOnset(e, at){
@@ -68,6 +72,9 @@ const Hear = {
       const want = Math.abs(T.cents) < 10 ? 0 : Math.max(-60, Math.min(60, Math.round(T.cents / 5) * 5));
       if (want !== T.applied && (want === 0 || Math.abs(want - T.applied) >= 10 || (T.applied === 0 && Math.abs(want) >= 15))) { T.applied = want; Listen.setStretch(Math.pow(2, -want / 1200)); }
     }
+    // tell whoever asked when the guitar turns out flat / sharp (or comes back in tune)
+    const ts = this.tuning().state;
+    if (ts !== T.told && ts !== 'unknown') { T.told = ts; const info = this.tuning(); this.tuneCbs.forEach(cb => { try { cb(info); } catch (err) { console.error(err); } }); }
   },
   tuning(){ const T = this.tune; return { cents: T.n ? T.cents : 0, state: T.n < 2 ? 'unknown' : Math.abs(T.cents) < 15 ? 'ok' : T.cents < 0 ? 'flat' : 'sharp', n: T.n, corrected: T.applied }; },
   resetTuning(){ this.tune = { cents: 0, n: 0, applied: 0, last: null }; if (Listen.stretch !== 1) Listen.setStretch(1); },
@@ -97,22 +104,27 @@ const Hear = {
   spanVerdict(tA, tB, midis, strictness, o){
     if (!Listen.ready) return null;
     o = o || {};
-    const cands = Listen.strums.filter(t => t >= tA && t <= tB);
-    if (o.at != null && !cands.some(t => Math.abs(t - o.at) < 0.06)) cands.push(o.at);
-    cands.sort((x, y) => x - y);
-    let best = null, pending = false;
+    const cands = Listen.strums.filter(t => t >= tA && t <= tB).map(t => ({ t, strum: true }));
+    if (o.at != null && !cands.some(c => Math.abs(c.t - o.at) < 0.06)) cands.push({ t: o.at, strum: false });
+    // nearest the middle of the span (the beat) first: in a strum pattern the chord's own down-stroke is tried before the
+    // last up-stroke of the chord before it
+    const mid = (tA + tB) / 2; cands.sort((x, y) => Math.abs(x.t - mid) - Math.abs(y.t - mid));
+    let best = null;
     for (const c of cands) {
-      const t0 = c + 0.04, t1 = Math.min(t0 + 0.55, o.end != null ? Math.max(t0 + 0.25, o.end - 0.02) : t0 + 0.55);
-      const v = this.chordVerdict(t0, t1, midis, strictness);
-      if (!v) { pending = true; continue; }
-      v.t = c;
+      // the model reports a strum ~0.17 s after hearing it: wait until no strum nearer the beat than this one can still turn up
+      if (Listen.reliableT - 0.19 < Math.min(tB, mid + Math.abs(c.t - mid))) return null;
+      const t0 = c.t + 0.04, t1 = Math.min(t0 + 0.55, o.end != null ? Math.max(t0 + 0.25, o.end - 0.02) : t0 + 0.55);
+      // a quick look first (the first 0.26 s, Practice's rule): a chord that is already all there locks in ~0.3 s sooner
+      let v = t1 - t0 > 0.3 ? this.chordVerdict(t0, t0 + 0.26, midis, strictness) : null;
+      if (!v || !v.ok) { v = this.chordVerdict(t0, t1, midis, strictness); if (!v) return null; }   // not heard yet: ask again
+      v.t = c.t; v.strum = c.strum;
       if (v.ok) return v;
       if (!best || (v.fresh && !best.fresh) || (v.fresh === best.fresh && v.frac > best.frac)) best = v;
     }
-    if (pending || Listen.reliableT < tB + 0.12) return null;         // a later strum may still show up
+    if (Listen.reliableT < tB + 0.12) return null;                    // a later strum may still show up
     if (best) return best;
     const exp = [...new Set(midis)], ns = {}; exp.forEach(m => ns[m] = 'unsure');
-    return { ok: false, notesOk: false, fresh: false, frac: 0, heard: [], missing: [...new Set(exp.map(m => m % 12))], wrong: [], attempt: false, detune: this.tune.n ? this.tune.cents : 0, noteState: ns, t: null };
+    return { ok: false, notesOk: false, fresh: false, frac: 0, heard: [], missing: [...new Set(exp.map(m => m % 12))], wrong: [], attempt: false, detune: this.tune.n ? this.tune.cents : 0, noteState: ns, t: null, strum: false };
   },
   // A chord that has to land on a beat (piano, or any polyphonic part through the mic). t0: when it should sound (mic
   // clock). An onset between t0 - early and t0 + late gives the timing; test(pcs) says whether the notes that followed it
@@ -141,6 +153,6 @@ const Hear = {
     const s = Capture.stats;
     return { onset: { n: z.length, median: q(0.5), p90: q(0.9), max: q(1) },
       model: { lag: Listen.ready && Listen.reliableT ? Math.round((this.now() - Listen.reliableT) * 1000) : null, look: Math.round(Listen.ms) },
-      capture: { mode: Capture.mode, gaps: s.gaps + (Listen.gaps || 0), gapFrames: s.gapFrames, blocks: s.blocks }, clipping: s.clip > 0 };
+      capture: { mode: Capture.mode, gaps: s.gaps + (Listen.gaps || 0), gapFrames: s.gapFrames, blocks: s.blocks }, clipping: !!s.clipAt && performance.now() - s.clipAt < 3000 };
   },
 };

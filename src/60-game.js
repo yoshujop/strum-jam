@@ -384,6 +384,9 @@ const G = {
         const v = Hear.spanVerdict(ev.t + lat - 0.3, ev.t + lat + 0.3, midisS, G.strictMode(), { at: ev.onsetT != null ? ev.onsetT + lat : null, end: next ? next.t + lat : null });
         if (!v) continue;
         ev.listened = true;
+        // a sound took this chord's timing slot but the model found no strum and none of the chord there (the band through the
+        // speakers, a knock, a voice): nobody played, so it is a MISS, not a WRONG CHORD
+        if (!v.ok && !v.strum && !v.attempt && ev.timing && ev.timing !== 'miss') { ev.timing = 'miss'; ev.onsetT = null; this.counts.miss++; Stage.popup('MISS', COL.bad); this.lastMissAt = now; Stage.shake = 5; Sfx.miss(); this.addHype(-0.22); }
         const r = { ok: v.ok, noteState: v.noteState, attempt: v.attempt && v.fresh, wrongNotes: v.fresh ? v.wrong : [] };
         // the strum that carried the chord is the one that's timed
         if (v.ok && v.t != null && ev.timing !== 'miss' && (ev.onsetT == null || Math.abs(v.t - lat - ev.onsetT) > 0.05)) { const d = v.t - lat - ev.t, a = Math.abs(d); if (a <= 0.3) { ev.timing = a <= 0.07 ? 'perfect' : a <= 0.13 ? 'great' : a <= 0.22 ? 'good' : 'ok'; ev.side = d < 0 ? 'EARLY' : 'LATE'; ev.onsetT = v.t - lat; } }

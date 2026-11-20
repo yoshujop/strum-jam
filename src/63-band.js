@@ -188,6 +188,8 @@ Object.assign(Parts, {
     let best = null, bd = 0.17;
     for (const tg of this.targets) { if (tg.result || (lane && tg.lane !== lane)) continue; const d = Math.abs(t - tg.t0); if (d < bd) { bd = d; best = tg; } if (tg.t0 > t + 0.2) break; }
     if (best) this.judgeTiming(G, best, Math.max(0, bd - 0.02), AudioEngine.now());
+    // the mic hears a kick and a hat played together as one hit: untrained (lane unknown), it counts for every drum due at that moment
+    if (best && !lane && src === 'mic') for (const tg of this.targets) { if (tg.t0 > best.t0 + 0.03) break; if (!tg.result && Math.abs(tg.t0 - best.t0) < 0.03) this.judgeTiming(G, tg, Math.max(0, bd - 0.02), AudioEngine.now()); }
     UI.drumPad && UI.drumPad(lane);
   },
   drumFrame(g, now){

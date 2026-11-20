@@ -1,6 +1,6 @@
 // Live end-to-end runs: the real game, sound injected into the mic chain on the audio clock.
 // usage: node live.js practice|stage [key=val ...]
-//   common: throttle=4 nomodel=1 leak=0.5 mic=laptop level=0.3 tempo=100 strict=normal
+//   common: throttle=4 nomodel=1 leak=0.5 mic=laptop level=0.3 tempo=100 strict=normal cents=-35 (the whole guitar flat)
 //   stage:  play=right|wrong|none|pattern offset=0.08 (s after the beat) pattern=D.D.D.DU cut=1 song="Chord Drill: G, C, D"
 const S = require('./synth.js'), L = require('./lib.js');
 const mode = process.argv[2] || 'practice', o = {};
@@ -8,7 +8,7 @@ for (const a of process.argv.slice(3)) { const [k, v] = a.split('='); o[k] = v; 
 const num = (k, d) => o[k] == null ? d : +o[k];
 const WRONG = { G: 'Em', C: 'Am', D: 'Dsus4', Em: 'G', Am: 'C' };
 function clipOf(name, opt = {}){
-  const sig = S.strum(S.CH[name], 1.9, opt);
+  const sig = S.strum(S.CH[name], 1.9, Object.assign({ cents: num('cents', 0) }, opt));
   let y = S.room(sig, 0.25); y = S.MICS[o.mic || 'laptop'](y); return S.norm(y, num('level', 0.3));
 }
 (async () => {
@@ -56,6 +56,7 @@ function clipOf(name, opt = {}){
     const lats = res.filter(r => r.lat != null).map(r => r.lat).sort((a, b) => a - b);
     console.log('PRACTICE', play, 'accepted', lats.length + '/' + res.length, 'latency s median', lats[lats.length >> 1], 'min', lats[0], 'max', lats[lats.length - 1]);
     console.log(JSON.stringify(res));
+    if (o.cents) console.log('TUNING played', o.cents, 'cents; Hear.tuning()', JSON.stringify(await page.evaluate(() => typeof Hear !== 'undefined' ? Hear.tuning() : null)));
   } else {
     const play = o.play || 'right', off = num('offset', 0.08);
     const info = await page.evaluate(() => ({ lead: G.list[0].t - AudioEngine.ctx.currentTime, list: G.list.map(e => ({ label: e.label, t: e.t, beat: e.beat })), beatDur: Groove.cfg.beatDur, start: Groove.cfg.startTime, now: AudioEngine.ctx.currentTime, beats: G.chart.beats, strum: G.chart.song.strum || '' }));
