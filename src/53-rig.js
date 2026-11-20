@@ -70,7 +70,8 @@
 //   rig.bounce(amount)             whole-body squash impulse: -0.08 = squash 8 % then spring back (volume preserving)
 //   rig.squash = { body, head }    extra stretch factors you can drive yourself (on top of poses and bounce)
 //   rig.smear = { on, trail, v0, v1, max, trailAt, width, color, bones }   speed-stretch of fast hands / feet (v0..v1 m/s ->
-//       0..max extra length); trail: a ribbon ghost (Rig.Trails) once the smear amount passes trailAt (big moves only)
+//       0..max extra length); trail: a ribbon ghost (Rig.Trails) once the smear amount passes trailAt AND the hand has
+//       travelled trailLen metres (x character size) within the ribbon's life: big moves only, never a strum or a drum hit
 //   rig.update(beat, dt)           beat: the music clock in beats; dt: seconds since the last frame (springs)
 //   rig.onKey = (tag, layer, key) => {}             a key with a tag landed (expressions, VFX)
 //   rig.pos(bone, outVec3) -> model-space position after update;  rig.worldPos(bone, outVec3)
@@ -350,7 +351,7 @@ const Rig = (function(){
     this.squash = { body: 1, head: 1 }; this._bx = 0; this._bv = 0; this._body = 1; this.bounceFreq = 3.4; this.bounceDamp = 0.32;
     this.look = { target: null, weight: 1, yaw: 62, pitch: 32, neck: 0.38, speed: 16, eyeX: 0, eyeY: 0, _y: 0, _p: 0 };
     this.handOv = { L: null, R: null, wL: 0, wR: 0 };
-    this.smear = { on: true, trail: true, v0: 2.6, v1: 9, max: 0.5, trailAt: 0.3, width: 0.05, color: null, bones: ['hand_L', 'hand_R', 'foot_L', 'foot_R'].filter(n => n in idx) };
+    this.smear = { on: true, trail: true, v0: 2.6, v1: 9, max: 0.5, trailAt: 0.3, trailLen: 0.45, width: 0.05, color: null, bones: ['hand_L', 'hand_R', 'foot_L', 'foot_R'].filter(n => n in idx) };
     this._sm = this.smear.bones.map(n => ({ i: idx[n], px: 0, py: 0, pz: 0, amt: 0, slot: -1, ok: false }));
     this._rootInv = new T.Matrix4(); this._m = new T.Matrix4(); this._m2 = new T.Matrix4(); this._v = new T.Vector3(); this._v2 = new T.Vector3(); this._q = new T.Quaternion(); this._s = new T.Vector3(1, 1, 1);
     this._rq = new F([0, 0, 0, 1]); this._rp = new F(3); this._rs = 1; this._bs = new F([1, 1, 1]);
@@ -641,7 +642,7 @@ const Rig = (function(){
         if (sm.trail && Trails.mesh) { if (s.slot < 0) s.slot = Trails.slot();
           if (s.slot >= 0) { vrot(S, 52, G, i * 4, c.dir[i * 3] * 0.07 * c.size, c.dir[i * 3 + 1] * 0.07 * c.size, c.dir[i * 3 + 2] * 0.07 * c.size);
             vrot(S, 48, rq, 0, (P[i * 3] + S[52]) * c._bs[0] * rs, (P[i * 3 + 1] + S[53]) * c._bs[1] * rs, (P[i * 3 + 2] + S[54]) * c._bs[2] * rs);
-            Trails.feed(s.slot, S[48] + rp0[0], S[49] + rp0[1], S[50] + rp0[2], want > sm.trailAt, sm.color, sm.width * c.size * rs); } }
+            Trails.feed(s.slot, S[48] + rp0[0], S[49] + rp0[1], S[50] + rp0[2], want > sm.trailAt, sm.color, sm.width * c.size * rs, (sm.trailLen || 0) * c.size * rs); } }
       }
     }
   };
@@ -668,8 +669,8 @@ const Rig = (function(){
     },
     slot(){ return this.mesh && this.used < this.n ? this.used++ : -1; },
     clear(){ if (!this.mesh) return; for (const s of this.s) { s.t.fill(-9); s.on = false; s.live = false; } this.pos.fill(0); this.mesh.geometry.attributes.position.needsUpdate = true; this.mesh.visible = false; },
-    feed(i, x, y, z, fast, color, w){
-      const s = this.s[i], K = this.K; if (!fast && !s.live) { s.p[s.h * 3] = x; s.p[s.h * 3 + 1] = y; s.p[s.h * 3 + 2] = z; s.t[s.h] = this.time; return; }   // idle: keep one fresh point
+    feed(i, x, y, z, fast, color, w, minLen){
+      const s = this.s[i], K = this.K; s.ml = minLen || 0; if (!fast && !s.live) { s.p[s.h * 3] = x; s.p[s.h * 3 + 1] = y; s.p[s.h * 3 + 2] = z; s.t[s.h] = this.time; return; }   // idle: keep one fresh point
       s.h = (s.h + 1) % K; s.p[s.h * 3] = x; s.p[s.h * 3 + 1] = y; s.p[s.h * 3 + 2] = z; s.t[s.h] = this.time; s.live = true; s.w = w;
       if (fast) { s.on = true; s.last = this.time; if (color) { this._c.set(color).lerp(this._w, 0.45); s.col[0] = this._c.r; s.col[1] = this._c.g; s.col[2] = this._c.b; } }
     },
@@ -682,6 +683,8 @@ const Rig = (function(){
         // how many samples are still young: newest first
         let cnt = 0; for (let k = 0; k < K; k++) { const j = (s.h - k + K) % K; if (now - s.t[j] <= LIFE && s.t[j] > -1) cnt++; else break; }
         if (cnt < 2 || !s.on || now - s.last > LIFE) { s.live = false; s.on = false; for (let k = base * 3; k < (base + vper) * 3; k++) pos[k] = 0; continue; }
+        if (s.ml > 0) { let len = 0; for (let k = 1; k < cnt; k++) { const a = (s.h - k + K) % K * 3, b = (s.h - k + 1 + K) % K * 3; len += Math.hypot(s.p[a] - s.p[b], s.p[a + 1] - s.p[b + 1], s.p[a + 2] - s.p[b + 2]); }
+          if (len < s.ml) { for (let k = base * 3; k < (base + vper) * 3; k++) pos[k] = 0; continue; } }               // a short flick: no ribbon
         any = true;
         for (let k = 0; k <= SEG; k++) {
           const u = k / SEG, f = (1 - u) * (cnt - 1), i0 = Math.floor(f), fr = f - i0;                // u = 0 the tail, 1 the head

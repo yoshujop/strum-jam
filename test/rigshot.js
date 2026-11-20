@@ -73,11 +73,11 @@ Shot.poses = async () => {
   names.forEach((n, i) => { L.to(n, { in: 0 }); for (let k = 0; k < 3; k++) rig.update(i + k * 0.01, 0); scene.updateMatrixWorld(true);
     c.drawImage(GFX.snapshot(scene, cam, CW, CH), (i % cols) * CW, Math.floor(i / cols) * CH); c.fillStyle = '#1E1B2E'; c.font = '600 20px sans-serif'; c.fillText(n, (i % cols) * CW + 10, Math.floor(i / cols) * CH + 26); });
   const outs = { 'rig-poses': Shot.png(cv) };
-  // hands: the left hand, palm to the camera
+  // hands: the left hand in the rest pose, from the palm side (the body is clipped away by the near plane) and from the back
   const hn = Object.keys(Rig.HANDS), hv = document.createElement('canvas'); hv.width = hn.length * 300; hv.height = 600; const hc = hv.getContext('2d'), hp = new T.Vector3();
-  L.to({ bones: { upperarm_L: [0, -60, 30], forearm_L: { bend: 60 }, upperarm_R: [0, 60, -30], forearm_R: { bend: 60 } } }, { in: 0 });
-  hn.forEach((n, i) => { rig.hand('L', n); rig.hand('R', n); rig.update(100 + i, 0); scene.updateMatrixWorld(true);
-    ['L', 'R'].forEach((s, r) => { rig.worldPos('middle1_' + s, hp); cam.fov = 6; cam.position.set(hp.x + (s === 'L' ? 1.2 : -2.2), hp.y + 0.8, hp.z + 3.2); cam.lookAt(hp); cam.updateMatrixWorld(true);
+  L.to('rest', { in: 0 });
+  hn.forEach((n, i) => { rig.hand('L', n); rig.hand('R', n); rig.update(100 + i, 0); scene.updateMatrixWorld(true); rig.worldPos('middle1_L', hp); cam.fov = 5.5;
+    [[-2.6, 0.5, 1.3], [2.6, 0.9, 1.3]].forEach((o, r) => { cam.near = r ? 0.1 : 2.55; cam.position.set(hp.x + o[0], hp.y + o[1], hp.z + o[2]); cam.lookAt(hp.x, hp.y - 0.02, hp.z); cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
       hc.drawImage(GFX.snapshot(scene, cam, 300, 300), i * 300, r * 300); }); hc.fillStyle = '#1E1B2E'; hc.font = '600 20px sans-serif'; hc.fillText(n, i * 300 + 10, 26); });
   outs['rig-hands'] = Shot.png(hv);
   return outs;

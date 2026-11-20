@@ -46,13 +46,13 @@ const Toon = {
   // emit: unlit HDR intensity. beat: how much GFX.beat() pumps the emission.
   cls: {
     toon:  { shade: '#ffffff', rim: 1.0, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
-    skin:  { shade: '#ffd3c4', rim: 0.9, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
+    skin:  { shade: '#ffd3c4', rim: 0.9, spec: [0, 0, 1],       sheen: [1, 0],      term: -0.3,    emit: 0,   beat: 0 },
     hair:  { shade: '#f0eaff', rim: 1.2, spec: [0, 0, 0.4],     sheen: [0.9, 0.22], term: 0,    emit: 0,   beat: 0 },
     cloth: { shade: '#ffffff', rim: 0.8, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
     metal: { shade: '#b9b4d6', rim: 1.4, spec: [0.2, 1.5, 1],   sheen: [0.6, 0.55], term: 0.05, emit: 0,   beat: 0 },
     gloss: { shade: '#e6e0f5', rim: 1.2, spec: [0.2, 1.15, 2.6], sheen: [0.3, 0.1],  term: 0,    emit: 0,   beat: 0 },
     emit:  { shade: '#ffffff', rim: 0,   spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 1.7, beat: 0.6 },
-    face:  { shade: '#ffd3c4', rim: 0.6, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 }
+    face:  { shade: '#ffd3c4', rim: 0.6, spec: [0, 0, 1],       sheen: [1, 0],      term: -0.3,    emit: 0,   beat: 0 }
   },
   ink: '#1E1B2E', linePx: 3.2, lineMin: 0.0035, lineMax: 0.032,
   MAX_SPOTS: 8,
