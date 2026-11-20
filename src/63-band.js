@@ -128,6 +128,21 @@ Object.assign(Parts, {
       ok = t => { const need = t.pcs.length >= 4 ? t.pcs.length - 1 : t.pcs.length; let have = 0; t.pcs.forEach(p => { if (h.pcs.has(p)) have++; }); let stray = 0; h.pcs.forEach(p => { if (!t.pcs.includes(p)) stray++; }); return have >= need && stray <= 1; };
     }
     const late = this.inst === 'piano' ? 0.35 : 0.28;
+    // piano through the mic: the fast onset says WHEN the chord was played, the note model says afterwards WHICH notes it
+    // was (Hear.timed), so it can be played on the beat however far behind the model runs
+    if (this.inst === 'piano' && !this.lastHeard.midi && Mic.on && Hear.ready) {
+      const lat = (Settings.latency || 0) / 1000, okP = (t, pcs) => { const need = t.pcs.length >= 4 ? t.pcs.length - 1 : t.pcs.length; let have = 0; t.pcs.forEach(p => { if (pcs.has(p)) have++; }); let stray = 0; pcs.forEach(p => { if (!t.pcs.includes(p)) stray++; }); return have >= need && stray <= 1; };
+      for (let i = 0; i < this.targets.length; i++) {
+        const t = this.targets[i]; if (t.result) continue;
+        if (tJ < t.t0 - 0.15) break;
+        const nx = this.targets[i + 1], gap = nx ? nx.t0 - t.t0 : 9, lw = Math.min(late, (t.t1 - t.t0) * 0.8, gap * 0.6);
+        const v = Hear.timed(t.t0 + lat, Math.min(0.15, gap * 0.4), lw, pcs => okP(t, pcs), now);
+        if (v) this.judgeTiming(g, t, v.ok ? Math.max(0, v.t - lat - t.t0 - 0.02) : null, now);
+      }
+      if (tJ > this.endT + 0.4 && this.targets.every(t => t.result)) this.finish(g);
+      else if (tJ > this.endT + 2.5) this.finish(g);
+      return;
+    }
     for (const t of this.targets) {
       if (t.result) continue;
       const win1 = t.t0 + Math.min(late, (t.t1 - t.t0) * 0.8);

@@ -135,6 +135,7 @@ const Listen = {
     const str = f => { const o = Array.from(f.onset.subarray(38 - 21, 89 - 21)).sort((a, b) => b - a); return o[0] + o[1] + o[2]; };
     const hist = this.frames(from - 1.0, this.reliableT).map(str).sort((a, b) => a - b), base = hist.length ? hist[Math.floor(hist.length * 0.5)] : 0;
     for (let i = 1; i < fr.length - 1; i++) {
+      if (fr[i].t > this.reliableT - 0.17) break;                                    // wait to hear whether notes ring on after it
       const s = str(fr[i]), mx = Math.max(...fr[i].onset.subarray(38 - 21, 89 - 21));
       if (mx < 0.45 || s < base + 0.6 || s < str(fr[i - 1]) || s < str(fr[i + 1])) continue;
       if (fr[i].t - this.lastStrumT < 0.12) continue;
@@ -144,20 +145,22 @@ const Listen = {
       let n = 0; for (let p = 38 - 21; p < 89 - 21; p++) if (Math.max(fr[i].onset[p], fr[i - 1].onset[p], fr[i + 1].onset[p]) >= 0.3) n++;
       // the fast detector heard the same attack to the sample: use its time (the model's own is within about -80..+30 ms)
       const fo = typeof Hear !== 'undefined' ? Hear.nearFast(fr[i].t - 0.012, 0.05, 0.085) : null, t = fo ? fo.t : fr[i].t;
-      // one lone pitched onset with a noisy attack is a voice, a clap or a knock, not a strum
-      if (this.strumFilter && n < 2 && fo && fo.kind === 'noise') continue;
+      // strings ring on: how many notes are sounding 40-160 ms after it. A clap, a knock, a snare or a consonant sets off
+      // onsets all over the keyboard and then nothing; that is not a strum
+      const after = this.frames(fr[i].t + 0.04, fr[i].t + 0.16); let sus = 0;
+      if (after.length) for (let p = 38 - 21; p < 89 - 21; p++) { let a = 0; for (const f of after) a += f.note[p]; if (a / after.length >= 0.3) sus++; }
+      if (this.strumFilter && (sus < 1 || (sus < 2 && (!fo || fo.kind !== 'tonal')))) { this.rejected.push({ t, n, sus, kind: fo ? fo.kind : '' }); if (this.rejected.length > 40) this.rejected.shift(); continue; }
       this.strums.push(t); if (this.strums.length > 40) this.strums.shift();
-      this.strumInfo.push({ t, tm: fr[i].t, n, kind: fo ? fo.kind : '' }); if (this.strumInfo.length > 40) this.strumInfo.shift();
+      this.strumInfo.push({ t, tm: fr[i].t, n, sus, kind: fo ? fo.kind : '' }); if (this.strumInfo.length > 40) this.strumInfo.shift();
       if (typeof Hear !== 'undefined') Hear.strumConfirmed(t, fo, n);
-      if (typeof Mic !== 'undefined' && Mic.fastMode && Mic.fastMode()) continue;   // drums: the fast onsets drive the game, not these
+      // the game already got this strum from the fast detector, at the moment it happened (drums: only ever from there)
+      if ((fo && fo.sent) || (typeof Mic !== 'undefined' && Mic.fastMode && Mic.fastMode())) continue;
       this.strumListeners.forEach(fn => fn(t));
     }
   },
-  strumInfo: [], strumFilter: true,
+  strumInfo: [], rejected: [], strumFilter: true,
   // raw mic audio between t0 and t1 (null if it's no longer, or not yet, in the buffer)
   audio(t0, t1){ return this.cap ? this.cap.read(Math.round(t1 * this.sr), Math.round((t1 - t0) * this.sr)) : null; },
-  // did the chord's notes actually get louder at this strum? (compares the spectrum just before with just after;
-  // steady background such as music, a TV or a droning pad is there both times and fails this)
   // Is this chord NEW at the strum at ts? Asked of the model itself: a string that was struck shows an onset there, or was
   // not sounding before and is now. (The old test compared 0.7 s of spectrum before and after, which a chord change over
   // a still-ringing chord, or a re-strum of the same chord, can never pass.) Steady background has no onsets and no change.
@@ -175,7 +178,7 @@ const Listen = {
     const pcs = [...new Set(exp.map(m => m % 12))]; let rosePc = 0, sum = 0;
     for (const pc of pcs) { let best = 0, nw = false; for (let m = 38; m <= 88; m++) if (m % 12 === pc) { if (on[m] > best) best = on[m]; if (isNew(m)) nw = true; } sum += best; if (nw) rosePc++; }
     const need = Math.min(pcs.length, Math.max(1, Math.ceil(pcs.length * this.FRESH.share)));
-    return { ok: rosePc >= need, rose: rosePc, need, rise: sum, roseSet, rose1: isNew, model: true, rose_: null, rose: rosePc, roseFn: isNew };
+    return { ok: rosePc >= need, nRose: rosePc, need, rise: sum, roseSet, rose: isNew, model: true };
   },
   FRESH: { on: 0.3, jump: 0.25, share: 0.5 },
   // the old spectrum test, kept for the fallback ear's logic and for comparison in tests
