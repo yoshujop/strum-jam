@@ -194,6 +194,31 @@ def outline(points, n=64, tension=0.5):
     return smooth_closed(np.asarray(points, dtype=np.float64), n, tension)
 
 
+def rounded(points, radius, steps=4):
+    """A closed polygon with its corners rounded: straight edges, arcs of `radius` (a number, or one per corner;
+    clamped to what the neighbouring edges allow). For hard-cut graphic outlines (headstocks, plates, signs)."""
+    P = np.asarray(points, dtype=np.float64)
+    n = len(P)
+    rs = [radius] * n if np.ndim(radius) == 0 else list(radius)
+    out = []
+    for i in range(n):
+        a, b, c = P[i - 1], P[i], P[(i + 1) % n]
+        u, v = a - b, c - b
+        lu, lv = np.linalg.norm(u), np.linalg.norm(v)
+        u, v = u / lu, v / lv
+        ang = math.acos(max(-1.0, min(1.0, float(np.dot(u, v)))))
+        r = rs[i]
+        if r <= 0 or ang > math.pi - 1e-3:
+            out.append(b)
+            continue
+        t = min(r / math.tan(ang / 2), lu * 0.45, lv * 0.45)
+        p0, p1 = b + u * t, b + v * t
+        for k in range(steps + 1):
+            f = k / float(steps)
+            out.append((1 - f) ** 2 * p0 + 2 * f * (1 - f) * b + f * f * p1)
+    return np.array(out)
+
+
 def polygon_area(P):
     P = np.asarray(P)
     x, y = P[:, 0], P[:, 1]
