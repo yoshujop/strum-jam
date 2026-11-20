@@ -344,7 +344,7 @@ const Lookup = {
     const k = track && track.trackId, m = k && this.rowsMemo.get(k);
     if (m) return m;
     const r = await this.findRowsFresh(track, opts);
-    if (k && r.rows.length) { this.rowsMemo.set(k, r); if (this.rowsMemo.size > 60) this.rowsMemo.delete(this.rowsMemo.keys().next().value); }
+    if (k && r.rows.length && r.rows.every(x => x.verified !== false)) { this.rowsMemo.set(k, r); if (this.rowsMemo.size > 60) this.rowsMemo.delete(this.rowsMemo.keys().next().value); }
     return r;
   },
   async findRowsFresh(track, opts){

@@ -132,8 +132,12 @@ const Chart = {
       try { timing = await this.askTiming(track, pick.sections, opts); } catch (e) { if (e.name === 'AbortError') throw e; timing = null; }
     }
     step('build', 'Laying the chords into bars…');
-    const song = this.build(track, pick, an, timing, src, web, audioErr, found, { htm, auto, webErr, htFix });
+    let song = this.build(track, pick, an, timing, src, web, audioErr, found, { htm, auto, webErr, htFix });
     if (opts.raw) return song;
+    // the only open question is the pitch, the evidence is a transcription of this very recording, and the answer is
+    // "same shapes, capo on": take it without asking (the song screen shows the capo; "as written" stays in prov.orig)
+    const is = song.prov.issues;
+    if (!opts.ask && is.length === 1 && is[0].kind === 'pitch' && is[0].from === 'hooktheory' && this.recommend(is[0]) === 'capo') song = this.applyChoices(song, { pitch: 'capo' });
     if (typeof window !== 'undefined' && window.SJ_DEBUG && an) song.debug = { cn: pick.sections.map(x => ({ name: x.name, type: x.type, chords: x.chords })), hist: an.hist, histBass: an.histBass, kf: song._kf, ak: an.key && an.key.scores.map(x => [x.tonic, x.minor, +x.s.toFixed(4)]), beatTop: an.beatTop, visits: an.visits, offsets: an.offsets, bpm: an.bpm, key: an.key && [an.key.tonic, an.key.minor, an.key.margin], chordFit: an.chordFit, durations: an.durations, triplet: an.triplet, triple: an.triple, cands: cands.map(c => ({ row: c.row, fit: c.an && c.an.fit, margin: c.an && c.an.margin, n: len(c) })), ks: song._ks, htm: htm && { h: htm.h, score: htm.score, margin: htm.margin } };
     return song;
   },
