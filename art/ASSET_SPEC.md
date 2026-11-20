@@ -168,3 +168,29 @@ with fewer cage rings), 4 influences are supported, scale 1 stud = 0.28 m.
 - Budget on a phone: 5 band members x 12k triangles x 2 (fill + hull) = 120k skinned triangles, about 10 draw calls per character.
   If that is too much for old phones, build an LOD with `HumanSpec(levels=0)` (the raw cage: the mannequin drops to 3.6k triangles, same rig and weights), or drop the hull for far characters.
 - Custom attributes (`_SJOUT`, `_SJOUTW`) survive in glTF; for USDZ / Metal they must be mapped to primvars or recomputed.
+
+## Verified at integration (art pipeline -> runtime, on `mannequin` + `guitar`)
+
+Checked by rendering through the real engine (`test/modelshot.js`, `test/rigshot.js`), not by reading code:
+
+| item | result |
+|---|---|
+| axes / scale | glTF Y-up, +Z forward, feet at the origin, 1.87 m to the top of the hair; no runtime correction |
+| bone names | all 48 found by `Rig` (incl. `twist_forearm_*`, `spr_forelock_1..3`, `att_*`); `Assets.info().warnings` is empty |
+| face UV | upright and unmirrored (wink test: the character's left eye is on the viewer's right) |
+| colour | COLOR_0 linear in the glb, shown as the authored sRGB after the output pass |
+| outline attributes | `_SJOUT` / `_SJOUTW` are used (`_sjout`, `_sjoutw`): finger webs thin, strings and frets lineless |
+| material classes | skin, face, cloth, toon, hair, gloss, metal all resolve; a character is 3 draws (fill, ink, face) |
+| props | `grip_fret` and `grip_strum` work as IK targets; the guitar hangs from `att_hip` |
+
+Runtime rules assets can rely on (and must not fight):
+
+- **Skin and face take no cast shadows** (`Toon.cls.skin.recv = 0`, `face.recv = 0`) and their terminator is pushed 0.3 towards
+  the dark side, so a fringe or a hat brim never puts a slab of shadow across the face. Shape a face with the N.L terminator and
+  the face canvas only. Cloth, hair and props still receive hard cast shadows.
+- Every node of a prop is its own fill + ink draw (the guitar's six strings make it 14 draws). Keep a part as a node only when
+  the runtime really animates it; otherwise join it into the body.
+- Grip empties mark the SURFACE to touch. The palm bone (`att_hand_*`) sits about 8 cm up the hand, so a hold offsets the IK
+  target by that much (see the strum in `test/rigdemo.js`).
+
+See `docs/3D_PIPELINE.md` for the end-to-end walkthrough.

@@ -4,7 +4,8 @@
 //   faces    faces-<spec>.png: every expression preset of each ready-made face spec (pure 2D, fast), faces-small.png: the
 //            same at 40 px (what a face is on a phone), faces-tween.png: the in-between frames of a change
 //   sheet    rig-sheet.png: 24 frames across two bars (3 per beat; frame 0 of each beat is the contact) in the studio,
-//            rig-big-<n>.png: four of them large, rig-face.png: head close-ups on 8 beats
+//            rig-big-<n>.png: four of them large, rig-face.png: head close-ups on 8 beats, rig-hold.png: the guitar hold
+//            close up from three sides (down-strum contact above, a third of a beat later below)
 //   stage    rig-stage-1280x665-<n>.png / rig-stage-390x844-<n>.png: real in-game size on the lit stage (beats 0, 2.33, 6.67, 7)
 //   poses    rig-poses.png: every pose of Rig.POSES held (the library at a glance), rig-hands.png: the hand presets
 //   perf     prints the cost of rig.update + face.update for five characters (ms per frame, in this browser) and checks
@@ -46,7 +47,7 @@ Shot.sheet = async (CW, CH) => {
   for (let i = 0; i < 480; i++) D.step(dt, false);                         // one full loop of warm-up: springs and loops are in their cycle
   const sheet = document.createElement('canvas'); sheet.width = CW * 6; sheet.height = CH * 4; const cx = sheet.getContext('2d'), outs = {};
   const faces = document.createElement('canvas'); faces.width = 300 * 8; faces.height = 300; const fx = faces.getContext('2d');
-  const fcam = new T.PerspectiveCamera(14, 1, 0.1, 50), hp = new T.Vector3();
+  const fcam = new T.PerspectiveCamera(14, 1, 0.1, 50), hp = new T.Vector3(); let holdC = null;
   const big = { 0: '0-contact', 1: '1-rebound', 2: '2-windup', 3: '3-contact', 20: '6-windup', 21: '7-pump', 22: '8-hold' };
   for (let f = 0; f < 24; f++) {
     D.scene.updateMatrixWorld(true);
@@ -55,6 +56,9 @@ Shot.sheet = async (CW, CH) => {
     if (f in big) outs['rig-big-' + big[f]] = Shot.png(GFX.snapshot(D.scene, D.cam, 1200, 860));
     if (f % 3 === 1) { D.chars[0].rig.worldPos('head', hp); fcam.position.set(hp.x + 0.5, hp.y + 0.2, hp.z + 2.6); fcam.lookAt(hp.x, hp.y + 0.14, hp.z); fcam.updateMatrixWorld(true);
       fx.drawImage(GFX.snapshot(D.scene, fcam, 300, 300), Math.floor(f / 3) * 300, 0); }
+    if (f === 0 || f === 1) { const g = D.chars[0].rig.worldPos('att_hip', hp), hc = f ? holdC : (holdC = document.createElement('canvas')); if (!f) { hc.width = 1800; hc.height = 1200; }
+      [[0, 0.25, 2.6], [1.6, 0.9, 2.0], [-1.7, 0.5, 1.9]].forEach((o, k) => { fcam.fov = 22; fcam.updateProjectionMatrix(); fcam.position.set(g.x + 0.1 + o[0], g.y + 0.15 + o[1], g.z + o[2]); fcam.lookAt(g.x + 0.1, g.y + 0.15, g.z + 0.1); fcam.updateMatrixWorld(true);
+        hc.getContext('2d').drawImage(GFX.snapshot(D.scene, fcam, 600, 600), k * 600, f * 600); }); fcam.fov = 14; fcam.updateProjectionMatrix(); if (f) outs['rig-hold'] = Shot.png(hc); }
     for (let i = 0; i < 10; i++) D.step(dt, false);                        // 1/3 of a beat at 120 bpm
   }
   outs['rig-sheet'] = Shot.png(sheet); outs['rig-face'] = Shot.png(faces);
@@ -73,11 +77,11 @@ Shot.poses = async () => {
   names.forEach((n, i) => { L.to(n, { in: 0 }); for (let k = 0; k < 3; k++) rig.update(i + k * 0.01, 0); scene.updateMatrixWorld(true);
     c.drawImage(GFX.snapshot(scene, cam, CW, CH), (i % cols) * CW, Math.floor(i / cols) * CH); c.fillStyle = '#1E1B2E'; c.font = '600 20px sans-serif'; c.fillText(n, (i % cols) * CW + 10, Math.floor(i / cols) * CH + 26); });
   const outs = { 'rig-poses': Shot.png(cv) };
-  // hands: the left hand, palm to the camera
+  // hands: the left hand in the rest pose, from the palm side (the body is clipped away by the near plane) and from the back
   const hn = Object.keys(Rig.HANDS), hv = document.createElement('canvas'); hv.width = hn.length * 300; hv.height = 600; const hc = hv.getContext('2d'), hp = new T.Vector3();
-  L.to({ bones: { upperarm_L: [0, -60, 30], forearm_L: { bend: 60 }, upperarm_R: [0, 60, -30], forearm_R: { bend: 60 } } }, { in: 0 });
-  hn.forEach((n, i) => { rig.hand('L', n); rig.hand('R', n); rig.update(100 + i, 0); scene.updateMatrixWorld(true);
-    ['L', 'R'].forEach((s, r) => { rig.worldPos('middle1_' + s, hp); cam.fov = 6; cam.position.set(hp.x + (s === 'L' ? 1.2 : -2.2), hp.y + 0.8, hp.z + 3.2); cam.lookAt(hp); cam.updateMatrixWorld(true);
+  L.to('rest', { in: 0 });
+  hn.forEach((n, i) => { rig.hand('L', n); rig.hand('R', n); rig.update(100 + i, 0); scene.updateMatrixWorld(true); rig.worldPos('middle1_L', hp); cam.fov = 5.5;
+    [[-2.6, 0.5, 1.3], [2.6, 0.9, 1.3]].forEach((o, r) => { cam.near = r ? 0.1 : 2.55; cam.position.set(hp.x + o[0], hp.y + o[1], hp.z + o[2]); cam.lookAt(hp.x, hp.y - 0.02, hp.z); cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
       hc.drawImage(GFX.snapshot(scene, cam, 300, 300), i * 300, r * 300); }); hc.fillStyle = '#1E1B2E'; hc.font = '600 20px sans-serif'; hc.fillText(n, i * 300 + 10, 26); });
   outs['rig-hands'] = Shot.png(hv);
   return outs;

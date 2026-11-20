@@ -43,16 +43,17 @@ const Toon = {
   // Per-class look. shade: multiplies the scene's shadow tone (hue shift per class). rim: rim-band strength.
   // spec: hard highlight [radius 0..1, strength (HDR, >1 blooms), stretch (>1 vertical streak, <1 horizontal)].
   // sheen: a lighter tone band around the highlight direction [threshold N.H, amount]. term: terminator offset.
-  // emit: unlit HDR intensity. beat: how much GFX.beat() pumps the emission.
+  // emit: unlit HDR intensity. beat: how much GFX.beat() pumps the emission. recv (default 1): how much of the cast-shadow
+  // map lands on the class; skin and face take none (a fringe must not put a slab of shadow across the face: the anime rule).
   cls: {
     toon:  { shade: '#ffffff', rim: 1.0, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
-    skin:  { shade: '#ffd3c4', rim: 0.9, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
+    skin:  { shade: '#ffd3c4', rim: 0.9, spec: [0, 0, 1],       sheen: [1, 0],      term: -0.3, emit: 0,   beat: 0, recv: 0 },
     hair:  { shade: '#f0eaff', rim: 1.2, spec: [0, 0, 0.4],     sheen: [0.9, 0.22], term: 0,    emit: 0,   beat: 0 },
     cloth: { shade: '#ffffff', rim: 0.8, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 },
     metal: { shade: '#b9b4d6', rim: 1.4, spec: [0.2, 1.5, 1],   sheen: [0.6, 0.55], term: 0.05, emit: 0,   beat: 0 },
     gloss: { shade: '#e6e0f5', rim: 1.2, spec: [0.2, 1.15, 2.6], sheen: [0.3, 0.1],  term: 0,    emit: 0,   beat: 0 },
     emit:  { shade: '#ffffff', rim: 0,   spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 1.7, beat: 0.6 },
-    face:  { shade: '#ffd3c4', rim: 0.6, spec: [0, 0, 1],       sheen: [1, 0],      term: 0,    emit: 0,   beat: 0 }
+    face:  { shade: '#ffd3c4', rim: 0.6, spec: [0, 0, 1],       sheen: [1, 0],      term: -0.3, emit: 0,   beat: 0, recv: 0 }
   },
   ink: '#1E1B2E', linePx: 3.2, lineMin: 0.0035, lineMax: 0.032,
   MAX_SPOTS: 8,
@@ -69,7 +70,7 @@ const Toon = {
       uSpotPos: { value: v4(this.MAX_SPOTS) }, uSpotDir: { value: v4(this.MAX_SPOTS) }, uSpotCol: { value: v4(this.MAX_SPOTS) },
       uSpotN: { value: 0 }, uSpotWash: { value: 0.35 },
       uFogCol: { value: new T.Color('#2a2350') }, uFogP: { value: new T.Vector4(0, 0, 0, 0.85) },
-      uClsA: { value: v4(8) }, uClsB: { value: v4(8) }, uClsC: { value: v4(8) },
+      uClsA: { value: v4(8) }, uClsB: { value: v4(8) }, uClsC: { value: v4(8) }, uClsD: { value: v4(8) },
       uBeat: { value: 0 }, uTime: { value: 0 }, uView: { value: new T.Vector3(1280, 665, 1) },
       uShadowMap: { value: null }, uShadowMat: { value: new T.Matrix4() }, uShadowP: { value: new T.Vector4(1 / 1024, 0.02, 0.0015, 1) },
       uMirror: { value: null }, uMirrorMat: { value: new T.Matrix4() }
@@ -105,7 +106,7 @@ const Toon = {
     for (const k in this.cls) { const i = this.CLS[k], d = this.cls[k];
       c.set(d.shade); U.uClsA.value[i].set(c.r, c.g, c.b, d.rim);
       U.uClsB.value[i].set(d.spec[0], d.spec[1], d.spec[2] || 1, d.emit);
-      U.uClsC.value[i].set(d.sheen[0], d.sheen[1], d.term, d.beat); }
+      U.uClsC.value[i].set(d.sheen[0], d.sheen[1], d.term, d.beat); U.uClsD.value[i].set(d.recv == null ? 1 : d.recv, 0, 0, 0); }
   },
 
   // ---- materials --------------------------------------------------------------------------------------------
@@ -345,6 +346,7 @@ uniform vec4 uRim;
 uniform vec4 uClsA[ 8 ];
 uniform vec4 uClsB[ 8 ];
 uniform vec4 uClsC[ 8 ];
+uniform vec4 uClsD[ 8 ];
 uniform vec3 uFogCol;
 uniform float uBeat;
 uniform float uSpotWash;
@@ -421,7 +423,7 @@ void main() {
 	float ndl = dot( N, uKeyDir );
 	float lit = sjStep( uShade.x + cC.z, ndl, uShade.y );
 	#if SJ_SHADOW > 0
-		lit *= sjShadow();
+		lit *= mix( 1.0, sjShadow(), uClsD[ ci ].x );
 	#endif
 	vec3 shadeCol = mix( base * uShadeMul * cA.rgb, uShadeTint, uShade.z );
 	vec3 col = mix( shadeCol, base * uKeyCol, lit ) * uAmb;

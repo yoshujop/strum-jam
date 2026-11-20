@@ -40,7 +40,7 @@ const StageKit = {
       clear: '#efe6d6', vignette: { amount: 0.12, inner: 0.6, outer: 1.2, color: '#c9b8a0' }, bloom: { strength: 0.7, threshold: 1.0 }, grade: { saturation: 1.05, contrast: 1.02, gain: 1 } },
     // small dark room: warm key from the front left, deep indigo shadow tone, cyan back light, haze
     club: { key: { dir: { az: -28, el: 48 }, color: '#fff0dc' }, amb: '#ffffff', shade: { mul: '#8b7de0', tint: '#2b1f73', shift: 0.1, threshold: 0.05, soft: 0 },
-      rim: { dir: { az: 155, el: 30 }, color: '#8fe9ff', threshold: 0.56, strength: 0.75 }, fog: { color: '#1c1446', density: 0.028, start: 7, max: 0.8 }, spotWash: 0.35,
+      rim: { dir: { az: 155, el: 30 }, color: '#8fe9ff', threshold: 0.56, strength: 0.75 }, fog: { color: '#1c1446', density: 0.028, start: 7, max: 0.8 }, spotWash: 0.15,
       clear: '#120d2e', vignette: { amount: 0.42, inner: 0.45, outer: 1.05, color: '#1a1050' }, bloom: { strength: 0.95, threshold: 1.0 }, grade: { saturation: 1.1, contrast: 1.04, gain: 1 } },
     // outdoors by day: high sun, sky-blue shadow tone, no haze to speak of
     street: { key: { dir: { az: -40, el: 58 }, color: '#fff7e2' }, amb: '#ffffff', shade: { mul: '#93a6f2', tint: '#35508f', shift: 0.08, threshold: 0.02, soft: 0 },
@@ -48,7 +48,7 @@ const StageKit = {
       clear: '#8fd3ff', vignette: { amount: 0.16, inner: 0.6, outer: 1.2, color: '#3a5fb0' }, bloom: { strength: 0.6, threshold: 1.0 }, grade: { saturation: 1.08, contrast: 1.03, gain: 1 } },
     // big hall: cold key, near-black blue shadows, hot magenta back light, long haze
     arena: { key: { dir: { az: -20, el: 55 }, color: '#eef4ff' }, amb: '#ffffff', shade: { mul: '#5f6fd0', tint: '#141a5c', shift: 0.2, threshold: 0.08, soft: 0 },
-      rim: { dir: { az: 165, el: 35 }, color: '#ff7fd0', threshold: 0.5, strength: 0.95 }, fog: { color: '#0e1140', density: 0.016, start: 10, max: 0.85 }, spotWash: 0.4,
+      rim: { dir: { az: 165, el: 35 }, color: '#ff7fd0', threshold: 0.5, strength: 0.95 }, fog: { color: '#0e1140', density: 0.016, start: 10, max: 0.85 }, spotWash: 0.2,
       clear: '#080a24', vignette: { amount: 0.5, inner: 0.4, outer: 1.0, color: '#0a0c3a' }, bloom: { strength: 1.05, threshold: 1.0 }, grade: { saturation: 1.12, contrast: 1.05, gain: 1 } },
     // golden hour: low orange key, plum shadow tone
     sunset: { key: { dir: { az: -60, el: 22 }, color: '#ffe2b0' }, amb: '#ffffff', shade: { mul: '#a070c8', tint: '#5a2a78', shift: 0.12, threshold: 0.03, soft: 0 },
