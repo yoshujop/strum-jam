@@ -6,13 +6,14 @@
 //   heads    <m>-heads.png: the head in 3D with 6 expressions, front and three-quarter
 //   hold     <m>-hold.png: the hands on the instrument from three sides;  <m>-hype.png: the hair's hype levels 0..4
 //   poses    <m>-poses.png: the signature poses, front and three-quarter;  <m>-pose-<name>.png large
+//   sil      <m>-silhouette.png: ART_BIBLE 12.1, black silhouettes at 64 px (and x4), without and with the instrument
 //   stage    <m>-stage-1280x665-<pose>.png / -390x844-<pose>.png: on the lit club stage at real in-game size
 // Env: MODELS=path/a.glb,path/b.glb to use scratch builds instead of vendor/models.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const { findModel, buildPage } = require('./gfxpage.js');
 const out = process.argv[2] || '/tmp/castshot'; fs.mkdirSync(out, { recursive: true });
-const what = (process.argv[3] || 'faces,turn,heads,hold,poses,stage').split(',');
+const what = (process.argv[3] || 'faces,turn,heads,hold,poses,sil,stage').split(',');
 const member = process.argv[4] || 'riff';
 const over = (process.env.MODELS || '').split(',').filter(Boolean).map(findModel);
 const need = { riff: ['riff', 'offcut'] }[member].concat(['club']);
@@ -58,6 +59,24 @@ Shot.studio = async (what) => {
     outs.detail = Shot.png(cv2);
     A.root.visible = false;
   }
+  if (what.includes('sil')) {
+    // black on paper: the character's pixels are whatever differs from the same shot without it (its cast shadow is switched off)
+    const W = 240, H = 300, views = [0, -40, 90, 180], cv = document.createElement('canvas'); cv.width = views.length * 2 * W + 40; cv.height = H + 64 + 60; const c = cv.getContext('2d');
+    c.fillStyle = '#efe6d6'; c.fillRect(0, 0, cv.width, cv.height); c.imageSmoothingQuality = 'high';
+    const b = box(-0.8, 0, -0.4, 0.8, 1.85, 0.5);
+    const sil = (A, az) => { const on = snap(b, az, 4, W, H, 1.04).getContext('2d').getImageData(0, 0, W, H); A.root.visible = false; Shot.scene.updateMatrixWorld(true);
+      const off = snap(b, az, 4, W, H, 1.04).getContext('2d').getImageData(0, 0, W, H); A.root.visible = true; Shot.scene.updateMatrixWorld(true);
+      const o = document.createElement('canvas'); o.width = W; o.height = H; const oc = o.getContext('2d'), im = oc.createImageData(W, H);
+      for (let i = 0; i < W * H * 4; i += 4) { const d = Math.abs(on.data[i] - off.data[i]) + Math.abs(on.data[i + 1] - off.data[i + 1]) + Math.abs(on.data[i + 2] - off.data[i + 2]); const k = d > 26;
+        im.data[i] = k ? 30 : 239; im.data[i + 1] = k ? 27 : 230; im.data[i + 2] = k ? 46 : 214; im.data[i + 3] = 255; }
+      let y0 = H, y1 = 0; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (im.data[(y * W + x) * 4] < 100) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      oc.putImageData(im, 0, 0); o.y0 = y0; o.h = Math.max(1, y1 - y0 + 1); return o; };
+    const row = (A, col0) => views.forEach((az, i) => { const s = sil(A, az), x = (col0 + i) * W + (col0 ? 40 : 0); c.drawImage(s, x, 0); const k = 64 / s.h; c.drawImage(s, 0, s.y0, W, s.h, x + W / 2 - W * k / 2, H + 40, W * k, 64); });
+    const A0 = Cast.spawn(M, { guitar: false }); scene.add(A0.root); A0.root.traverse(o => o.layers.disable(GFX.CAST)); A0.rig.layerBy.arms.to('rest', { in: 0 }); A0.rig.lookAt(null); Shot.settle(A0); row(A0, 0); A0.root.visible = false;
+    const A1 = Cast.spawn(M); scene.add(A1.root); A1.root.traverse(o => o.layers.disable(GFX.CAST)); A1.pose('lean'); Shot.settle(A1, 50); row(A1, views.length); A1.root.visible = false;
+    Shot.label(c, 'rest, no instrument   (below: 64 px tall)', 0, H); Shot.label(c, 'the Lean, with the instrument', views.length * W + 40, H);
+    outs.silhouette = Shot.png(cv);
+  }
   if (what.includes('heads') || what.includes('hold') || what.includes('poses')) {
     const A = Cast.spawn(M); scene.add(A.root); A.lookAt(front);
     if (what.includes('heads')) {
@@ -78,7 +97,7 @@ Shot.studio = async (what) => {
       outs.hype = Shot.png(hv); A.hype(0);
     }
     if (what.includes('poses')) {
-      const list = [['lean', 0, 'smirk'], ['lean', 1, 'locked'], ['lean', -1, 'grin'], ['kickstand', 1, 'yell']], CW = 640, CH = 760, cv = document.createElement('canvas'); cv.width = CW * 4; cv.height = CH * 2; const c = cv.getContext('2d');
+      const list = [['lean', 0, 'smirk'], ['lean_dip', 1, 'locked'], ['lean', -1, 'grin'], ['kickstand', 1, 'yell']], CW = 640, CH = 760, cv = document.createElement('canvas'); cv.width = CW * 4; cv.height = CH * 2; const c = cv.getContext('2d');
       const b = box(-0.8, 0, -0.4, 0.8, 1.85, 0.5);
       list.forEach((p, i) => { A.pose(p[0]); A.strum(p[1], { in: 0 }); A.express(p[2], { snap: true }); Shot.settle(A, 50);
         c.drawImage(snap(b, 0, 5, CW, CH, 1.04), i * CW, 0); c.drawImage(snap(b, i === 3 ? 55 : -40, 8, CW, CH, 1.04), i * CW, CH);
@@ -110,7 +129,7 @@ Shot.pose = async (p, strum, face, hype) => { const A = Shot.A; A.pose(p); A.str
     await p.goto('file://' + html); await p.evaluate(() => Shot.ready); return p; };
   const save = (name, dataUrl) => { const f = path.join(out, member + '-' + name + '.png'); fs.writeFileSync(f, Buffer.from(dataUrl.split(',')[1], 'base64')); console.log(f); };
   if (what.includes('faces')) { const p = await open(800, 600); const o = await p.evaluate(() => Shot.faces()); for (const k in o) save(k, o[k]); await p.close(); }
-  if (['turn', 'heads', 'hold', 'poses'].some(k => what.includes(k))) { const p = await open(1280, 800); const info = await p.evaluate(() => Shot.info);
+  if (['turn', 'heads', 'hold', 'poses', 'sil'].some(k => what.includes(k))) { const p = await open(1280, 800); const info = await p.evaluate(() => Shot.info);
     console.log(JSON.stringify({ tris: info.tris, draws: info.draws, bones: info.bones, warnings: info.warnings }));
     const o = await p.evaluate(w => Shot.studio(w), what); for (const k in o) save(k, o[k]); await p.close(); }
   if (what.includes('stage')) for (const [w, h] of [[1280, 665], [390, 844]]) {

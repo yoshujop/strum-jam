@@ -35,11 +35,11 @@ const StageKit = {
   MAX: 16, MAX_BLOBS: 48,
   RIGS: {
     // neutral daylight for looking at models: paper backdrop, soft violet shadow tone
-    studio: { key: { dir: { az: -32, el: 42 }, color: '#ffffff' }, amb: '#ffffff', shade: { mul: '#a99ce6', tint: '#4a3f8f', shift: 0.06, threshold: 0.05, soft: 0 },
+    studio: { key: { dir: { az: -32, el: 42 }, color: '#ffffff' }, amb: '#ffffff', shade: { mul: '#c2c0e0', tint: '#4a3f8f', shift: 0.06, threshold: 0.05, soft: 0 },
       rim: { dir: { az: 150, el: 25 }, color: '#ffffff', threshold: 0.62, strength: 0.35 }, fog: { color: '#efe6d6', density: 0, start: 0, max: 0 }, spotWash: 0.3,
       clear: '#efe6d6', vignette: { amount: 0.12, inner: 0.6, outer: 1.2, color: '#c9b8a0' }, bloom: { strength: 0.7, threshold: 1.0 }, grade: { saturation: 1.05, contrast: 1.02, gain: 1 } },
     // small dark room: warm key from the front left, deep indigo shadow tone, cyan back light, haze
-    club: { key: { dir: { az: -28, el: 48 }, color: '#fff0dc' }, amb: '#ffffff', shade: { mul: '#8b7de0', tint: '#2b1f73', shift: 0.1, threshold: 0.05, soft: 0 },
+    club: { key: { dir: { az: -28, el: 48 }, color: '#fff0dc' }, amb: '#ffffff', shade: { mul: '#a9a4e0', tint: '#2b1f73', shift: 0.1, threshold: 0.05, soft: 0 },
       rim: { dir: { az: 155, el: 30 }, color: '#8fe9ff', threshold: 0.56, strength: 0.75 }, fog: { color: '#1c1446', density: 0.028, start: 7, max: 0.8 }, spotWash: 0.15,
       clear: '#120d2e', vignette: { amount: 0.42, inner: 0.45, outer: 1.05, color: '#1a1050' }, bloom: { strength: 0.95, threshold: 1.0 }, grade: { saturation: 1.1, contrast: 1.04, gain: 1 } },
     // outdoors by day: high sun, sky-blue shadow tone, no haze to speak of

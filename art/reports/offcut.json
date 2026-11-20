@@ -12,7 +12,7 @@
    -0.0275
   ]
  },
- "bytes": 176460,
+ "bytes": 177520,
  "draw_calls": 2,
  "errors": [],
  "extras": {
@@ -35,18 +35,18 @@
    "material": "sj_gloss",
    "mesh": "offcut_body",
    "outline_agree": 0.942,
-   "tris": 1298,
+   "tris": 1278,
    "verts": 1032
   },
   {
    "material": "sj_toon",
    "mesh": "offcut_body",
-   "outline_agree": 0.739,
-   "tris": 1746,
-   "verts": 2192
+   "outline_agree": 0.742,
+   "tris": 1766,
+   "verts": 2214
   }
  ],
  "triangles": 3044,
- "vertices": 3224,
+ "vertices": 3246,
  "warnings": []
 }

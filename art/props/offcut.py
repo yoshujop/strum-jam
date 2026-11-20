@@ -101,7 +101,9 @@ def build(pal=PAL, name='offcut'):
     HT = BOARD_TOP + 0.005
     head = shapes.extrude('head', head_o, 0.020, bevel=0.004, segments=2, plane='xz')
     bl.transform(head, loc=(0, HT, 0))
-    P.append(part(head, pal['body'], 'sj_gloss'))
+    part(head, pal['body'], 'sj_gloss')
+    color.set_class(head, 'sj_toon', faces=[0])          # the flat front: no lacquer blob flooding the headstock white
+    P.append(head)
     pl_pts = [(hx + 0.040, -0.036), (hx + 0.166, -0.036), (hx + 0.187, 0.022), (hx + 0.046, 0.026)]
     plate = shapes.extrude('plate', shapes.rounded(pl_pts, 0.010, steps=3), 0.002, bevel=0.0008, segments=1, plane='xz')
     bl.transform(plate, loc=(0, HT - 0.002, 0))

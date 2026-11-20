@@ -371,3 +371,32 @@ def union(name, objs, voxel=None, smooth=0, exact=True):
 
 def decimate(ob, ratio=0.5):
     return bl.modify(ob, 'DECIMATE', ratio=ratio)
+
+
+# ------------------------------------------------------------------ plane cuts
+def cut(ob, co, no, fill=True, clear=True, smooth_angle=None):
+    """Slice a solid with the plane through `co` with normal `no` and throw away the side the normal points to
+    (the hole is capped flat): chamfers, wedges, a quiff's sloped back.  clear=False only scores the mesh: it
+    adds the edge loop where the plane crosses, so faces on each side can be painted separately (see `score`)."""
+    import bmesh
+    me = ob.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+    res = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=tuple(co), plane_no=tuple(no), clear_outer=clear, clear_inner=False)
+    if clear and fill:
+        edges = [e for e in res['geom_cut'] if isinstance(e, bmesh.types.BMEdge)]
+        if edges:
+            bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=True, edges=edges)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    if smooth_angle is not None:
+        hard(ob, smooth_angle)
+    return ob
+
+
+def score(ob, co, no):
+    """Add an edge loop where a plane crosses the mesh (nothing is removed): a clean boundary to paint up to."""
+    return cut(ob, co, no, fill=False, clear=False)

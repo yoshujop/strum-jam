@@ -33,7 +33,8 @@
 //              L: { scale, open, lidLine }, R: { ... } permanent per-eye differences (the CHARACTER's left / right):
 //              size, a multiplier on the openness, the lid weight },
 //     brows: { style: 'bar' | 'arc' | 'taper' | 'thin' | 'slab' (a parallelogram), x: 44, y: -42, w: 22 (half length),
-//              thick: 9, color, slit: null | 'L' | 'R' (a shaved slit through that brow) },
+//              thick: 9, color, slit: null | 'L' | 'R' (a shaved slit through that brow),
+//              L: { dy, a }, R: { ... } a permanent offset of one brow: units down, degrees inner end down },
 //     mouth: { y: 68, w: 29 (half width), inner: '#6b1730', tongue: '#ff6f91', teeth: 'top' | 'both' | 'none' | 'grill' |
 //              'gap' | 'fangs', teethColor: '#fff', lip: null | colour, x: 0 (off-centre), hook: 0..1 (a hooked-up end on
 //              the high side of a skewed shut mouth) },
@@ -41,7 +42,7 @@
 //              'handlebar' | 'brush', color }, { type: 'goatee', color }, { type: 'shades', color, shine }, { type:
 //              'glasses', color }, { type: 'mole', x, y }, { type: 'scar', x, y }, { type: 'bags' }, { type: 'star', x, y, color },
 //              { type: 'dots', x, y, r, pts: [[dx, dy], ...] } (ink dots: a freckle chord; they hop with the `jump` parameter),
-//              { type: 'tick', x, y, w, h } (a nose tick), { type: 'pick', color } (a pick in the low corner of a shut
+//              { type: 'tick', x, y, w, h } (a nose tick), { type: 'pick', color, size, rot, dx, dy, line } (a pick in the low corner of a shut
 //              mouth; hidden by the `pick: 0` parameter and whenever the mouth opens) ] }
 //
 // ---- expression parameters -----------------------------------------------------------------------------------
@@ -272,7 +273,7 @@ const FaceDecal = (function(){
     _brows(c, e){
       const sp = this.spec, B = sp.brows, lw = B.thick; if (B.style === 'none') return;
       for (const sx of [-1, 1]) {
-        const as = e.browAs * (sx > 0 ? 1 : -1), y = B.y - (e.browY + as) * lw * 0.9, A = (e.browA - as * 5) * DEG, w = B.w;
+        const as = e.browAs * (sx > 0 ? 1 : -1), bd = (sx > 0 ? B.L : B.R) || {}, y = B.y - (e.browY + as) * lw * 0.9 + (bd.dy || 0), A = (e.browA - as * 5 + (bd.a || 0)) * DEG, w = B.w;
         const yi = Math.sin(A) * w, yo = -Math.sin(A) * w * 0.75;
         c.save(); c.translate(sx * B.x, y); c.scale(sx, 1);              // local: -x = inner end, +x = outer end
         c.strokeStyle = B.color; c.fillStyle = B.color; c.lineWidth = lw;
@@ -338,7 +339,7 @@ const FaceDecal = (function(){
       else if (x.type === 'dots') { c.fillStyle = x.color || sp.ink; const r = x.r || 3.2; for (const p of x.pts || [[-8, 0], [8, 0], [0, 10]]) { c.beginPath(); c.arc((x.x || 62) + p[0], (x.y || 44) + p[1] - (e.jump || 0), r, 0, TAU); c.fill(); } }
       else if (x.type === 'tick') { c.strokeStyle = x.color || sp.ink; c.lineWidth = lw * 0.62; const X = x.x || 0, Y = x.y == null ? 30 : x.y, w = x.w || 5, h = x.h || 7; c.beginPath(); c.moveTo(X - w, Y - h); c.lineTo(X + w * 0.2, Y); c.lineTo(X - w * 0.9, Y + h * 0.35); c.stroke(); }
       else if (x.type === 'pick') { const M = sp.mouth, m = e.mouth; if (e.pick !== 0 && m.o < 0.07 && !m.wob) { const W = Math.max(3, M.w * m.w), lift = m.c * W * 0.42, dx = m.s * W * 0.22, yl = M.y - lift * (1 - m.s), s = x.size || 13;
-        c.save(); c.translate((M.x || 0) - W + dx + s * 0.25, yl + s * 0.1); c.rotate((x.rot == null ? 118 : x.rot) * DEG); c.fillStyle = x.color || '#FFF1D0'; c.strokeStyle = sp.ink; c.lineWidth = lw * 0.6; c.lineJoin = 'round';
+        c.save(); c.translate((M.x || 0) - W + dx + s * 0.25 + (x.dx || 0), yl + s * 0.1 + (x.dy || 0)); c.rotate((x.rot == null ? 118 : x.rot) * DEG); c.fillStyle = x.color || '#FFF1D0'; c.strokeStyle = sp.ink; c.lineWidth = lw * (x.line || 0.6); c.lineJoin = 'round';
         this._pick(c, 0, -s * 1.05, s * 0.86, s); c.fill(); c.stroke(); c.restore(); } }
       else if (x.type === 'bags') { c.strokeStyle = sp.ink; c.lineWidth = lw * 0.5; for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(sx * sp.eyes.x - 14, sp.eyes.h + 9); c.quadraticCurveTo(sx * sp.eyes.x, sp.eyes.h + 16, sx * sp.eyes.x + 14, sp.eyes.h + 9); c.stroke(); } }
       else if (x.type === 'star') { c.save(); c.translate(x.x || 76, x.y || 34); c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 6 : 14; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); c.fillStyle = x.color || '#FFCE3A'; c.fill(); c.strokeStyle = sp.ink; c.lineWidth = lw * 0.6; c.stroke(); c.restore(); }
