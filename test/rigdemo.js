@@ -41,7 +41,7 @@ const RigDemo = {
     rig.layerBy.big.weight = 0;
     rig.plant('foot_L'); rig.plant('foot_R');
     const fret = rig.ik('arm_L', { target: gtr.root.getObjectByName('grip_fret'), tip: 'att_hand_L', pole: [0.5, -1, -0.3], rot: [-10, -100, 62] });
-    const strum = rig.ik('arm_R', { target: gtr.root.getObjectByName('grip_strum'), tip: 'att_hand_R', pole: [-1, -0.15, -0.5], rot: [20, 75, -30] });
+    const strum = rig.ik('arm_R', { target: gtr.root.getObjectByName('grip_strum'), tip: 'att_hand_R', pole: [-1, -0.1, 0.7], rot: [20, 75, -30] });
     const sc = Rig.channel(-1).loop([{ at: 0, v: 1, in: 0.13, ease: 'hit', over: 0.25, settle: 0.25 }, { at: 0.5, v: -1, in: 0.15, ease: 'hit', over: 0.2, settle: 0.25 }], 1);
     const bw = Rig.channel(0).loop([{ at: 6.72, v: 1, in: 0.02 }, { at: 7.98, v: 0, in: 0.25, ease: 'smooth' }], 8);
     rig.lookAt(D.cam.position);
@@ -49,8 +49,8 @@ const RigDemo = {
     rig.onKey = tag => { if (tag === 'pump' && typeof VFX !== 'undefined' && VFX.mesh) VFX.hit(rig.worldPos('hand_R', new T.Vector3()), 'perfect'); };
     const sx = Math.sin(th), cx = Math.cos(th);
     D.chars.push({ m, rig, face, faces: D.FACES, pre(beat){
-      const s = sc.get(beat), w = bw.get(beat);
-      strum.offset.set(sx * 0.055 * s, -cx * 0.055 * s, 0.01); strum.weight = 1 - w; rig.layerBy.big.weight = w;
+      const s = sc.get(beat), w = bw.get(beat);      // the strum runs across the strings, centred on the pickups (the palm bone sits 8 cm up the hand)
+      strum.offset.set(sx * (0.05 * s - 0.085), -cx * (0.05 * s - 0.085), 0.02); strum.weight = 1 - w; rig.layerBy.big.weight = w;
       rig.hand('R', w > 0.5 ? 'fist' : null);
     } });
   },

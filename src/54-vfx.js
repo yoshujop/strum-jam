@@ -171,7 +171,7 @@ const VFX = {
   },
   // ready-made judgement feedback
   hit(pos, grade){
-    if (grade === 'perfect') { this.ring(pos, { color: '#FFF7E6', size: 0.95 }); this.ring(pos, { color: '#FFCE3A', size: 0.6, delay: 0.06 }); this.stars(pos, { count: 6 }); this.burst(pos, { count: 14, colors: ['#FFCE3A', '#FFF7E6', '#FF8FC7'] }); }
+    if (grade === 'perfect') { this.ring(pos, { color: '#FFF7E6', size: 0.6 }); this.ring(pos, { color: '#FFCE3A', size: 0.38, delay: 0.06 }); this.stars(pos, { count: 6 }); this.burst(pos, { count: 14, colors: ['#FFCE3A', '#FFF7E6', '#FF8FC7'] }); }
     else if (grade === 'good') { this.ring(pos, { color: '#2EC4B6', size: 0.75 }); this.stars(pos, { count: 3, color: '#2EC4B6', size: 0.12 }); this.burst(pos, { count: 8, color: '#2EC4B6' }); }
     else if (grade === 'ok') { this.ring(pos, { color: '#6CC8FF', size: 0.5 }); this.burst(pos, { count: 5, color: '#6CC8FF' }); }
     else this.burst(pos, { count: 6, color: '#8a84a8', gain: 0.8, speed: 1.6, gravity: 7 });

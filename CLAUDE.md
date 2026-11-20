@@ -127,6 +127,8 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
 (full standalone page). `dist/` is gitignored.
 
 ## 3D engine (foundation for the 3D rebuild; the 2D game does not use it yet)
+- Start with `docs/3D_PIPELINE.md` (art script -> glb -> engine -> rig / face, commands, budgets, iOS / Roblox) and
+  `art/ASSET_SPEC.md` (the contract). `tools/art.sh all` rebuilds `vendor/models/*.glb` from `art/` (needs `tools/setup-art.sh`).
 - `src/50-gfx.js` (`GFX`: renderer, tiers low/medium/high with auto-degrade, shadow map, floor mirror, bloom/grade/vignette),
   `src/50-gfx-toon.js` (`Toon`: the cel shader keyed by ASSET SPEC material names + inverted-hull ink outlines),
   `src/51-assets.js` (`Assets`: embedded `vendor/models/*.glb` -> templates -> `spawn()` instances with bones, face canvas),
