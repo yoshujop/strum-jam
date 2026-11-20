@@ -22,7 +22,6 @@ const out = process.argv[2] || '/tmp/search'; require('fs').mkdirSync(out, { rec
     const s = await p.evaluate(() => ({ title: UI.song.title, src: UI.song.prov && UI.song.prov.src, bpm: UI.song.bpm, capo: UI.song.capo, strum: UI.song.strum, secs: UI.song.sections.length, bars: UI.chart.totalBars, model: chartModel(UI.song).sections[0].strum.pattern }));
     await p.waitForTimeout(500); await p.screenshot({ path: `${out}/song-offline-${W}x${H}.png` });
     // not built in
-    await p.evaluate(() => UI.show && UI.show('library')).catch(() => {});
     const msg = await p.evaluate(async () => { try { await Chart.make({ title: 'Qwrtplk Zzxv', artist: 'Nobody', trackId: 5, durationMs: 0 }, { ai: false }); return 'charted'; } catch (e) { return UI.lookupErr(e, 'chart'); } });
     const ok = /wonderwall/i.test(first) && s.capo === 2 && s.strum && s.bars > 60 && !errs.length && /connection|reach/i.test(msg) && !/API key/i.test(msg);
     if (!ok) bad++;

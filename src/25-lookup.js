@@ -31,10 +31,12 @@ const Lookup = {
       if (opts.signal) { if (opts.signal.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' }); opts.signal.addEventListener('abort', stop, { once: true }); }
       try {
         const r = await fetch(url, { signal: ctl.signal, method: opts.method || 'GET', headers: opts.headers, body: opts.body });
+        this.netFail = 0;
         if (r.status === 429 || r.status >= 500) { last = Object.assign(new Error('HTTP ' + r.status), { status: r.status }); await new Promise(z => setTimeout(z, 700 * (a + 1))); continue; }
         if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
         return await r.json();
       } catch (e) {
+        if (this.errKind(e) === 'offline') this.netFail = Date.now();   // the request never got an answer
         if (opts.signal && opts.signal.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' });
         last = e; if (e.status && e.status < 500 && e.status !== 429) throw e;
         if (a + 1 < (opts.tries || 2)) await new Promise(z => setTimeout(z, 600 * Math.pow(2, a)));
@@ -391,7 +393,11 @@ const Lookup = {
     if (e.code === 'offline' || e instanceof TypeError || /network|Failed to fetch|Load failed|timeout|tunnel/i.test(String(e.message))) return 'offline';
     return '';
   },
+  // isOffline: the browser says there is no connection. netDown: that, or a request got no answer in the last 20 s
+  // (navigator.onLine stays true on a dead Wi-Fi), so a song that isn't built in reads "no connection", not "not found"
+  netFail: 0,
   isOffline(){ return typeof navigator !== 'undefined' && navigator.onLine === false; },
+  netDown(){ return this.isOffline() || (this.netFail > 0 && Date.now() - this.netFail < 20000); },
 
   /* ---------- the built-in catalogue: every song the page can chart with no network ---------- */
   // The starter pack (27-pack.js) and the Hooktheory table, as {title, artist, src, id}. Hooktheory keys are slugs

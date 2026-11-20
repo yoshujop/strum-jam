@@ -146,7 +146,7 @@ const Chart = {
   notFound(found, offline){
     if (found.note === 'no-index') return Object.assign(new Error('no index'), { code: 'no_index' });
     if (found.hits && (found.failed || found.error)) return Object.assign(new Error('chord data unreachable'), { code: 'offline', inIndex: true });
-    if (offline) return Object.assign(new Error('offline, not in the built-in songs'), { code: 'offline_nf' });
+    if (offline || Lookup.netDown()) return Object.assign(new Error('offline, not in the built-in songs'), { code: 'offline_nf' });
     return Object.assign(new Error('not in dataset'), { code: 'not_in_dataset' });
   },
   // a starter-pack entry as a finished song

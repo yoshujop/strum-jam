@@ -61,7 +61,7 @@ function packSong(p){
   }
   return { title: p.t, artist: p.a, year: p.y || 0, bpm: p.bpm, time: p.time || '4/4', feel: p.feel || 'straight', style: p.style || 'rock', key: p.key, capo: p.capo || 0,
     approx: true, sections: secs,
-    note: (p.tip ? p.tip + ' ' : '') + 'Starter-pack arrangement: the usual beginner chords, written by hand. Section lengths are close to the record, not exact.' };
+    note: p.tip || '' };
 }
 
 // "Title — Artist": [felt bpm (0 = no opinion), style, feel]
