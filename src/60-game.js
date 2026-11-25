@@ -68,7 +68,9 @@ const G = {
         sectionStarts: new Set(chart.sections.map(s => s.startBar)),
         fillBars: new Set(chart.sections.map(s => s.startBar + s.bars - 1).filter(b => b < this.endBar - 1)),
         // the player's own instrument drops out of the band: no bass line in Bass, no kit in Drums
-        bassAt: opts.inst === 'bass' ? null : k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
+        bassAt: opts.inst === 'bass' ? null : k => this.harmAt(k),
+        // the band's arranger: the chord under each step, the song's sections, and which part the player has taken over
+        harmAt: k => this.harmAt(k), sections: chart.sections, noBass: opts.inst === 'bass', noComp: opts.inst === 'piano',
         noKit: opts.inst === 'drums', onEnd: () => {} });
       const cfg = Groove.cfg;
       this.list.forEach((e, i) => {
@@ -94,13 +96,14 @@ const G = {
     return true;
   },
   stop(){ this.running = false; Groove.stop(); Mic.onsetListeners.clear(); if (Parts.active) Parts.end(); },
+  harmAt(k){ const chart = this.chart, beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; } return e && !e.rest ? this.bassFor(e) : null; },
   bassFor(ev){
     if (!ev || !ev.shape) return null;
     const cap = this.chart.capo;
     const rootPc = mod12((ev.shape.bass != null ? ev.shape.bass : ev.shape.root) + cap);
     const iv = QUALITIES[ev.shape.quality] || [0, 4, 7];
     const fifth = iv.includes(7) ? 7 : iv.includes(6) ? 6 : iv.includes(8) ? 8 : 7;
-    return { root: 28 + mod12(rootPc - 4), fifth };
+    return { root: 28 + mod12(rootPc - 4), fifth, pcs: iv.map(i => mod12(ev.shape.root + cap + i)) };
   },
   /* ---------- hype: how quickly and cleanly you play drives the band and crowd ---------- */
   addHype(d){
@@ -139,7 +142,7 @@ const G = {
     const up = n > this.level;
     this.level = n; Groove.level = n; this.topLevel = Math.max(this.topLevel, n);
     if (up) {
-      const extra = n === 2 ? (Groove.pitchedOk() ? 'BASS JOINS IN · ' : 'MORE DRUMS · ') : n === 3 ? 'MORE DRUMS · ' : '';
+      const layer = Groove.layerName(n), extra = layer ? layer + ' · ' : '';
       Stage.bannerShow(extra + LEVEL_NAMES[n].toUpperCase() + '!', [COL.paper, COL.mint, COL.teal, COL.amber, COL.coral][n]);
       Stage.burst(null, null, 26 + n * 10); Sfx.levelUp(n);
     }
@@ -492,6 +495,7 @@ const G = {
     this.lastStrumAt = now;
     if (this.mode === 'practice') {
       if (src === 'tap' && this.tapMode) {
+        const cur = this.cur(); AudioEngine.playerStrum(cur && cur.notes);             // the tap is the player's strum: it sounds the chord
         Fretboard.feedback(['heard', 'heard', 'heard', 'heard', 'heard', 'heard'], []);
         this.practiceSuccess(now, 'tap');
       }
@@ -505,6 +509,7 @@ const G = {
       if (d < -0.3) break;
       if (Math.abs(d) <= 0.3 && Math.abs(d) < bd) { best = ev; bd = Math.abs(d); }
     }
+    if (src === 'tap') AudioEngine.playerStrum(best ? best.notes : null);             // in tap mode a strum sounds the chord (a dead strum off the beat)
     if (!best) return;
     const d = t - best.t, a = Math.abs(d);
     const g = a <= 0.07 ? 'perfect' : a <= 0.13 ? 'great' : a <= 0.22 ? 'good' : 'ok';
@@ -537,7 +542,7 @@ const G = {
     const chart = this.chart, opts = this.opts;
     if (this.mode === 'practice') {
       const pattern = buildPattern(chart);
-      Groove.start({ mode: 'loop', bpm: chart.bpm * opts.tempo / 100, sub: chart.sub, swing: chart.swing ? 1 : 0, pattern, click: Settings.click || pattern.none, countIn: 0 });
+      Groove.start({ mode: 'loop', bpm: chart.bpm * opts.tempo / 100, sub: chart.sub, swing: chart.swing ? 1 : 0, pattern, click: Settings.click || pattern.none, countIn: 0, bassAt: () => this.bassFor(this.cur()) });
       this.chordStart = AudioEngine.now(); this.okFrames = []; this.okRun = 0; this.lastSeq = Mic.anSeq;
       return;
     }

@@ -147,3 +147,15 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
   `node test/rigshot.js <outdir> [faces,sheet,stage,poses,perf]`: expression sheets, a 24-frame contact sheet of the
   demo band (`test/rigdemo.js`, 120 bpm), in-game size stage shots, the pose library, cost + stability; writes `dist/rigdemo.html`.
 - Test models: `/opt/sj-bpy/bin/python test/fixtures/mk_fixtures.py` -> `test/fixtures/models/*.glb` (not shipped).
+
+## The band's sound (audio overhaul)
+- `src/30-audio.js` (`AudioEngine`: mix bus with channel strips, generated-impulse reverbs, drum glue, limiter + soft clip;
+  `Ticker`; `Groove`: the bar-by-bar scheduler, 0.4 s look-ahead that grows after a stall), `src/31-voices.js` (`Voices`: every
+  instrument, synthesized), `src/32-arrange.js` (`Arranger`: pure data, what each player plays in a bar, by style, section,
+  hype level and leak mode), `src/35-music.js` (menu theme on the same voices, mix follows the screen), `src/36-sfx.js` (in-key
+  hit sounds, jingles). Each file starts with its API.
+- Leak modes (`AudioEngine.leakMode()`): `full` (mic off or headphones), `safe` (mic on, speakers: unpitched drums, root/fifth
+  bass, one soft pad on the chord's notes), `drums` (`Settings.leakBand = 'drums'`, or `cfg.leakSafe: 'drums'`).
+- `node test/audiotest.js offline|rt|stall|sfx|menu [outdir]` (`WAV=1` keeps the renders): loudness, clipping, spectrum, stereo,
+  note density per style / hype level / leak mode; `node test/audioleak.js silence|test/right.wav [secs] [level] [safe|drums]`:
+  does the band leaking into the mic fool the note check.
