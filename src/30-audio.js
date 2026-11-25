@@ -103,9 +103,15 @@ const AudioEngine = (() => {
     return { in: inp, duck, lfo };
   }
   // a full set of strips feeding `out` (drums through `drumOut`): the band has one, the menu music another
-  function makeStrips(out, drumOut){
-    ensure(); const set = {};
-    for (const name in CH) set[name] = strip(ctx, g, name, CH[name][0] === 'd' ? (drumOut || out) : out);
+  // ownVerb: the set gets its own two reverbs returning into `out`, so fading `out` also ends the tails (the menu theme
+  // must be gone when a song starts with the mic open)
+  function makeStrips(out, drumOut, ownVerb){
+    ensure(); const set = {}; let G = g;
+    if (ownVerb) {
+      G = { room: ctx.createConvolver(), plate: ctx.createConvolver() }; G.room.buffer = g.room.buffer; G.plate.buffer = g.plate.buffer;
+      const rr = ctx.createGain(), pr = ctx.createGain(); rr.gain.value = 1.6; pr.gain.value = 1.5; G.room.connect(rr).connect(out); G.plate.connect(pr).connect(out);
+    }
+    for (const name in CH) set[name] = strip(ctx, G, name, CH[name][0] === 'd' ? (drumOut || out) : out);
     return set;
   }
   function build(c){

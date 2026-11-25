@@ -11,7 +11,7 @@
    Music.hits (kick snare hat tom gtr, for the menu's beat visuals), Music.beat(), Music.playing, Music.fanfareNext()
    ===================================================================== */
 const Music = (() => {
-  const BPM = 112, SPB = 16, STEP = 60 / BPM / 4, LOOP = 16;
+  const BPM = 112, SPB = 16, STEP = 60 / BPM / 4, LOOP = 16, TAIL = 0.4;
   let bus = null, strips = null, echoIn = null, playing = false, timer = null, t0 = 0, k = 0, interacted = false, pendingFanfare = false, scene = 'title';
   const hits = [];
   // Original theme in D minor / F major. Close voicings chosen for smooth voice leading.
@@ -62,7 +62,7 @@ const Music = (() => {
     const ctx = AudioEngine.ensure();
     if (bus) return ctx;
     bus = ctx.createGain(); bus.gain.value = 0; bus.connect(AudioEngine.duckBus);
-    strips = AudioEngine.makeStrips(bus);
+    strips = AudioEngine.makeStrips(bus, null, true);
     // dotted-eighth echo for the lead
     const dl = ctx.createDelay(1); dl.delayTime.value = 60 / BPM * 0.75;
     const fb = ctx.createGain(); fb.gain.value = 0.28; const wet = ctx.createGain(); wet.gain.value = 0.3;
@@ -166,7 +166,11 @@ const Music = (() => {
     playing = false; if (timer) Ticker.remove(timer); timer = null;
     const ctx = AudioEngine.ctx; if (!ctx || !bus) return;
     const now = ctx.currentTime;
-    bus.gain.cancelScheduledValues(now); bus.gain.setValueAtTime(bus.gain.value, now); bus.gain.linearRampToValueAtTime(0, now + 0.3);
+    // with the mic open on speakers the theme's last chord and its reverb tail would be heard as the player's notes:
+    // cut it short and ignore the mic while the tail dies
+    const leak = AudioEngine.leakMode() !== 'full';
+    bus.gain.cancelScheduledValues(now); bus.gain.setValueAtTime(bus.gain.value, now); bus.gain.linearRampToValueAtTime(0, now + (leak ? 0.08 : 0.3));
+    if (leak && typeof Mic !== 'undefined' && Mic.deaf) Mic.deaf(TAIL);
   }
   return {
     hits,

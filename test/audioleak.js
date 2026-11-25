@@ -4,7 +4,7 @@
 // (gain 0.5, 23 ms late). With `silence` the player does nothing: every "chord found" is a false accept, every green
 // string a false light. With test/right.wav (node test/mkwav.js: G C D, two strums each, 3 s per chord) the player plays
 // the right chords: count how many are found, to compare bands (band=drums is the old drums-only behaviour).
-// DIST=/path/strum-jam.html runs an older build.
+// DIST=/path/strum-jam.html runs an older build.  MUTE=kick,snare,... silences those voices (to find what leaks).
 const { chromium } = require('playwright'); const fs = require('fs'); const path = require('path'); const os = require('os');
 const src = process.argv[2] || 'silence', secs = +(process.argv[3] || 30), level = +(process.argv[4] || 2), band = process.argv[5] || 'safe';
 const DIST = process.env.DIST || path.join(__dirname, '..', 'dist', 'strum-jam.html');
@@ -24,20 +24,21 @@ if (src === 'silence') {
   await p.click('text=Chord Drill: G, C, D', { timeout: 8000 }); await p.waitForTimeout(400);
   await p.evaluate(band => { Settings.tuneFirst = false; Settings.leakBand = band; }, band);
   await p.click('#btn-practice'); await p.waitForTimeout(800);
-  const info = await p.evaluate(([lv, silent]) => {
+  const info = await p.evaluate(([lv, silent, mute]) => {
     const ctx = AudioEngine.ctx, g = ctx.createGain(); g.gain.value = 0.5; AudioEngine.master.connect(g);
     const d = ctx.createDelay(0.1); d.delayTime.value = 0.023; g.connect(d);
     if (Listen.node) d.connect(Listen.node); d.connect(Mic.anLong); d.connect(Mic.anSmall);
     G.hype = [0.05, 0.3, 0.5, 0.7, 0.95][lv]; G.setLevel(lv);
+    for (const m of mute) if (typeof Voices !== 'undefined' && Voices[m]) Voices[m] = () => {};          // MUTE=kick,snare: which voice is it?
     window.__found = 0; const ps = G.practiceSuccess.bind(G);
     G.practiceSuccess = function(now, how){ if (how !== 'tap' && how !== 'skip') window.__found++; if (!silent) return ps(now, how); };     // silent player: stay on G
     return { mic: Mic.on, model: Listen.ready, mode: typeof Groove.leakMode === 'function' ? Groove.leakMode() : 'old build (drums only)' };
-  }, [level, src === 'silence']);
-  const sh = { samples: 0, green: 0, wrong: 0, wrongNotes: {}, strings: [0, 0, 0, 0, 0, 0] };
+  }, [level, src === 'silence', (process.env.MUTE || '').split(',').filter(Boolean)]);
+  const sh = { samples: 0, green: 0, wrong: 0, wrongNotes: {}, strings: [0, 0, 0, 0, 0, 0], at: [] };
   for (let i = 0; i < secs * 4; i++) { await p.waitForTimeout(250);
     const f = await p.evaluate(() => G.fb ? { s: G.fb.states.slice(), w: G.fb.wrong.map(w => midiName(w.midi)) } : null);
-    sh.samples++; if (f) { f.s.forEach((x, k) => { if (x === 'heard') sh.strings[k]++; }); if (f.s.includes('heard')) sh.green++; if (f.w.length) { sh.wrong++; for (const w of f.w) sh.wrongNotes[w] = (sh.wrongNotes[w] || 0) + 1; } } }
+    sh.samples++; if (f) { f.s.forEach((x, k) => { if (x === 'heard') sh.strings[k]++; }); if (f.s.includes('heard')) { sh.green++; sh.at.push(i / 4); } if (f.w.length) { sh.wrong++; for (const w of f.w) sh.wrongNotes[w] = (sh.wrongNotes[w] || 0) + 1; } } }
   const found = await p.evaluate(() => window.__found);
-  console.log(JSON.stringify({ wav: path.basename(src), level, band: info.mode, secs, chordsFound: found, samplesWithGreenStrings: sh.green, greenPerString: sh.strings.join(' '), samplesWithWrongNotes: sh.wrong, of: sh.samples, wrongNotes: sh.wrongNotes, mic: info.mic, model: info.model, errors: errs }));
+  console.log(JSON.stringify({ wav: path.basename(src), level, band: info.mode, secs, chordsFound: found, samplesWithGreenStrings: sh.green, greenPerString: sh.strings.join(' '), greenAtSec: sh.at.join(' '), samplesWithWrongNotes: sh.wrong, of: sh.samples, wrongNotes: sh.wrongNotes, mic: info.mic, model: info.model, errors: errs }));
   await b.close();
 })();
