@@ -6,7 +6,8 @@
 
      ShowHost.start(songOrChart, { inst, difficulty, mode, fail, autoEncore, onEvent, shapes, countIn })  -> track | null
          compiles the song, builds the Show track, starts Groove (the band + the clock), hooks the mic
-     ShowHost.tap(dir, lane)       a key / touch / pad hit, stamped with the audio clock ('D' | 'U', drums: lane)
+     ShowHost.tap(dir, lane, t)    a key / touch / pad hit ('D' | 'U', drums: lane); t = when it happened on the audio
+                                   clock if the host knows (an input event's timestamp), else now
      ShowHost.encore()             the player fires the Encore
      ShowHost.stop()               stops the loop, the band and the mic hook
      ShowHost.on(fn) / off(fn)     every Show event, as it happens: fn(event, state)
@@ -16,10 +17,12 @@
    What plugs in where
      clock        Groove.beatAt(AudioEngine.now()) every animation frame -> run.tick(beat). Show's targets already carry
                   Groove's swing offsets, so the linear beat clock is the right one.
-     timing       Mic.onsetListeners (flux / model onsets, already time-stamped on the audio clock)
+     timing       Mic.onsetListeners (the capture worklet's fast onsets via Hear -> Mic.fastOnset: sample-exact time on the
+                  audio clock, the game's own sounds and the sensitivity setting already filtered)
                   -> run.onset(Groove.beatAt(t - Settings.latency)), judged at once: the 'hit' event is the instant feedback.
-     chord        on each 'span' event the host remembers the span; once Listen has heard 0.5 s of it, Listen.judge decides
-                  -> run.chordResult(span, { ok, frac }) -> 'lock' / 'buzz' / 'wrong'. No model, or not a guitar: { unsure }.
+     chord        on each 'span' event the host remembers the span; Hear.spanVerdict (else Listen.judge once 0.5 s of it was
+                  heard) decides -> run.chordResult(span, { ok, frac }) -> 'lock' / 'buzz' / 'wrong'. No model, or not a
+                  guitar: { unsure }.
      band         'levelUp' / 'levelDown' -> Groove.level (the kit thickens); 'call' -> the band strums the bar the player
                   echoes; tap mode: every hit sounds the chord (the player's input is the guitar track).
    ===================================================================== */
@@ -72,7 +75,7 @@ const ShowHost = {
     Mic.onsetListeners.clear();
     if (mode !== 'mic') return;
     const lat = () => ((typeof Settings !== 'undefined' && Settings.latency) || 0) / 1000;
-    this.micFn = t => { if (this.run) this.run.onset(this.beat(t - lat()), { src: 'mic', lane: inst === 'drums' && typeof Calib !== 'undefined' ? Calib.classify() || undefined : undefined }); };
+    this.micFn = (t, o) => { if (this.run && !(o && o.own)) this.run.onset(this.beat(t - lat()), { src: 'mic', vel: o && o.strength, lane: inst === 'drums' && typeof Calib !== 'undefined' ? Calib.classify() || undefined : undefined }); };
     Mic.onsetListeners.add(this.micFn);
   },
   loop(){
@@ -90,9 +93,9 @@ const ShowHost = {
     if (this.run) { Groove.stop(); if (typeof Mic !== 'undefined' && this.micFn) Mic.onsetListeners.delete(this.micFn); }
     this.run = null; this.micFn = null;
   },
-  tap(dir, lane){
+  tap(dir, lane, t){
     if (!this.run) return null;
-    return this.run.onset(this.beat(), { src: 'tap', dir, lane });
+    return this.run.onset(this.beat(t), { src: 'tap', dir, lane });
   },
   encore(){ return this.run ? this.run.encore(this.beat()) : false; },
 
@@ -103,6 +106,14 @@ const ShowHost = {
     for (let i = this.spans.length - 1; i >= 0; i--) {
       const sp = this.spans[i], ev = this.chart ? this.chart.events[sp.ref] : null;
       if (!ready || !ev || !ev.notes) { if (now > sp.t1) { this.run.chordResult(sp.id, { unsure: true }); this.spans.splice(i, 1); } continue; }
+      const strict = (typeof Settings !== 'undefined' && Settings.strict) || 'normal';
+      if (typeof Hear !== 'undefined' && Hear.spanVerdict) {                                       // the recognition track's verdict: tried on each strum of the span
+        if (now < sp.t1 && sp.hitT == null) continue;
+        const mm = ev.notes.map(n => n.midi), v = now > sp.t1 + 1.5 ? { unsure: true } : Hear.spanVerdict(sp.t0 - 0.12, sp.t1, mm, strict, { at: sp.hitT != null ? sp.hitT : sp.t0, end: sp.t1 });
+        if (!v) continue;
+        this.run.chordResult(sp.id, v.unsure || (!v.attempt && !v.ok) ? { unsure: true } : { ok: !!v.ok, frac: v.frac != null ? v.frac : (v.ok ? 1 : 0) });
+        this.spans.splice(i, 1); continue;
+      }
       const t0 = (sp.hitT != null ? sp.hitT : sp.t0) + 0.04, t1 = Math.min(t0 + 0.55, Math.max(t0 + 0.25, sp.t1 - 0.02));
       if (Listen.reliableT < t1) continue;
       const midis = ev.notes.map(n => n.midi), h = Listen.heard(t0, t1);

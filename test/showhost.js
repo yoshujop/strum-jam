@@ -1,5 +1,6 @@
 // ShowHost (src/59-showhost.js) in the real build: Show driven by Groove's audio clock in Chromium, tap input from an
-// in-page bot that hits each target on the first frame after its beat. Checks the adapter end to end, no page errors.
+// in-page bot that hits each target on the first frame after its beat, before the host's tick, the way input events
+// arrive before a frame (stamped at most 30 ms late, so a stalled headless frame does not decide the grade). Checks the adapter end to end, no page errors.
 //   python3 build.py && NODE_PATH=$(npm root -g) node test/showhost.js
 const { chromium } = require('playwright');
 (async () => {
@@ -8,7 +9,7 @@ const { chromium } = require('playwright');
   await p.goto('file://' + __dirname + '/../dist/strum-jam.html'); await p.waitForTimeout(800);
   await p.click('#btn-start', { force: true }); await p.waitForTimeout(1500);
   let fails = 0; const check = (ok, msg, d) => { if (!ok) fails++; console.log((ok ? '  ok    ' : '  FAIL  ') + msg + (d ? '  [' + d + ']' : '')); };
-  const bot = `(T => { let i = 0; window.__ev = []; ShowHost.on(e => window.__ev.push(e)); const f = () => { if (!ShowHost.run) return; const b = ShowHost.beat(); while (i < T.targets.length && T.targets[i].beat <= b) { const t = T.targets[i++]; if (t.kind !== 'rest') ShowHost.tap(t.dir === 'U' ? 'U' : 'D', T.lanes.length > 1 ? t.lane : undefined); } requestAnimationFrame(f); }; f(); return { judged: T.judged, apm: T.apm, bpm: T.bpm }; })`;
+  const bot = `(T => { let i = 0; window.__ev = []; ShowHost.on(e => window.__ev.push(e)); const step = () => { if (!ShowHost.run) return; const now = AudioEngine.now(), b = ShowHost.beat(now); while (i < T.targets.length && T.targets[i].beat <= b) { const t = T.targets[i++]; if (t.kind !== 'rest') ShowHost.tap(t.dir === 'U' ? 'U' : 'D', T.lanes.length > 1 ? t.lane : undefined, Math.min(now, ShowHost.timeOf(t.beat) + 0.03)); } }; if (!ShowHost.frame0) { ShowHost.frame0 = ShowHost.frame; } ShowHost.frame = function(){ step(); ShowHost.frame0(); }; return { judged: T.judged, apm: T.apm, bpm: T.bpm }; })`;
   // a song, Normal, tap mode
   const info = await p.evaluate(bot + `(ShowHost.start(LIBRARY.find(s => s.id === 'lib-susanna'), { mode: 'tap', difficulty: 'normal' }))`);
   await p.waitForTimeout(16000);
