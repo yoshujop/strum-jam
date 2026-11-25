@@ -3,12 +3,14 @@
 // what (default: all), comma separated:
 //   faces    <m>-faces.png: every named expression as 2D ink (large, and at 40 px = a face on a phone)
 //   turn     <m>-turntable.png: the rest pose, no instrument, 8 angles
+//   hair     (with turn) <m>-hair.png: the head close up from 8 angles (the last one from above)
 //   heads    <m>-heads.png: the head in 3D with 6 expressions, front and three-quarter
 //   hold     <m>-hold.png: the hands on the instrument from three sides;  <m>-hype.png: the hair's hype levels 0..4
 //   poses    <m>-poses.png: the signature poses, front and three-quarter;  <m>-pose-<name>.png large
 //   sil      <m>-silhouette.png: ART_BIBLE 12.1, black silhouettes at 64 px (and x4), without and with the instrument
-//   stage    <m>-stage-1280x665-<pose>.png / -390x844-<pose>.png: on the lit club stage at real in-game size
-// Env: MODELS=path/a.glb,path/b.glb to use scratch builds instead of vendor/models.
+//   stage    <m>-stage-1280x665-<pose>.png / -390x844-<pose>.png: on the lit club stage at real in-game size, framed as the
+//            hero (low, close camera); FRAME=wide for the old whole-band distance
+// Env: FRAME=wide (stage);  MODELS=path/a.glb,path/b.glb to use scratch builds instead of vendor/models.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const { findModel, buildPage } = require('./gfxpage.js');
@@ -57,6 +59,10 @@ Shot.studio = async (what) => {
     const cv2 = document.createElement('canvas'); cv2.width = 2400; cv2.height = 1200; const c2 = cv2.getContext('2d');
     c2.drawImage(snap(box(-0.45, 1.0, -0.3, 0.45, 1.82, 0.3), -25, 4, 1200, 1200, 1.0), 0, 0); c2.drawImage(snap(box(-0.5, 0, -0.3, 0.5, 0.7, 0.3), 30, 12, 1200, 1200, 1.0), 1200, 0);
     outs.detail = Shot.png(cv2);
+    if (what.includes('hair')) { A.rig.worldPos('head', hp); const S = 480, hv = document.createElement('canvas'); hv.width = S * 4; hv.height = S * 2; const hc = hv.getContext('2d');
+      const hb = box(hp.x - 0.3, hp.y - 0.12, hp.z - 0.3, hp.x + 0.3, hp.y + 0.52, hp.z + 0.3);
+      for (let i = 0; i < 8; i++) hc.drawImage(snap(hb, i * 45, i === 7 ? 40 : 6, S, S, 1.0), (i % 4) * S, (i >> 2) * S);
+      outs.hair = Shot.png(hv); }
     A.root.visible = false;
   }
   if (what.includes('sil')) {
@@ -81,7 +87,7 @@ Shot.studio = async (what) => {
     const A = Cast.spawn(M); scene.add(A.root); A.lookAt(front);
     if (what.includes('heads')) {
       A.pose('rest'); const names = ['smirk', 'locked', 'grin', 'yell', 'flinch', 'camera'], S = 520, cv = document.createElement('canvas'); cv.width = S * 6; cv.height = S * 2; const c = cv.getContext('2d');
-      names.forEach((n, i) => { A.express(n, { snap: true }); Shot.settle(A, 6); A.rig.worldPos('head', hp); const b = box(hp.x - 0.4, hp.y - 0.08, hp.z - 0.3, hp.x + 0.4, hp.y + 0.72, hp.z + 0.3);
+      names.forEach((n, i) => { A.express(n, { snap: true }); Shot.settle(A, 6); A.rig.worldPos('head', hp); const b = box(hp.x - 0.26, hp.y - 0.1, hp.z - 0.3, hp.x + 0.26, hp.y + 0.42, hp.z + 0.3);
         c.drawImage(snap(b, 0, 2, S, S, 1.0), i * S, 0); c.drawImage(snap(b, i % 2 ? 38 : -38, 6, S, S, 1.0), i * S, S); Shot.label(c, n, i * S, 0); });
       outs.heads = Shot.png(cv); A.express(DEF.face.base, { snap: true });
     }
@@ -113,7 +119,9 @@ Shot.stage = async (tier) => {
   const T = THREE; GFX.init(document.getElementById('c'), { tier, auto: false });
   const scene = Shot.scene = new T.Scene(), portrait = innerHeight > innerWidth, cam = new T.PerspectiveCamera(portrait ? 34 : 30, innerWidth / innerHeight, 0.1, 200);
   GFX.setScene(scene, cam); GfxTest.stage(scene); if (typeof VFX !== 'undefined') scene.add(VFX.init());
-  if (portrait) { cam.position.set(0, 1.5, 7.6); cam.lookAt(0, 1.02, 0); } else { cam.position.set(0, 1.7, 10.4); cam.lookAt(0, 1.25, 0); }
+  // hero framing (default): low and close, the character fills about two thirds of the frame height. FRAME=wide: the old band shot.
+  if (${JSON.stringify(process.env.FRAME || 'hero')} === 'wide') { if (portrait) { cam.position.set(0, 1.5, 7.6); cam.lookAt(0, 1.02, 0); } else { cam.position.set(0, 1.7, 10.4); cam.lookAt(0, 1.25, 0); } }
+  else if (portrait) { cam.position.set(0.3, 0.85, 5.6); cam.lookAt(0.06, 0.96, 0); } else { cam.fov = 28; cam.updateProjectionMatrix(); cam.position.set(0.9, 0.85, 4.9); cam.lookAt(0.2, 1.0, 0); }
   cam.updateMatrixWorld(true);
   const A = Shot.A = Cast.spawn(M); scene.add(A.root); StageKit.blob(A.root, 0.5); A.lookAt(cam.position);
 };

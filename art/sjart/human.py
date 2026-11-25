@@ -93,6 +93,9 @@ class HumanSpec:
     knee_fwd: float = 0.006    # how far the knee joint sits in front of the hip-ankle line (a rest bend; 0.02 = about 5 degrees)
     tweak: dict = None         # per-ring edits of torso_rows(): {'mouth': dict(rx=0.85, ryf=1.0, ryb=1.0, dz=0.0, cy=0.0, ef=..., eb=...)}
                                # rx / ryf / ryb multiply, dz / cy add (m), ef / eb replace. E.g. a pick-shaped head.
+    posture: tuple = None      # a rest slouch: front-back offsets (m, negative = forward) of the centre line at
+                               # (hip joint, waist, chest, neck base, head). Rings, joints, arms and legs follow it.
+                               # E.g. (-0.03, -0.015, 0.02, 0.015, -0.03): hips forward, chest sunk, head poked out.
 
     def but(self, **kw):
         """A copy with some fields changed: spec.but(height=1.9, r_thigh=0.06)."""
@@ -147,6 +150,15 @@ class Human:
         self._mirror_joints()
         c.orient()
 
+    def yoff(self, z):
+        """The posture's front-back offset of the body's centre line at height z (0 without a posture)."""
+        p = self.spec.posture
+        if not p:
+            return 0.0
+        TL = self.spec.torso_len
+        zs = (self.hz, self.hz + 0.36 * TL, self.hz + 0.80 * TL, self.sz + 0.066, self.chin_z + 0.034)
+        return float(np.interp(z, zs, p))
+
     # ------------------------------------------------------------------ landmarks
     def _landmarks(self):
         sp = self.spec
@@ -162,7 +174,7 @@ class Human:
         self.Ls = self.leg_len - self.Lt
         self.hjx = sp.hip_w * 0.275
         # arm chain (left)
-        self.S = vec(sp.shoulder_w / 2, 0.006, self.sz)
+        self.S = vec(sp.shoulder_w / 2, 0.006 + self.yoff(self.sz), self.sz)
         a = vec(math.cos(A), 0, -math.sin(A))
         self.E = self.S + a * sp.upperarm_len
         b = math.radians(sp.elbow_bend)
@@ -174,12 +186,12 @@ class Human:
         self.V = unit(vec(0, -1, 0) - self.U * np.dot(self.U, vec(0, -1, 0)))
         self.D = np.cross(self.V, self.U)
         # leg chain (left)
-        self.H = vec(self.hjx, 0.004, self.hz)
+        self.H = vec(self.hjx, 0.004 + self.yoff(self.hz), self.hz)
         self.A = vec(self.hjx * sp.stance, 0.012, self.ankle_z)
         self.K = lerp(self.H, self.A, sp.knee) + vec(0, -sp.knee_fwd, 0)
         # head
         Hh = sp.head_h
-        self.head_cy = -0.012
+        self.head_cy = -0.012 + (sp.posture[4] if sp.posture else 0.0)
         self.eye_z = self.chin_z + 0.44 * Hh
         self.lm.update(chin_z=self.chin_z, shoulder_z=self.sz, hip_z=self.hz, crotch_z=self.crotch_z,
                        eye_z=self.eye_z, crown_z=sp.height, face_size=0.86 * Hh,
@@ -224,6 +236,8 @@ class Human:
             R('top', cz + 1.005 * Hh, hw * 0.30, hd * 0.142, hd * 0.150, hc + 0.004, ef=2.0, part='head'),
         ]
         for r in rows:
+            if sp.posture and r['part'] != 'head':
+                r['cy'] += self.yoff(r['z'])
             t = (sp.tweak or {}).get(r['name'])
             if t:
                 for k in ('rx', 'ryf', 'ryb'):
@@ -307,9 +321,10 @@ class Human:
         cr = ring['crotch']
         z = self.crotch_z
         gap = 0.016 + 0.05 * sp.hip_w
-        x0 = c.add([vec(0, 0.006, z)], w={'hips': 1.0}, part='torso', ring='under', col=0)[0]
-        xl = c.add([vec(gap, 0.006, z + 0.012)], w={'hips': 0.62, 'thigh_L': 0.38}, part='torso', ring='under', col=1)[0]
-        xr = c.add([vec(-gap, 0.006, z + 0.012)], w={'hips': 0.62, 'thigh_R': 0.38}, part='torso', ring='under', col=-1)[0]
+        yo = self.yoff(self.hz)
+        x0 = c.add([vec(0, 0.006 + yo, z)], w={'hips': 1.0}, part='torso', ring='under', col=0)[0]
+        xl = c.add([vec(gap, 0.006 + yo, z + 0.012)], w={'hips': 0.62, 'thigh_L': 0.38}, part='torso', ring='under', col=1)[0]
+        xr = c.add([vec(-gap, 0.006 + yo, z + 0.012)], w={'hips': 0.62, 'thigh_R': 0.38}, part='torso', ring='under', col=-1)[0]
         tag = dict(part='torso', lo='under', hi='crotch', li=-1)
         c.face((cr[15], cr[0], x0, xr), **tag)
         c.face((cr[0], cr[1], xl, x0), **tag)
@@ -321,12 +336,15 @@ class Human:
         TL, hz = sp.torso_len, self.hz
         J = self.joints
         hy = 0.012
+        yo = self.yoff
+        zj = (hz + 0.08 * TL, hz + 0.30 * TL, hz + 0.60 * TL, self.sz + 0.05, self.chin_z + 0.045)
+        pj = [vec(0, y + yo(z_), z_) for y, z_ in zip((hy, hy, hy, 0.016, 0.020), zj)]
         J['root'] = (vec(0, 0, 0), vec(0, 0, 0.12))
-        J['hips'] = (vec(0, hy, hz + 0.08 * TL), vec(0, hy, hz + 0.30 * TL))
-        J['spine'] = (vec(0, hy, hz + 0.30 * TL), vec(0, hy, hz + 0.60 * TL))
-        J['chest'] = (vec(0, hy, hz + 0.60 * TL), vec(0, 0.016, self.sz + 0.05))
-        J['neck'] = (vec(0, 0.016, self.sz + 0.05), vec(0, 0.020, self.chin_z + 0.045))
-        J['head'] = (vec(0, 0.020, self.chin_z + 0.045), vec(0, 0.020, sp.height))
+        J['hips'] = (pj[0], pj[1].copy())
+        J['spine'] = (pj[1].copy(), pj[2].copy())
+        J['chest'] = (pj[2].copy(), pj[3].copy())
+        J['neck'] = (pj[3].copy(), pj[4].copy())
+        J['head'] = (pj[4].copy(), vec(0, pj[4][1], sp.height))
 
     # ------------------------------------------------------------------ arm + hand (left)
     def _arm(self):
@@ -365,7 +383,7 @@ class Human:
             c.bridge(a, b, part=part + '_L', d0=(fa if part == ba else 0.0), d1=(fb if bb == part else 1.0))
         self._hand(c, rings[-1][0], sp.forearm_rings[-1])
         J = self.joints
-        J['shoulder_L'] = (vec(0.022, 0.012, self.sz + 0.012), S.copy())
+        J['shoulder_L'] = (vec(0.022, 0.012 + self.yoff(self.sz), self.sz + 0.012), S.copy())
         J['upperarm_L'] = (S.copy(), E.copy())
         J['forearm_L'] = (E.copy(), W.copy())
         J['twist_forearm_L'] = (lerp(E, W, 0.6), W.copy())
@@ -499,7 +517,7 @@ class Human:
         t_top = self.hz - z_top
         self._thigh_top = t_top / Lt
         x_top = self._leg_gap * 0.55 + sp.r_thigh
-        top_c = vec(max(x_top, lerp(H, K, t_top / Lt)[0]), 0.004, z_top)
+        top_c = vec(max(x_top, lerp(H, K, t_top / Lt)[0]), 0.004 + self.yoff(self.hz), z_top)
         dn = lambda p0, p1, f: lerp(p0, p1, f)
         keys = [
             dict(t=t_top - 0.05, c=top_c + vec(0, 0, 0.05), rx=sp.r_thigh, ryf=sp.r_thigh * 1.02, ryb=sp.r_thigh * 1.06),
@@ -629,8 +647,9 @@ class Human:
                 J[name[:-2] + '_R'] = (j[0] * m, j[1] * m) + ((-(j[2] * m),) if len(j) > 2 else ())
         sp = self.spec
         J['att_head'] = (vec(0, self.head_cy + 0.004, sp.height), vec(0, self.head_cy + 0.004, sp.height + 0.05))
-        J['att_back'] = (vec(0, sp.chest_d * 0.50, self.sz - 0.10), vec(0, sp.chest_d * 0.50, self.sz - 0.05))
-        J['att_hip'] = (vec(0, -sp.hip_d * 0.48, self.hz + 0.05), vec(0, -sp.hip_d * 0.48, self.hz + 0.10))
+        yb, yh = self.yoff(self.sz - 0.10), self.yoff(self.hz + 0.05)
+        J['att_back'] = (vec(0, sp.chest_d * 0.50 + yb, self.sz - 0.10), vec(0, sp.chest_d * 0.50 + yb, self.sz - 0.05))
+        J['att_hip'] = (vec(0, -sp.hip_d * 0.48 + yh, self.hz + 0.05), vec(0, -sp.hip_d * 0.48 + yh, self.hz + 0.10))
 
     # ------------------------------------------------------------------ selections
     def select(self, torso=None, upperarm=None, forearm=None, thigh=None, shin=None, hand=False, foot=False,

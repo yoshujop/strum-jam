@@ -8,6 +8,9 @@
     wardrobe.patch(ch, 'Patch', rings, colour, centre, back=True)           flat appliques pressed onto the clothes
     wardrobe.nails(ch, {'index': '#2EC4B6', ...}, side='L')                 finger nails
     wardrobe.charm(ch, 'Earring', pts2d, colour, at, bone='head', spring='earring')   a small hanging plate
+    wardrobe.lock(ch, 'Hair_F1', points, widths, bulge, colour, centre)     one big swept chunk of hair (a quiff is 6-10 of them)
+    wardrobe.slacks(ch, '#3A3552', leg=0.74, cuff_from=0.64)                tapered trousers with a break and a rolled cuff
+    wardrobe.chunky(ch, body=..., cap=..., sole=...)                        rounded oversized high-tops: sole, tongue, laces
 
 Shells keep the body's skin weights (they cannot tear); rigid pieces follow one bone; pieces that lie on
 the clothes (strap, patches, zip) take the spine chain's weights at their height.
@@ -659,3 +662,223 @@ def kicks(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', lac
         out.append(ob)
     ch.hide(h.select(foot=True), interior=False)
     return out
+
+
+# ------------------------------------------------------------------ sculpted hair: big swept chunks
+def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, segments=9, twist=None, top=None, tip=None,
+         cls='sj_hair', bone='head', sway=None, grow=None, line=None, blunt=0.0):
+    """One big chunk of hair: a tapered, flattened loft along a curve, its fat side facing away from `centre`
+    (the middle of the skull). Chunks overlap; the ink hull draws the line where one crosses another.
+
+    pts: the chunk's centre line, root (inside the scalp) to tip; width / thick: [(t 0..1, half width)], [(t, bulge)]
+    (a number is allowed); under: thickness of the side facing the head, as a fraction of `thick`; e: section
+    exponent (2 = oval, 3 = soft plank); twist: [(t, degrees)] rolls the section about the curve.
+    top: (colour, threshold) paints the faces whose normal points up more than the threshold (0..1): the top planes.
+    tip: (t0, colour) paints everything past t0.   blunt: > 0 ends the chunk with a cut face this fraction of the width.
+    sway: (bone, t0, t1) blends the chunk from `bone` at t0 to that bone at t1 (a spring: jelly lag);
+    grow: (bone, t0, t1) the same again on top of it (the hype slider: the chunk stretches when the bone slides)."""
+    from .util import Curve
+    P = np.asarray(pts, dtype=np.float64)
+    path = shapes.spline(P, segments + 1)
+    key = lambda v: Curve([(0.0, float(v)), (1.0, float(v))] if np.ndim(v) == 0 else list(v), 'pchip')
+    wf, tf = key(width), key(thick)
+    twf = key(twist) if twist is not None else None
+    c0 = np.asarray(centre, dtype=np.float64)
+    rings, ts = [], []
+    m = len(path)
+    for i, p in enumerate(path):
+        t = i / (m - 1.0)
+        T = unit(path[min(i + 1, m - 1)] - path[max(i - 1, 0)])
+        out = p - c0
+        out = out - T * np.dot(out, T)
+        out = unit(out) if np.linalg.norm(out) > 1e-6 else perp_(T)
+        ex = unit(np.cross(out, T))
+        if twf is not None:
+            a = math.radians(twf(t))
+            ex, out = ex * math.cos(a) + out * math.sin(a), out * math.cos(a) - ex * math.sin(a)
+        w, th = max(wf(t), 0.002), max(tf(t), 0.002)
+        if blunt and i == m - 1:
+            w, th = max(w, wf(0.5) * blunt), th
+        p2 = ring2d(n, w, th, th * under, ef=e, eb=2.0)
+        rings.append(place(p2, p, ex, -out))
+        ts.append(t)
+    ob = shapes.grid_mesh(name, rings, cap0='fan', cap1='fan' if not blunt else 'round')
+    bl.recalc_normals(ob)
+    col.paint(ob, color, cls)
+    nv = len(ob.data.vertices)
+    vt = np.array([ts[min(i // n, m - 1)] if i < m * n else (0.0 if i == m * n else 1.0) for i in range(nv)])
+    if top or tip:
+        fn, fc = bl.face_normals(ob), bl.face_centres(ob)
+        ft = np.array([np.mean([vt[v] for v in p.vertices]) for p in ob.data.polygons])
+        if top:
+            col.paint(ob, top[0], cls, faces=(fn[:, 2] > top[1]) & (ft > (top[2] if len(top) > 2 else 0.25)))
+        if tip:
+            col.paint(ob, tip[1], cls, faces=ft > tip[0])
+    ob.vertex_groups.clear()
+    ws = np.zeros(nv) if not sway else np.array([smoothstep(sway[1], sway[2], t) for t in vt])
+    wg = np.zeros(nv) if not grow else np.array([smoothstep(grow[1], grow[2], t) for t in vt])
+    groups = {}
+
+    def put(b, i, x):
+        if x > 1e-4:
+            g = groups.get(b) or groups.setdefault(b, ob.vertex_groups.new(name=b))
+            g.add([i], float(x), 'REPLACE')
+    for i in range(nv):
+        put(bone, i, (1 - ws[i]) * (1 - wg[i]))
+        if sway:
+            put(sway[0], i, ws[i] * (1 - wg[i]))
+        if grow:
+            put(grow[0], i, wg[i])
+    if line is not None:
+        outline.set_weight(ob, line)
+    ch.parts.append(ob)
+    return ob
+
+
+def perp_(T):
+    from .util import perp
+    return perp(T)
+
+
+# ------------------------------------------------------------------ tapered trousers with a rolled cuff
+def slacks(ch, color, top='hip', leg=0.74, cuff_from=0.64, fit=0.014, seat=0.010, thigh=0.012, taper=0.004, brk=0.008, cuff=0.008,
+           cuff_color=None, cls='sj_cloth', name='Trousers'):
+    """Carrot trousers: room in the seat and thigh, tapering to a cropped hem with a break (the cloth bunching
+    just above it) and a turned-up cuff standing `cuff` proud. leg / cuff_from must be shin ring positions
+    (HumanSpec.shin_rings). thigh: extra room at mid-thigh; taper: room left at the hem; brk: the bulge of the break."""
+    h = ch.h
+    cg = h.cage
+    faces = h.select(torso=('crotch', top), thigh=(0.0, 1.0), shin=(0.0, leg))
+
+    def off(p, meta, n):
+        part = meta.get('part', '')
+        s = meta.get('s', 0.0)
+        if part.startswith('thigh'):
+            return fit + thigh * (1 - abs(s - 0.45) / 0.55)
+        if part.startswith('shin'):
+            if abs(s - cuff_from) < 1e-6:
+                return fit + taper + brk
+            return fit + lerp(thigh * 0.15, taper, clamp(s / max(leg, 1e-6)))
+        return fit + seat
+
+    sh = cg.shell(faces, offset=off, lip=0.012, part='trousers', extend=lambda p, m: 0.004 if m.get('part', '').startswith('shin') else 0.0, crease=0.3)
+    ch.hide(faces)
+    ob = ch.add_cage(sh, name, paint=color, cls=cls)
+    if cuff > 0:
+        cf = h.select(shin=(cuff_from, leg))
+        b = cg.shell(cf, offset=lambda p, m, n: fit + taper + cuff + (0.004 if abs(m.get('s', 0) - cuff_from) < 1e-6 else 0.0), lip=0.012, part='cuff',
+                     crease=0.3, wall=0.0, extend=lambda p, m: 0.010)
+        ch.add_cage(b, name + '_Cuff', paint=cuff_color or color, cls=cls)
+    return ob
+
+
+# ------------------------------------------------------------------ chunky high-tops (rounded: built on outfit.sneaker_cage)
+def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', lace='#2B2740', tongue=None, lining='#2B2740', foxing=None,
+           length=1.30, width=1.50, sole_h=0.05, collar=0.10, laces=4, tongue_rise=0.045, bumper=0.010, toe_out=0.0, name='Shoe'):
+    """Oversized high-top trainers with form: the subdivided sneaker body (toe cap, heel counter, padded collar),
+    a separate thick sole that steps out from the upper all round, a tongue standing up in front of the ankle
+    and fat laces lying across the instep. toe_out: degrees the shoes turn out at rest. Hides the bare feet."""
+    h = ch.h
+    c = outfit.sneaker_cage(h, length=length, width=width, sole=sole_h, collar=collar, toe_up=0.018)
+    D = c.dims
+    for fi, t in enumerate(c.ft):
+        if t.get('zone') == 'upper':
+            ss = [c.meta[i].get('s') for i in c.f[fi]]
+            if all(x is not None and x <= 0.14 for x in ss):
+                t['zone'] = 'heel'
+        if t.get('zone') == 'lace':
+            t['zone'] = 'upper'
+    pal = {'': (body, 'sj_cloth'), 'sole': (foxing or body, 'sj_toon'), 'cap': (cap, 'sj_toon'), 'heel': (heel or cap, 'sj_toon'),
+           'collar': (body, 'sj_cloth'), 'lining': (lining, 'sj_cloth')}
+    ch.hide(h.select(foot=True), interior=False)
+    A = h.A
+    out = []
+    for sgn, S, cage in ((1.0, 'L', c), (-1.0, 'R', c.mirrored())):
+        up = cage.to_object('%s_up_%s' % (name, S), levels=h.spec.levels, orient=False)
+        bl.recalc_normals(up)
+        cf = bl.face_attr(up, 'sj_cf')
+        vals = np.array([str(cage.ft[i].get('zone', '')) for i in cf])
+        col.paint(up, body, 'sj_cloth')
+        for k, (cc, kc) in pal.items():
+            if k:
+                col.paint(up, cc, kc, faces=(vals == k))
+        up.vertex_groups.clear()
+        parts = [up]
+        bvh = _bvh([up])
+        # the sole: the plan outline grown by `bumper`, a thick rounded slab
+        pl = c.plan
+        left = [(xc + hw + bumper, y) for y, xc, hw in pl]
+        right = [(xc - hw - bumper, y) for y, xc, hw in pl][::-1]
+        toe = [(pl[-1][1], pl[-1][0] - 0.022 - bumper)]
+        heelp = [(pl[0][1], pl[0][0] + 0.016 + bumper)]
+        o2 = shapes.outline(left + toe + right + heelp, n=32, tension=0.5)
+        sl = shapes.extrude('%s_sole_%s' % (name, S), [(x * sgn, y) for x, y in o2], sole_h * 0.78, bevel=0.011, segments=2, plane='xy')
+        P = bl.co(sl)
+        ty = smoothstep_arr(pl[-3][0], pl[-1][0] - 0.03, P[:, 1])
+        P[:, 2] += ty * D['toe_up'] * 1.2
+        bl.set_co(sl, P)
+        bl.recalc_normals(sl)
+        col.paint(sl, sole, 'sj_toon')
+        parts.append(sl)
+        # the tongue: a rounded tab in front of the ankle, leaning forward
+        ty0 = D['collar_y'] - D['collar_r'] * 1.02
+        tz = D['collar_z'] + tongue_rise
+        tg = shapes.box('%s_tongue_%s' % (name, S), (D['collar_r'] * 1.75, 0.022, 0.115), bevel=0.008, segments=2, corner=0.030, steps=3)
+        P = bl.co(tg)
+        a = math.radians(-14.0)
+        y, z = P[:, 1].copy(), P[:, 2] - 0.0575
+        P[:, 1] = ty0 - 0.004 + y * math.cos(a) - z * math.sin(a)
+        P[:, 2] = tz + y * math.sin(a) + z * math.cos(a)
+        P[:, 0] += A[0] * sgn
+        bl.set_co(tg, P)
+        col.paint(tg, tongue or body, 'sj_cloth')
+        parts.append(tg)
+        # laces: fat bars lying on the instep between the tongue and the toe cap
+        y_a, y_b = ty0 - 0.030, D['heel_y'] - 0.70 * D['L']
+        for j in range(laces):
+            yj = lerp(y_a, y_b, (j + 0.5) / laces)
+            xc = float(np.interp(-yj, [-q[0] for q in pl], [q[1] for q in pl])) * sgn
+            hwj = float(np.interp(-yj, [-q[0] for q in pl], [q[2] for q in pl])) * 0.60
+            rings = []
+            for i in range(5):
+                x = xc + hwj * (-1 + 2 * i / 4.0)
+                zs = []
+                for dy in (-0.011, 0.011):
+                    hit = bvh.ray_cast((x, yj + dy, 1.0), (0, 0, -1), 2.0)
+                    zs.append(hit[0][2] if hit[0] is not None else D['sole'])
+                z0 = float(np.mean(zs))
+                sl_ = (zs[1] - zs[0]) / 0.022
+                t = unit(vec(0, 1, sl_))
+                nrm = unit(np.cross(vec(1, 0, 0), t))
+                p = vec(x, yj, z0)
+                e = 0.3 if i in (0, 4) else 1.0
+                rings.append([p - t * 0.011 - nrm * 0.004, p + t * 0.011 - nrm * 0.004, p + t * 0.009 + nrm * 0.007 * e, p - t * 0.009 + nrm * 0.007 * e])
+            lb = shapes.grid_mesh('%s_lace%d_%s' % (name, j, S), rings, cap0='flat', cap1='flat')
+            bl.recalc_normals(lb)
+            col.paint(lb, lace, 'sj_cloth')
+            outline.set_weight(lb, 0.0)
+            parts.append(lb)
+        for o in parts:
+            outline.ensure_weight(o)
+        ob = bl.join(parts, '%s_%s' % (name, S))
+        if toe_out:
+            a = math.radians(toe_out) * sgn
+            P = bl.co(ob)
+            x, y = P[:, 0] - A[0] * sgn, P[:, 1] - A[1]
+            P[:, 0], P[:, 1] = A[0] * sgn + x * math.cos(a) + y * math.sin(a), A[1] - x * math.sin(a) + y * math.cos(a)
+            bl.set_co(ob, P)
+        by = ch.joints['toe_L'][0][1]
+        zc = D['collar_z']
+
+        def wfn(p, S=S, by=by, zc=zc):
+            wt = smoothstep(by + 0.03, by - 0.03, p[1]) * smoothstep(0.11, 0.07, p[2])
+            ws = 0.3 * smoothstep(zc - 0.05, zc, p[2])
+            return {'foot_' + S: (1 - wt) * (1 - ws), 'toe_' + S: wt * (1 - ws), 'shin_' + S: ws}
+        ch.add_weighted(ob, wfn)
+        out.append(ob)
+    return out
+
+
+def smoothstep_arr(e0, e1, x):
+    t = np.clip((np.asarray(x) - e0) / (e1 - e0), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
