@@ -33,21 +33,21 @@ const Cast = (function(){
         ink: INK, line: 5.2, scale: 1.2,
         // two D shapes, flat side up, outer corners down 6 degrees. His left (fretting side) eye is wide open and 10 % larger;
         // his right (strumming side) eye is two-thirds open under a double-weight lid. Teal iris ring, pick-shaped pupils.
-        eyes: { shape: 'dee', x: 53, y: 4, w: 30, h: 39, tilt: -6, white: '#FFF7E6', iris: '#2EC4B6', pupil: 0.5, pupilShape: 'pick', shine: 'square',
+        eyes: { shape: 'dee', x: 47, y: 4, w: 28, h: 38, tilt: -6, white: '#FFF7E6', iris: '#2EC4B6', pupil: 0.5, pupilShape: 'pick', shine: 'square',
           lid: 1, lidLine: 1.15, L: { scale: 1.1 }, R: { open: 0.66, lidLine: 2 } },
-        brows: { style: 'slab', x: 53, y: -46, w: 31, thick: 13, color: INK, slit: 'R', R: { dy: 6, a: 10 } },   // the half-lid side sits lower and angled in: attitude, not sleep
+        brows: { style: 'slab', x: 47, y: -45, w: 29, thick: 13, color: INK, slit: 'R', R: { dy: 6, a: 10 } },   // the half-lid side sits lower and angled in: attitude, not sleep
         mouth: { y: 71, x: -4, w: 28, inner: '#5A0F1E', tongue: '#FF5E7E', teeth: 'top', teethColor: '#FFF1D0', hook: 1 },
         extras: [
-          { type: 'dots', x: 62, y: 52, r: 3.8, pts: [[-9, 0], [9, 0], [0, 13]] },        // the D chord, under the wide eye
-          { type: 'tick', x: 1, y: 39, w: 5, h: 7 },                                         // the nose
-          { type: 'pick', color: '#F2D6A2', size: 16, rot: 142, dx: -7, dy: 1, line: 0.85 } ]   // chewed OUTSIDE the low corner of the smirk, point out
+          { type: 'dots', x: 54, y: 50, r: 3.6, pts: [[-9, 0], [9, 0], [0, 13]] },        // the D chord, under the wide eye
+          { type: 'pick', color: '#FFFFFF', size: 9, rot: 142, dx: -5, dy: 1, line: 0.8 } ]   // chewed OUTSIDE the low corner of the smirk, point out
       },
       base: 'smirk',
       expressions: {
         smirk:    { mouth: { w: 0.92, c: 0.5, s: 0.95 }, browAs: 0.55, browY: 0.1 },
         locked:   { eoL: 0.66, eoR: 1, lx: 0.75, ly: 0.7, mouth: { w: 0.45, c: 0 }, browA: 9, browY: -0.35, pick: 0 },
         grin:     { eo: 0, ec: 1, mouth: { w: 1.22, o: 0.62, c: 1, s: 0.3, t: 1 }, browY: 0.7, pick: 0 },
-        yell:     { eoL: 1.15, eoR: 1.75, pup: 0.7, mouth: { w: 1.75, o: 1.95, c: 0.2, t: 1, g: 0.75 }, browA: 20, browY: 0.15, browAs: 0, pick: 0 },
+        yell:     { eoL: 1.15, eoR: 1.75, pup: 0.7, mouth: { w: 1.4, o: 1.7, c: 0.2, t: 1, g: 0.75 }, browA: 20, browY: 0.15, browAs: 0, pick: 0 },
+        rock:     { eoL: 0.58, eoR: 0.9, lx: 0, ly: 0.2, mouth: { w: 1.3, o: 0.95, c: 0.9, s: 0.55, t: 1 }, browA: 7, browY: -0.25, browAs: 0.5, pick: 0 },   // PERFECT: a lazy open grin under heavy lids
         flinch:   { glyph: 'squeeze', mouth: { w: 0.7, c: -0.2, wob: 1.4 }, jump: 7, browA: -14, browY: 0.6, pick: 0 },
         flat:     { glyph: 'flat', mouth: { w: 0.7, c: 0 }, browY: -0.5, mark: 'sweat', pick: 0 },
         mirror:   { eoL: 0.9, lx: -0.35, ly: 1, browAs: 1.3, mouth: { w: 0.2, o: 0.16, r: 1 }, pick: 0 },
@@ -58,41 +58,42 @@ const Cast = (function(){
     },
     // ---- The Offcut, slung low: body centre at hip height, neck 27 degrees up, headstock at shoulder height
     hold: {
-      bone: 'att_hip', pos: [-0.07, -0.05, 0.10], rot: [4, -9, 27],                  // degrees, XYZ; rot[2] = the neck angle
+      bone: 'att_hip', pos: [-0.05, -0.14, 0.115], rot: [4, -9, 32],                  // degrees, XYZ; rot[2] = the neck angle
       fret:  { grip: 'grip_fret', tip: 'att_hand_L', pole: [0.55, -1, -0.25], rot: [-10, -100, 62], offset: [0, 0, 0] },
-      strum: { grip: 'grip_strum', tip: 'att_hand_R', pole: [-1, -0.15, 0.6], rot: [20, 75, -30], back: 0.07, lift: 0.03, travel: 0.075, along: -0.07 },
+      strum: { grip: 'grip_strum', tip: 'att_hand_R', pole: [-1, -0.15, 0.6], rot: [20, 75, -30], back: 0.07, lift: 0.03, travel: 0.075, along: 0.0 },
       arms: { bones: { shoulder_L: [0, 0, 6], upperarm_L: [0, -28, -8], forearm_L: { bend: 78, twist: -50 }, upperarm_R: [0, 30, 22], forearm_R: { bend: 82, twist: 30 } },
         hands: { L: 'fret', R: 'pick' } }
     },
     // ---- signature poses (motion brief 3.2). Riff never stands up straight.
     poses: {
-      rest: { body: {}, feet: { L: { pos: [0, 0, 0] }, R: { pos: [0, 0, 0] } }, neck: 27 },
+      rest: { body: {}, feet: { L: { pos: [0, 0, 0] }, R: { pos: [0, 0, 0] } }, neck: 32 },
       // the Lean: feet wide, knees a little in, weight on the back (strumming-side) foot, hips forward, torso back 12
       // degrees, head tilted 6 degrees toward the neck. Hair, guitar and legs make a Z.
-      lean: { body: { move: { hips: [-0.105, -0.115, 0.075] }, bones: { hips: [-7, 9, 0], spine: [-6, 4, 4], chest: [-6, 3, 5], neck: [5, 0, -5], head: [16, -5, -9] } },
+      lean: { body: { move: { hips: [-0.105, -0.125, 0.125] }, bones: { hips: [-11, 9, 0], spine: [-9, 4, 4], chest: [-8, 3, 5], neck: [8, 0, -5], head: [20, -5, -11] } },
         feet: { L: { pos: [0.30, 0, 0.12], rot: [0, 26, 0] }, R: { pos: [-0.19, 0, -0.05], rot: [0, -18, 0] } },
-        knees: { L: [-0.10, 0, 1], R: [0.10, 0, 1] }, neck: 27 },
+        knees: { L: [-0.10, 0, 1], R: [0.10, 0, 1] }, neck: 32 },
       // the heel bounce on 1 and 3 (key it over 'lean' and back): the back knee drops, the chin tucks, the quiff lags
-      lean_dip: { body: { move: { hips: [-0.125, -0.185, 0.085] }, bones: { hips: [-5, 9, 0], spine: [-4, 4, 4], chest: [-3, 3, 6], neck: [6, 0, -5], head: [20, -5, -9] }, squash: { head: 0.96 } },
+      lean_dip: { body: { move: { hips: [-0.125, -0.195, 0.125] }, bones: { hips: [-8, 9, 0], spine: [-6, 4, 4], chest: [-4, 3, 6], neck: [8, 0, -5], head: [22, -5, -11] }, squash: { head: 0.96 } },
         feet: { L: { pos: [0.30, 0, 0.12], rot: [0, 26, 0] }, R: { pos: [-0.19, 0, -0.05], rot: [0, -18, 0] } },
-        knees: { L: [-0.10, 0, 1], R: [0.10, 0, 1] }, neck: 24 },
+        knees: { L: [-0.10, 0, 1], R: [0.10, 0, 1] }, neck: 29 },
       // PERFECT, the Kickstand, staged in the screen plane: the whole body leans 35 degrees away from the neck, the kick
       // leg goes straight out to the neck side with the sole to the camera, the head tips back so the face is open, the
       // guitar slides to the strumming-side hip with the neck to the sky, outside the fretting-side ear
       kickstand: { body: { move: { hips: [-0.17, -0.07, 0] }, bones: { hips: [0, 0, 14], spine: [0, 0, 11], chest: [-2, 0, 10], neck: [-5, 0, -8], head: [-12, 0, -12] }, squash: { body: 1.04 } },
-        feet: { L: { pos: [0.50, 0.60, 0.05], rot: [-78, 0, -12] }, R: { pos: [0.03, 0, 0], rot: [0, -12, 0] } },
+        feet: { L: { pos: [0.52, 0.47, 0.06], rot: [-75, 0, 72] }, R: { pos: [0.03, 0, 0], rot: [0, -12, 0] } },
         knees: { L: [0.2, 1, 0.4], R: [-0.5, 0, 1] }, neck: 47, guitar: [-0.07, -0.10, 0.03] }
     },
     strumRecoil: { down: { bones: { chest: [2, 2, 0], head: [3, 0, 0] } }, up: { bones: { chest: [-2, -2, 0], head: [-2, 0, 0] } } },
     // ---- the hair: a level meter. The quiff's upper half hangs from hype_1; it slides up step * level and the quiff grows.
-    hype: { bones: ['hype_1'], step: 0.028, levels: 4 },
+    hype: { bones: ['hype_1'], step: 0.046, curl: 4, levels: 4 },   // curl: degrees the quiff rolls forward per level
+    linePx: 4.6,                                                       // the hero's ink: 1.45 x the default hull
     springs: { quiff: { freq: 3.6, damp: 0.45, gravity: 0, limit: 7 }, earring: { freq: 3.2, damp: 0.25, gravity: 0.6, limit: 40 } }
   };
 
   const DEG = Math.PI / 180;
   function spawn(name, o){
     o = o || {}; const def = Cast[name]; if (!def || !def.model) throw new Error('Cast: no member "' + name + '"');
-    const T = THREE, inst = Assets.spawn(def.model, { faceSize: o.faceSize || 512 }), rig = Rig.create(inst), face = FaceDecal.create(inst, def.face.spec);
+    const T = THREE, inst = Assets.spawn(def.model, { faceSize: o.faceSize || 512, linePx: o.linePx || def.linePx }), rig = Rig.create(inst), face = FaceDecal.create(inst, def.face.spec);
     const A = { def, inst, root: inst.root, rig, face, guitar: null, fret: null, strumIK: null, feet: {}, _feet: { L: [0, 0, 0, 0, 0, 0], R: [0, 0, 0, 0, 0, 0] }, _feetT: { L: [0, 0, 0, 0, 0, 0], R: [0, 0, 0, 0, 0, 0] },
       _neck: def.hold ? def.hold.rot[2] : 0, _neckT: def.hold ? def.hold.rot[2] : 0, _gp: [0, 0, 0], _gpT: [0, 0, 0], _strum: 0, _strumT: 0, _hype: 0, snap: 26 };
     face.set(def.face.expressions[def.face.base], { snap: true });
@@ -119,7 +120,8 @@ const Cast = (function(){
     A.hype = level => { const Hy = def.hype; if (!Hy) return A; A._hype = level; const mv = {};
       Hy.bones.forEach((b, i) => { const r = rig.idx[b] == null ? null : inst.rest[b], d = Hy.step * Math.max(0, level - i) / rig.size; if (!r) return;
         const up = new T.Vector3(0, 1, 0).applyQuaternion(r.mQuat); mv[b] = [up.x * d, up.y * d, up.z * d]; });
-      rig.layer('hype', { mode: 'add' }).to({ move: mv }, { in: 0.12, ease: 'snap', over: 0.5, settle: 0.3 }); return A; };
+      const rot = {}; if (Hy.curl) rot[Hy.bones[0]] = [Hy.curl * level, 0, 0];
+      rig.layer('hype', { mode: 'add' }).to({ move: mv, bones: rot }, { in: 0.12, ease: 'snap', over: 0.5, settle: 0.3 }); return A; };
     A.lookAt = (t, opt) => { rig.lookAt(t, opt); return A; };
     A.update = (beat, dt) => {
       const k = 1 - Math.exp(-A.snap * dt), H = def.hold;

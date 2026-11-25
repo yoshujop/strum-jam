@@ -148,7 +148,7 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
   demo band (`test/rigdemo.js`, 120 bpm), in-game size stage shots, the pose library, cost + stability; writes `dist/rigdemo.html`.
 - The cast: `src/55-cast.js` (`Cast.riff`: model, guitar, face spec + 10 named expressions, the guitar hold, the poses
   lean / lean_dip / kickstand, the hair's hype meter; `Cast.spawn('riff')` -> an actor with `pose()`, `strum()`, `express()`,
-  `hype()`, `update(beat, dt)`). Riff = `art/chars/riff.py` + his guitar `art/props/offcut.py`: a lanky 6-head frontman
+  `hype()`, `update(beat, dt)`; expression `rock` = the Kickstand's lazy open grin; `linePx` = the hero's thicker ink). Riff = `art/chars/riff.py` + his guitar `art/props/offcut.py`: a lanky 6-head frontman
   (1.67 m to the crown, 1.88 with the quiff; `HumanSpec.posture` gives him the slouch), hair = big swept chunks
   (`wardrobe.lock`, listed in `LOCKS`), up to 18k triangles. Outfit pieces (bomber, `slacks`, `chunky` high-tops, strap,
   patches) are in `art/sjart/wardrobe.py`. `node test/castshot.js <outdir> [faces,turn,hair,heads,hold,poses,sil,stage]`

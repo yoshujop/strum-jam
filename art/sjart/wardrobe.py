@@ -11,6 +11,11 @@
     wardrobe.lock(ch, 'Hair_F1', points, widths, bulge, colour, centre)     one big swept chunk of hair (a quiff is 6-10 of them)
     wardrobe.slacks(ch, '#3A3552', leg=0.74, cuff_from=0.64)                tapered trousers with a break and a rolled cuff
     wardrobe.chunky(ch, body=..., cap=..., sole=...)                        rounded oversized high-tops: sole, tongue, laces
+                                                                            (tread=, tab=, logo= for the sole bars, pull tab, side mark)
+    wardrobe.stripe(ch, 'Stripe_L', colour, path, normal, across)           a flat stripe lying on a garment (side stripe, piping)
+    wardrobe.ribs(ch, 'Rib', colour, centre, axis, length, count=8)         rib lines round a knitted band (bomber(rib=...) uses it)
+    wardrobe.copy_weights(ob, targets)                                      skin weights from the nearest garment vertex
+    lock(..., cuts=[(u, t0, t1)])                                           inked cut lines on a hair chunk
 
 Shells keep the body's skin weights (they cannot tear); rigid pieces follow one bone; pieces that lie on
 the clothes (strap, patches, zip) take the spine chain's weights at their height.
@@ -55,6 +60,107 @@ def _torso_cols(cg, fi):
     return {cg.meta[i].get('col') for i in cg.f[fi]}
 
 
+def copy_weights(ob, targets):
+    """Give `ob` the skin weights of the nearest vertex of `targets` (things lying on a garment move with it)."""
+    from mathutils import kdtree
+    src = []
+    kd = kdtree.KDTree(sum(len(t.data.vertices) for t in targets))
+    for t in targets:
+        names = [g.name for g in t.vertex_groups]
+        for v in t.data.vertices:
+            kd.insert(v.co, len(src))
+            src.append({names[g.group]: g.weight for g in v.groups if g.weight > 1e-4})
+    kd.balance()
+    ob.vertex_groups.clear()
+    groups = {}
+    for v in ob.data.vertices:
+        w = src[kd.find(v.co)[1]]
+        s = sum(w.values()) or 1.0
+        for b, x in w.items():
+            g = groups.get(b) or groups.setdefault(b, ob.vertex_groups.new(name=b))
+            g.add([v.index], x / s, 'REPLACE')
+    return ob
+
+
+def _sheet(name, rows, facing):
+    """A single-sided sheet through rows of points, its normals turned towards `facing` (a direction or fn(centre))."""
+    m = len(rows[0])
+    V = [tuple(p) for r in rows for p in r]
+    F = [(i * m + j, i * m + j + 1, (i + 1) * m + j + 1, (i + 1) * m + j) for i in range(len(rows) - 1) for j in range(m - 1)]
+    ob = bl.new_object(name, V, F, smooth=True)
+    fn, fc = bl.face_normals(ob), bl.face_centres(ob)
+    d = np.array([facing(c) for c in fc]) if callable(facing) else np.asarray(facing, dtype=float)[None, :]
+    if float(np.mean(np.sum(fn * d, axis=1))) < 0:
+        ob.data.flip_normals()
+        ob.data.update()
+    return ob
+
+
+def stripe(ch, name, color, path, normal, across, width=0.018, lift=0.0025, cols=3, targets=None, far=0.3, cls='sj_cloth', line=0.0):
+    """A flat stripe lying on a garment (a trouser side stripe, piping): `path` is a line of points INSIDE the body,
+    `normal` the direction the stripe faces (it is found by ray casting back along it), `across` its width direction.
+    It takes the weights of the garment under it (`targets`, default: everything so far)."""
+    tg = targets or list(ch.parts)
+    bvh = _bvh(tg)
+    nrm, ac = unit(normal), unit(across)
+    rows = []
+    for p in path:
+        row = []
+        for j in range(cols):
+            q = np.asarray(p, dtype=float) + ac * width * (j / (cols - 1.0) - 0.5)
+            hit = _outer_hit(bvh, q, nrm, far=far)
+            row.append((hit if hit is not None else q) + nrm * lift)
+        rows.append(row)
+    ob = _sheet(name, rows, nrm)
+    col.paint(ob, color, cls)
+    copy_weights(ob, tg)
+    outline.set_weight(ob, line)
+    ch.parts.append(ob)
+    return ob
+
+
+def ribs(ch, name, color, centre, axis, length, count=8, width=0.0065, lift=0.002, reach=0.12, targets=None, samples=3,
+         arc=(0.0, 360.0), bone=None, cls='sj_cloth'):
+    """Rib lines on a knitted band (cuff, hem, sock): `count` thin ink bars round `centre`, each running `length`
+    along `axis`, pressed onto `targets` by ray casting (a ray that misses skips its bar, so an open front stays open).
+    arc: degrees round the axis to cover. bone: rigid on that bone; otherwise the weights of `targets`."""
+    from .util import perp
+    tg = targets or list(ch.parts)
+    bvh = _bvh(tg)
+    c = np.asarray(centre, dtype=float)
+    ax = unit(axis)
+    e1 = perp(ax)
+    e2 = np.cross(ax, e1)
+    out = []
+    full = abs(arc[1] - arc[0]) >= 359.9
+    for i in range(count):
+        th = math.radians(lerp(arc[0], arc[1], i / float(count if full else max(1, count - 1))))
+        d = e1 * math.cos(th) + e2 * math.sin(th)
+        t = np.cross(ax, d)
+        rows = []
+        for k in range(samples):
+            s = length * (k / (samples - 1.0) - 0.5)
+            hit = _outer_hit(bvh, c + ax * s, d, far=reach)
+            if hit is None or np.dot(hit - c, d) <= 0:
+                rows = None
+                break
+            rows.append([hit + d * lift - t * width / 2, hit + d * lift + t * width / 2])
+        if not rows:
+            continue
+        ob = _sheet('%s_%d' % (name, i), rows, d)
+        col.paint(ob, color, cls)
+        out.append(ob)
+    if not out:
+        return None
+    ob = bl.join(out, name)
+    if bone:
+        return ch.add_rigid(ob, bone, line=0.0)
+    copy_weights(ob, tg)
+    outline.set_weight(ob, 0.0)
+    ch.parts.append(ob)
+    return ob
+
+
 # ------------------------------------------------------------------ tee under an open jacket
 def tee_front(ch, color, cols=2, hem='pelvis', collar='neckbase', fit=0.016, drop=0.03, cls='sj_cloth', name='Tee'):
     """Only the part of a tee an open jacket shows: the front `cols` torso columns each side of the centre."""
@@ -71,7 +177,7 @@ def tee_front(ch, color, cols=2, hem='pelvis', collar='neckbase', fit=0.016, dro
 # ------------------------------------------------------------------ bomber jacket
 def bomber(ch, color, trim, zip_color=None, fit=0.028, box=0.050, puff=0.020, sleeve=0.40, cuff_from=0.16, cuff_fit=0.030,
            hem='hip', drop=0.030, hem_in=0.004, open_cols=1, close=0.0, collar=0.048, collar_rise=0.035, cls='sj_cloth', name='Jacket',
-           bands=0.0, stand=None, yoke=0.0):
+           bands=0.0, stand=None, yoke=0.0, rib=None, rib_n=(12, 7, 7)):
     """A cropped, boxy, open bomber: a shell over torso and arms with a dark hem band and fat cuffs, a ribbed
     stand collar (a half torus open at the front) and a zip line down both edges of the opening.
 
@@ -81,7 +187,8 @@ def bomber(ch, color, trim, zip_color=None, fit=0.028, box=0.050, puff=0.020, sl
     collar: tube radius of the collar (0 = none); collar_rise: how much higher it stands at the back.
     bands: > 0 builds the hem band and the cuffs as separate rib bands standing this proud of the shell (a hard step and
     its own ink line) instead of painting the shell; stand: dict of stand_collar() options, replaces the tube collar;
-    yoke: extra room across the shoulders (drop shoulders)."""
+    yoke: extra room across the shoulders (drop shoulders); with bands the hem band tapers to nothing at the open front.
+    rib: a colour -> inked rib lines on the hem band, the cuffs and the collar; rib_n: how many on each."""
     h = ch.h
     cg = h.cage
     front = {k % NT for k in range(-open_cols, open_cols + 1)}
@@ -124,19 +231,30 @@ def bomber(ch, color, trim, zip_color=None, fit=0.028, box=0.050, puff=0.020, sl
         elif (t.get('src_part') or '').startswith('forearm') and t.get('d0', 0.0) >= cuff_from - 1e-6:
             z = 'cuff'
         t['zone'] = z
-    ob = ch.add_cage(sh, name, paint={'': (color, cls), 'hem': (color if bands else trim, cls), 'cuff': (trim, cls)}, by='zone')
+    ob = ch.add_cage(sh, name, paint={'': (color, cls), 'hem': (trim, cls), 'cuff': (trim, cls)}, by='zone')
     ch.hide(faces)
     band_top = -1e9
     if bands:
         hb = [fi for fi in faces if cg.ft[fi].get('part') == 'torso' and cg.ft[fi].get('lo') == hem]
-        b = cg.shell(hb, offset=lambda p, m, n: off(p, m, n) + bands, lip=0.012, part='hemband', crease=0.3, wall=0.0,
-                     extend=lambda p, m: drop + 0.006 if m.get('ring') == hem else 0.0)
-        ch.add_cage(b, name + '_Hem', paint=trim, cls=cls)
+        e_c = (open_cols, NT - open_cols)
+        b = cg.shell(hb, offset=lambda p, m, n: off(p, m, n) + (-0.004 if m.get('col') in e_c else bands), lip=0.012, part='hemband', crease=0.3, wall=0.0,
+                     extend=lambda p, m: (drop - 0.004 if m.get('col') in e_c else drop + 0.006) if m.get('ring') == hem else 0.0)
+        hem_ob = ch.add_cage(b, name + '_Hem', paint=trim, cls=cls)
         band_top = max(cg.v[i][2] for fi in hb for i in cg.f[fi]) - 0.004
         cf = [fi for fi in faces if cg.ft[fi].get('part', '').startswith('forearm') and cg.ft[fi].get('d0', 0.0) >= cuff_from - 1e-6]
         b = cg.shell(cf, offset=lambda p, m, n: cuff_fit + bands, lip=0.014, part='cuffband', crease=0.3, wall=0.0,
                      extend=lambda p, m: 0.014)
-        ch.add_cage(b, name + '_Cuffs', paint=trim, cls=cls)
+        cuff_ob = ch.add_cage(b, name + '_Cuffs', paint=trim, cls=cls)
+        if rib:
+            zs = [cg.v[i][2] for fi in hb for i in cg.f[fi]]
+            zm = (min(zs) + max(zs)) / 2
+            ribs(ch, name + '_HemRib', rib, (0.0, h.yoff(zm) if h.spec.posture else 0.0, zm + 0.012), (0, 0, 1),
+                 (max(zs) - min(zs)) * 0.42, count=rib_n[0], reach=0.4, targets=[hem_ob])
+            for sg, S in ((1.0, 'L'), (-1.0, 'R')):
+                E, W = [np.asarray(q, dtype=float) * vec(sg, 1, 1) for q in ch.joints['forearm_L']]
+                f0, f1 = cuff_from, sleeve
+                ribs(ch, name + '_CuffRib_' + S, rib, lerp(E, W, (f0 + f1) / 2), W - E, float(np.linalg.norm(W - E)) * (f1 - f0) * 0.75, count=rib_n[1],
+                     reach=0.09, targets=[cuff_ob])
     # zip: a thin cream line down each edge of the opening
     if zip_color:
         e_cols = {open_cols: 'L', NT - open_cols: 'R'}
@@ -170,6 +288,29 @@ def bomber(ch, color, trim, zip_color=None, fit=0.028, box=0.050, puff=0.020, sl
                         caps=('round', 'round'), segments=18)
         col.paint(c, trim, cls)
         ch.add_weighted(c, lambda p: {'chest': 0.72, 'neck': 0.28})
+        if rib:
+            bvh = _bvh([c])
+            bars = []
+            for j in range(rib_n[2]):
+                f = (j + 0.5) / rib_n[2] * 16.0
+                k0 = min(int(f), 15)
+                p = lerp(pts[k0], pts[k0 + 1], f - k0)
+                o = unit(vec(p[0], p[1] - 0.014, 0.0))
+                tg = unit(pts[k0 + 1] - pts[k0])
+                rows = []
+                for a in (-50.0, -15.0, 20.0, 55.0, 90.0):
+                    d = o * math.cos(math.radians(a)) + vec(0, 0, 1) * math.sin(math.radians(a))
+                    hit = bvh.ray_cast(tuple(p + d * 0.1), tuple(-d), 0.2)[0]
+                    if hit is None:
+                        continue
+                    q = np.array(hit) + d * 0.002
+                    rows.append([q - tg * 0.0025, q + tg * 0.0025])
+                if len(rows) > 1:
+                    bars.append(_sheet('CollarRib%d' % j, rows, lambda cc, p=p: cc - p))
+                    col.paint(bars[-1], rib, cls)
+            if bars:
+                rb = bl.join(bars, 'CollarRib')
+                ch.add_weighted(rb, lambda p: {'chest': 0.72, 'neck': 0.28}, line=0.0)
     return ob
 
 
@@ -390,12 +531,17 @@ def strap(ch, color, a, b, width=0.08, thick=0.014, gap=0.004, n=22, squares=0, 
     u = unit(a - b)
     fwd = vec(0, -1, 0)
     dirs, rad = [], []
+    side0 = unit(np.cross(u, fwd))
     for i in range(n):
         th = 2 * math.pi * i / n
         d = unit(u * math.cos(th) + fwd * math.sin(th))
-        hit = _outer_hit(bvh, C, d)
+        best = None
+        for sx in (-0.5, 0.0, 0.5):                                    # the widest thing under the strap's whole width
+            hit = _outer_hit(bvh, C + side0 * (sx * width), d)
+            if hit is not None:
+                best = max(best or 0.0, float(np.dot(hit - C, d)))
         dirs.append(d)
-        rad.append(float(np.dot(hit - C, d)) if hit is not None else 0.1)
+        rad.append(best if best is not None else 0.1)
     rad = np.array(rad)
     sm = rad.copy()
     for _ in range(3):
@@ -405,7 +551,7 @@ def strap(ch, color, a, b, width=0.08, thick=0.014, gap=0.004, n=22, squares=0, 
     side = unit(np.cross(u, fwd))                      # across the strap's width
     rings = []
     hw, ht = width / 2, thick / 2
-    prof = [(-hw, -ht), (-hw * 0.5, -ht), (hw * 0.5, -ht), (hw, -ht), (hw, ht), (hw * 0.5, ht), (-hw * 0.5, ht), (-hw, ht)]
+    prof = [(-hw, -ht), (hw, -ht), (hw, ht), (hw * 0.5, ht), (-hw * 0.5, ht), (-hw, ht)]
     for i in range(n + 1):
         k = i % n
         t = unit(pts[(k + 1) % n] - pts[(k - 1) % n])
@@ -666,7 +812,8 @@ def kicks(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', lac
 
 # ------------------------------------------------------------------ sculpted hair: big swept chunks
 def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, segments=9, twist=None, top=None, tip=None,
-         cls='sj_hair', bone='head', sway=None, grow=None, line=None, blunt=0.0):
+         cls='sj_hair', bone='head', sway=None, grow=None, line=None, blunt=0.0,
+         cuts=None, cut_color='#14111F', cut_w=0.0035):
     """One big chunk of hair: a tapered, flattened loft along a curve, its fat side facing away from `centre`
     (the middle of the skull). Chunks overlap; the ink hull draws the line where one crosses another.
 
@@ -676,7 +823,8 @@ def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, seg
     top: (colour, threshold) paints the faces whose normal points up more than the threshold (0..1): the top planes.
     tip: (t0, colour) paints everything past t0.   blunt: > 0 ends the chunk with a cut face this fraction of the width.
     sway: (bone, t0, t1) blends the chunk from `bone` at t0 to that bone at t1 (a spring: jelly lag);
-    grow: (bone, t0, t1) the same again on top of it (the hype slider: the chunk stretches when the bone slides)."""
+    grow: (bone, t0, t1) the same again on top of it (the hype slider: the chunk stretches when the bone slides).
+    cuts: [(u, t0, t1), ...] inked cut lines drawn on the chunk's outer face: u = -1..1 across its width, from t0 to t1."""
     from .util import Curve
     P = np.asarray(pts, dtype=np.float64)
     path = shapes.spline(P, segments + 1)
@@ -684,7 +832,7 @@ def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, seg
     wf, tf = key(width), key(thick)
     twf = key(twist) if twist is not None else None
     c0 = np.asarray(centre, dtype=np.float64)
-    rings, ts = [], []
+    rings, ts, frames = [], [], []
     m = len(path)
     for i, p in enumerate(path):
         t = i / (m - 1.0)
@@ -702,6 +850,7 @@ def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, seg
         p2 = ring2d(n, w, th, th * under, ef=e, eb=2.0)
         rings.append(place(p2, p, ex, -out))
         ts.append(t)
+        frames.append((t, p, ex, out, w, th))
     ob = shapes.grid_mesh(name, rings, cap0='fan', cap1='fan' if not blunt else 'round')
     bl.recalc_normals(ob)
     col.paint(ob, color, cls)
@@ -714,24 +863,42 @@ def lock(ch, name, pts, width, thick, color, centre, under=0.35, n=8, e=2.5, seg
             col.paint(ob, top[0], cls, faces=(fn[:, 2] > top[1]) & (ft > (top[2] if len(top) > 2 else 0.25)))
         if tip:
             col.paint(ob, tip[1], cls, faces=ft > tip[0])
-    ob.vertex_groups.clear()
-    ws = np.zeros(nv) if not sway else np.array([smoothstep(sway[1], sway[2], t) for t in vt])
-    wg = np.zeros(nv) if not grow else np.array([smoothstep(grow[1], grow[2], t) for t in vt])
-    groups = {}
+    def weigh(o, vt):
+        o.vertex_groups.clear()
+        groups = {}
 
-    def put(b, i, x):
-        if x > 1e-4:
-            g = groups.get(b) or groups.setdefault(b, ob.vertex_groups.new(name=b))
-            g.add([i], float(x), 'REPLACE')
-    for i in range(nv):
-        put(bone, i, (1 - ws[i]) * (1 - wg[i]))
-        if sway:
-            put(sway[0], i, ws[i] * (1 - wg[i]))
-        if grow:
-            put(grow[0], i, wg[i])
+        def put(b, i, x):
+            if x > 1e-4:
+                g = groups.get(b) or groups.setdefault(b, o.vertex_groups.new(name=b))
+                g.add([i], float(x), 'REPLACE')
+        for i, t in enumerate(vt):
+            s_ = smoothstep(sway[1], sway[2], t) if sway else 0.0
+            g_ = smoothstep(grow[1], grow[2], t) if grow else 0.0
+            put(bone, i, (1 - s_) * (1 - g_))
+            if sway:
+                put(sway[0], i, s_ * (1 - g_))
+            if grow:
+                put(grow[0], i, g_)
+    weigh(ob, vt)
     if line is not None:
         outline.set_weight(ob, line)
     ch.parts.append(ob)
+    for ci, (u, t0, t1) in enumerate(cuts or ()):
+        rows, tt = [], []
+        fr = [f for f in frames if t0 - 1e-6 <= f[0] <= t1 + 1e-6]
+        for k, (t, p, ex, out, w, th) in enumerate(fr):
+            z = th * max(0.0, 1 - abs(u) ** e) ** (1.0 / e)
+            hw_ = cut_w * (0.25 if k in (0, len(fr) - 1) else 1.0)
+            c1 = p + ex * (u * w) + out * (z + 0.0025)
+            rows.append([c1 - ex * hw_, c1 + ex * hw_])
+            tt += [t, t]
+        if len(rows) < 2:
+            continue
+        cu = _sheet('%s_cut%d' % (name, ci), rows, lambda cc: cc - c0)
+        col.paint(cu, cut_color, cls)
+        weigh(cu, tt)
+        outline.set_weight(cu, 0.0)
+        ch.parts.append(cu)
     return ob
 
 
@@ -774,10 +941,13 @@ def slacks(ch, color, top='hip', leg=0.74, cuff_from=0.64, fit=0.014, seat=0.010
 
 # ------------------------------------------------------------------ chunky high-tops (rounded: built on outfit.sneaker_cage)
 def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', lace='#2B2740', tongue=None, lining='#2B2740', foxing=None,
-           length=1.30, width=1.50, sole_h=0.05, collar=0.10, laces=4, tongue_rise=0.045, bumper=0.010, toe_out=0.0, name='Shoe'):
+           length=1.30, width=1.50, sole_h=0.05, collar=0.10, laces=4, tongue_rise=0.045, bumper=0.010, toe_out=0.0, name='Shoe',
+           tread=None, tab=None, logo=None):
     """Oversized high-top trainers with form: the subdivided sneaker body (toe cap, heel counter, padded collar),
     a separate thick sole that steps out from the upper all round, a tongue standing up in front of the ankle
-    and fat laces lying across the instep. toe_out: degrees the shoes turn out at rest. Hides the bare feet."""
+    and fat laces lying across the instep. toe_out: degrees the shoes turn out at rest. Hides the bare feet.
+    tread: a colour -> bars and a heel block under the sole (a kicked-up foot reads as a shoe, not a blob);
+    tab: a colour -> a pull tab at the back of the collar; logo: (colour, [(y, z) outline]) -> a mark on the outer side."""
     h = ch.h
     c = outfit.sneaker_cage(h, length=length, width=width, sole=sole_h, collar=collar, toe_up=0.018)
     D = c.dims
@@ -811,8 +981,8 @@ def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', la
         right = [(xc - hw - bumper, y) for y, xc, hw in pl][::-1]
         toe = [(pl[-1][1], pl[-1][0] - 0.022 - bumper)]
         heelp = [(pl[0][1], pl[0][0] + 0.016 + bumper)]
-        o2 = shapes.outline(left + toe + right + heelp, n=32, tension=0.5)
-        sl = shapes.extrude('%s_sole_%s' % (name, S), [(x * sgn, y) for x, y in o2], sole_h * 0.78, bevel=0.011, segments=2, plane='xy')
+        o2 = shapes.outline(left + toe + right + heelp, n=40, tension=0.5)
+        sl = shapes.extrude('%s_sole_%s' % (name, S), [(x * sgn, y) for x, y in o2], sole_h * 0.78, bevel=0.011, segments=1, plane='xy')
         P = bl.co(sl)
         ty = smoothstep_arr(pl[-3][0], pl[-1][0] - 0.03, P[:, 1])
         P[:, 2] += ty * D['toe_up'] * 1.2
@@ -820,10 +990,46 @@ def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', la
         bl.recalc_normals(sl)
         col.paint(sl, sole, 'sj_toon')
         parts.append(sl)
+        col.paint(up, sole, 'sj_toon', faces=(bl.face_normals(up)[:, 2] < -0.7) & (bl.face_centres(up)[:, 2] < 0.012))
+        pin = lambda yv, k: float(np.interp(-yv, [-q[0] for q in pl], [q[k] for q in pl]))
+        lift_ = lambda yv: float(smoothstep_arr(pl[-3][0], pl[-1][0] - 0.03, yv)) * D['toe_up'] * 1.2 - 0.0015
+        if tread:
+            y_h, y_t = pl[0][0], pl[-1][0]
+            bars = [(lerp(y_h, y_t, 0.03), lerp(y_h, y_t, 0.24))] + [(lerp(y_h, y_t, 0.40 + 0.115 * j), lerp(y_h, y_t, 0.40 + 0.115 * j + 0.062)) for j in range(5)]
+            for j, (ya, yb) in enumerate(bars):
+                rows = []
+                for yv in (ya, (ya + yb) / 2, yb):
+                    xc, hwv = pin(yv, 1) * sgn, (pin(yv, 2) + bumper) * (0.80 if j else 0.72)
+                    rows.append([vec(xc - hwv, yv, lift_(yv)), vec(xc + hwv, yv, lift_(yv))])
+                tb = _sheet('%s_tread%d_%s' % (name, j, S), rows, (0, 0, -1))
+                col.paint(tb, tread, 'sj_toon')
+                outline.set_weight(tb, 0.0)
+                parts.append(tb)
+        if tab:
+            tbx = shapes.block('%s_tab_%s' % (name, S), (0.026, 0.012, 0.062))
+            P = bl.co(tbx)
+            bl.set_co(tbx, P + vec(A[0] * sgn, D['collar_y'] + D['collar_r'] * 1.14, D['collar_z'] + 0.012))
+            col.paint(tbx, tab, 'sj_toon')
+            outline.set_weight(tbx, 0.6)
+            parts.append(tbx)
+        if logo:
+            ly, lz = D['heel_y'] - 0.40 * D['L'], sole_h + 0.034
+            hit = bvh.ray_cast((A[0] * sgn + sgn * 0.5, ly, lz), (-sgn, 0, 0), 1.0)[0]
+            if hit is not None:
+                lg = shapes.extrude('%s_logo_%s' % (name, S), [(y_, z_) for y_, z_ in logo[1]], 0.005, bevel=0.0, segments=1, plane='yz')
+                P = bl.co(lg)
+                P[:, 0] += (hit[0] - 0.0025 - P[:, 0].min()) if sgn > 0 else (hit[0] + 0.0025 - P[:, 0].max())
+                P[:, 1] += ly
+                P[:, 2] += lz
+                bl.set_co(lg, P)
+                bl.recalc_normals(lg)
+                col.paint(lg, logo[0], 'sj_toon')
+                outline.set_weight(lg, 0.0)
+                parts.append(lg)
         # the tongue: a rounded tab in front of the ankle, leaning forward
         ty0 = D['collar_y'] - D['collar_r'] * 1.02
         tz = D['collar_z'] + tongue_rise
-        tg = shapes.box('%s_tongue_%s' % (name, S), (D['collar_r'] * 1.75, 0.022, 0.115), bevel=0.008, segments=2, corner=0.030, steps=3)
+        tg = shapes.box('%s_tongue_%s' % (name, S), (D['collar_r'] * 1.75, 0.022, 0.115), bevel=0.008, segments=1, corner=0.030, steps=2)
         P = bl.co(tg)
         a = math.radians(-14.0)
         y, z = P[:, 1].copy(), P[:, 2] - 0.0575
@@ -840,8 +1046,8 @@ def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', la
             xc = float(np.interp(-yj, [-q[0] for q in pl], [q[1] for q in pl])) * sgn
             hwj = float(np.interp(-yj, [-q[0] for q in pl], [q[2] for q in pl])) * 0.60
             rings = []
-            for i in range(5):
-                x = xc + hwj * (-1 + 2 * i / 4.0)
+            for i in range(4):
+                x = xc + hwj * (-1 + 2 * i / 3.0)
                 zs = []
                 for dy in (-0.011, 0.011):
                     hit = bvh.ray_cast((x, yj + dy, 1.0), (0, 0, -1), 2.0)
@@ -851,7 +1057,7 @@ def chunky(ch, body='#FFF7E6', cap='#2EC4B6', sole='#FF8A1F', heel='#2EC4B6', la
                 t = unit(vec(0, 1, sl_))
                 nrm = unit(np.cross(vec(1, 0, 0), t))
                 p = vec(x, yj, z0)
-                e = 0.3 if i in (0, 4) else 1.0
+                e = 0.3 if i in (0, 3) else 1.0
                 rings.append([p - t * 0.011 - nrm * 0.004, p + t * 0.011 - nrm * 0.004, p + t * 0.009 + nrm * 0.007 * e, p - t * 0.009 + nrm * 0.007 * e])
             lb = shapes.grid_mesh('%s_lace%d_%s' % (name, j, S), rings, cap0='flat', cap1='flat')
             bl.recalc_normals(lb)

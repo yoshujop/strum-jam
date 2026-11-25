@@ -18,19 +18,19 @@ from sjart import *                      # noqa: E402
 from sjart import outfit, wardrobe      # noqa: E402
 
 PAL = dict(skin='#E3A26B', teal='#2EC4B6', dark='#3A3552', paper='#FFF7E6', tang='#FF8A1F', sun='#FFCE3A', coral='#FF5E7E',
-           hair='#2B2740', under='#4A4466', amber='#FFB020', grape='#7B5CF0', ink='#2B2740', yoke='#D8D0EC')
+           hair='#2B2740', under='#4A4466', slack='#4B4486', rib='#7A72B4', stripe='#D8D0EC', amber='#FFB020', grape='#7B5CF0', ink='#2B2740', yoke='#D8D0EC')
 
 SPEC = HumanSpec(
-    height=1.78, head_h=0.29, head_w=0.216, head_d=0.236, jaw=0.74, chin=0.9, cheek=0.2, face_e=2.7, skull_e=2.1, ear=1.05, nose=0.0,
+    height=1.78, head_h=0.29, head_w=0.216, head_d=0.236, jaw=0.74, chin=0.9, cheek=0.2, face_e=2.7, skull_e=2.1, ear=1.05, nose=1.0,
     # a long face: cheekbones at the eye line, flat cheeks running down to a square jutting chin
-    tweak={'jaw': dict(rx=1.18, ryf=1.10, ef=2.7, dz=-0.004), 'mouth': dict(rx=0.93, ryf=1.02), 'forehead': dict(rx=1.04), 'crown': dict(rx=1.1)},
+    tweak={'jaw': dict(rx=1.30, ryf=1.20, ef=2.7, dz=-0.004), 'mouth': dict(rx=0.93, ryf=1.02), 'forehead': dict(rx=1.04), 'crown': dict(rx=1.1)},
     neck_len=0.115, neck_r=0.036,
-    torso_len=0.45, shoulder_w=0.325, chest_w=0.265, chest_d=0.165, waist_w=0.215, waist_d=0.145, hip_w=0.255, hip_d=0.165,
+    torso_len=0.45, shoulder_w=0.325, chest_w=0.265, chest_d=0.165, waist_w=0.215, waist_d=0.145, hip_w=0.278, hip_d=0.165,
     torso_e=2.4, trap=0.55, butt=0.006,
     posture=(-0.040, -0.026, 0.026, 0.022, -0.038),
     upperarm_len=0.30, forearm_len=0.28, r_shoulder=0.039, r_bicep=0.030, r_elbow=0.031, r_forearm=0.030, r_wrist=0.021,
-    hand_len=0.25, hand_w=0.118, hand_t=0.036, palm=0.46, finger_r=0.0165, finger_splay=9.0, finger_curl=10.0,
-    knee=0.50, stance=1.25, knee_fwd=0.012, r_thigh=0.061, r_midthigh=0.050, r_knee=0.045, r_calf=0.041, r_ankle=0.029,
+    forearm_rings=(0.14, 0.36, 0.52, 0.76), hand_len=0.25, hand_w=0.106, hand_t=0.036, palm=0.46, finger_r=0.0165, finger_splay=9.0, finger_curl=10.0,
+    knee=0.50, stance=1.25, knee_fwd=0.026, r_thigh=0.068, r_midthigh=0.057, r_knee=0.043, r_calf=0.044, r_ankle=0.029,
     shin_rings=(0.10, 0.30, 0.52, 0.64, 0.74, 0.88),
     foot_len=0.30, foot_w=0.105, foot_h=0.090)
 SCALE = 0.94                             # the design above is drawn at 1.78 m to the crown; he ships at 1.67 m (1.88 m with the quiff)
@@ -41,29 +41,41 @@ SPEC = SPEC.scaled(SCALE).but(posture=tuple(v * SCALE for v in SPEC.posture))
 # Every chunk grows out of the scalp, sweeps forward and up off the hairline, then rolls back and over to his RIGHT
 # (the strumming side, away from the guitar neck). name: (points, half widths, bulge, options)
 T_ = 'tang'
-WF = [(0, 0.050), (0.3, 0.068), (0.78, 0.056), (1, 0.008)]
-TF = [(0, 0.026), (0.35, 0.038), (0.78, 0.028), (1, 0.006)]
+WF = [(0, 0.050), (0.3, 0.066), (0.62, 0.050), (0.86, 0.022), (1, 0.005)]     # tips taper to a third of the base
+TF = [(0, 0.026), (0.35, 0.038), (0.70, 0.028), (1, 0.005)]
+CUT = [(-0.40, 0.14, 0.80), (0.38, 0.20, 0.72)]
 LOCKS = [
     ('Core', [(-0.030, 0.150, -0.010), (-0.055, 0.060, 0.070), (-0.080, -0.050, 0.100), (-0.075, -0.130, 0.060)],
      [(0, 0.060), (0.35, 0.105), (0.75, 0.112), (1, 0.085)], [(0, 0.030), (0.35, 0.065), (0.75, 0.075), (1, 0.045)], dict(n=10, seg=7, under=0.7, e=2.4)),
-    ('F_L', [(0.070, -0.080, -0.050), (0.085, -0.145, 0.020), (0.060, -0.140, 0.100), (0.015, -0.075, 0.150), (-0.020, 0.020, 0.150)],
-     WF, TF, dict(tip=0.66, n=10, seg=9, e=1.9)),
-    ('F_C', [(0.000, -0.090, -0.050), (0.000, -0.165, 0.030), (-0.035, -0.160, 0.120), (-0.075, -0.090, 0.185), (-0.105, 0.020, 0.195)],
-     WF, TF, dict(tip=0.66, n=10, seg=9, e=1.9)),
-    ('F_R', [(-0.070, -0.080, -0.050), (-0.100, -0.150, 0.030), (-0.140, -0.145, 0.110), (-0.170, -0.080, 0.165), (-0.195, 0.020, 0.170)],
-     WF, TF, dict(tip=0.66, n=10, seg=9, e=1.9)),
-    ('Streak', [(-0.035, -0.105, -0.040), (-0.050, -0.185, 0.035), (-0.090, -0.180, 0.120), (-0.128, -0.105, 0.197), (-0.145, -0.030, 0.185)],
-     [(0, 0.018), (0.4, 0.024), (1, 0.010)], [(0, 0.020), (0.5, 0.024), (1, 0.010)], dict(color=T_)),
-    ('Tail', [(-0.080, 0.020, 0.130), (-0.105, 0.090, 0.150), (-0.125, 0.150, 0.185)],
-     [(0, 0.050), (0.5, 0.042), (1, 0.006)], [(0, 0.028), (0.5, 0.026), (1, 0.005)], dict(n=8, seg=6, e=1.9)),
+    # three front chunks at staggered heights (low, high, middle), their tips tucked back into the mass
+    ('F_L', [(0.070, -0.080, -0.050), (0.088, -0.142, 0.015), (0.066, -0.136, 0.085), (0.022, -0.075, 0.128), (-0.015, 0.025, 0.105)],
+     WF, TF, dict(n=10, seg=8, e=1.9, cuts=CUT)),
+    ('F_C', [(0.000, -0.090, -0.050), (0.000, -0.170, 0.035), (-0.035, -0.168, 0.135), (-0.078, -0.095, 0.212), (-0.108, 0.025, 0.170)],
+     WF, TF, dict(n=10, seg=9, e=1.9, cuts=CUT)),
+    ('F_R', [(-0.070, -0.080, -0.050), (-0.100, -0.150, 0.030), (-0.142, -0.145, 0.105), (-0.172, -0.080, 0.160), (-0.190, 0.025, 0.125)],
+     WF, TF, dict(n=10, seg=8, e=1.9, cuts=CUT)),
+    ('Streak', [(-0.035, -0.105, -0.040), (-0.050, -0.190, 0.040), (-0.090, -0.186, 0.135), (-0.128, -0.112, 0.216), (-0.140, -0.040, 0.158)],
+     [(0, 0.018), (0.4, 0.024), (1, 0.008)], [(0, 0.020), (0.5, 0.024), (1, 0.008)], dict(color=T_, n=6)),
+    # one flick off the back of the quiff, curving down and back
+    ('Tail', [(-0.080, 0.020, 0.120), (-0.100, 0.078, 0.132), (-0.112, 0.118, 0.100)],
+     [(0, 0.050), (0.5, 0.040), (1, 0.006)], [(0, 0.028), (0.5, 0.024), (1, 0.005)], dict(n=8, seg=6, e=1.9)),
     ('Back', [(-0.020, 0.030, 0.030), (-0.030, 0.118, 0.020), (-0.022, 0.146, -0.060), (-0.012, 0.138, -0.135)],
-     [(0, 0.070), (0.4, 0.084), (0.8, 0.060), (1, 0.022)], [(0, 0.024), (0.4, 0.030), (1, 0.010)], dict(sway=False)),
+     [(0, 0.070), (0.4, 0.084), (0.8, 0.060), (1, 0.022)], [(0, 0.024), (0.4, 0.030), (1, 0.010)], dict(sway=False, cuts=[(-0.3, 0.3, 0.9), (0.35, 0.35, 0.85)])),
     ('S_R', [(-0.095, -0.060, -0.060), (-0.124, 0.020, -0.050), (-0.112, 0.105, -0.085)],
-     [(0, 0.034), (0.5, 0.040), (1, 0.012)], [(0, 0.016), (0.5, 0.022), (1, 0.008)], dict(sway=False, n=8, seg=6)),
+     [(0, 0.034), (0.5, 0.040), (1, 0.012)], [(0, 0.016), (0.5, 0.022), (1, 0.008)], dict(sway=False, n=6, seg=5)),
     ('S_L', [(0.095, -0.060, -0.060), (0.124, 0.020, -0.050), (0.112, 0.105, -0.085)],
-     [(0, 0.034), (0.5, 0.040), (1, 0.012)], [(0, 0.016), (0.5, 0.022), (1, 0.008)], dict(sway=False, n=8, seg=6)),
+     [(0, 0.034), (0.5, 0.040), (1, 0.012)], [(0, 0.016), (0.5, 0.022), (1, 0.008)], dict(sway=False, n=6, seg=5)),
+    # nape chunks behind the ears and a sideburn in front of each
+    ('N_R', [(-0.075, 0.085, -0.060), (-0.082, 0.128, -0.120), (-0.050, 0.120, -0.190)],
+     [(0, 0.030), (0.5, 0.036), (1, 0.008)], [(0, 0.014), (0.5, 0.020), (1, 0.006)], dict(sway=False, n=6, seg=5)),
+    ('N_L', [(0.075, 0.085, -0.060), (0.082, 0.128, -0.120), (0.050, 0.120, -0.190)],
+     [(0, 0.030), (0.5, 0.036), (1, 0.008)], [(0, 0.014), (0.5, 0.020), (1, 0.006)], dict(sway=False, n=6, seg=5)),
+    ('B_R', [(-0.098, -0.040, -0.085), (-0.108, -0.048, -0.130), (-0.103, -0.060, -0.178)],
+     [(0, 0.016), (0.5, 0.017), (1, 0.005)], [(0, 0.008), (0.5, 0.011), (1, 0.004)], dict(sway=False, n=6, seg=4)),
+    ('B_L', [(0.098, -0.040, -0.085), (0.108, -0.048, -0.130), (0.103, -0.060, -0.178)],
+     [(0, 0.016), (0.5, 0.017), (1, 0.005)], [(0, 0.008), (0.5, 0.011), (1, 0.004)], dict(sway=False, n=6, seg=4)),
     ('Stray', [(0.050, -0.100, -0.050), (0.068, -0.140, -0.072), (0.058, -0.132, -0.122)],
-     [(0, 0.018), (0.5, 0.020), (1, 0.007)], [(0, 0.012), (0.5, 0.014), (1, 0.006)], dict(sway=False, n=8, seg=6)),
+     [(0, 0.018), (0.5, 0.020), (1, 0.007)], [(0, 0.012), (0.5, 0.014), (1, 0.006)], dict(sway=False, n=6, seg=4)),
 ]
 
 
@@ -77,14 +89,14 @@ def hair(ch, pal):
     centre = hp((0.0, 0.0, -0.11))
     spr = ch.spring('quiff', [hp((0, -0.03, -0.02)), hp((-0.05, -0.05, 0.16))], 'head')[0]
     base = hp((-0.03, -0.06, 0.06))
-    ch.joints['hype_1'] = (base, base + unit(vec(-0.25, 0.0, 1.0)) * 0.05)
+    ch.joints['hype_1'] = (base, base + unit(vec(-0.22, -0.30, 1.0)) * 0.05)
     ch.parents['hype_1'] = spr
     for name, pts, wd, th, o in LOCKS:
         sway = o.get('sway', True)
         wardrobe.lock(ch, 'Hair_' + name, [hp(p) for p in pts], [(t, w * k) for t, w in wd], [(t, x * k) for t, x in th],
                       pal[o.get('color', 'hair')], centre, cls=o.get('cls', 'sj_toon'), e=o.get('e', 2.8), under=o.get('under', 0.4),
                       tip=(o['tip'], pal['tang']) if o.get('tip') else None, n=o.get('n', 8), segments=o.get('seg', 9),
-                      sway=(spr, 0.15, 0.7) if sway else None, grow=('hype_1', 0.45, 1.0) if sway else None, line=o.get('line'))
+                      sway=(spr, 0.15, 0.7) if sway else None, grow=('hype_1', 0.30, 0.95) if sway else None, line=o.get('line'), cuts=o.get('cuts'))
 
 
 def build(name='riff', pal=PAL):
@@ -94,20 +106,25 @@ def build(name='riff', pal=PAL):
     ch = Character(name, h, skin=pal['skin'])
     ch.face_flat = 0.7
     # ---- legs and feet: carrot trousers with a rolled cuff breaking on the biggest high-tops in the band
-    wardrobe.slacks(ch, pal['dark'], top='hip', leg=0.74, cuff_from=0.64)
+    tr = wardrobe.slacks(ch, pal['slack'], top='hip', leg=0.74, cuff_from=0.64, thigh=0.020, brk=0.010)
+    for sg, S in ((1.0, 'L'), (-1.0, 'R')):                     # a pale side stripe: the legs keep a shape on a dark stage
+        m = vec(sg, 1, 1)
+        path = [lerp(h.H, h.K, f) * m for f in (0.04, 0.3, 0.6, 0.85)] + [lerp(h.K, h.A, f) * m for f in (0.0, 0.2, 0.42, 0.60)]
+        wardrobe.stripe(ch, 'Stripe_' + S, pal['stripe'], path, (sg, 0, 0), (0, 1, 0), width=0.019, targets=[tr])
     wardrobe.band(ch, 'Sock', pal['paper'], fit=0.008, ext=0.004, shin=(0.74, 1.0), lip=0.0)
-    wardrobe.chunky(ch, body=pal['paper'], cap=pal['teal'], sole=pal['tang'], heel=pal['teal'], lace=pal['ink'], toe_out=7.0, length=1.38, width=1.60)
+    wardrobe.chunky(ch, body=pal['paper'], cap=pal['teal'], sole=pal['tang'], heel=pal['teal'], lace=pal['ink'], toe_out=7.0, length=1.38, width=1.60,
+                    tread=pal['ink'], tab=pal['tang'], logo=(pal['tang'], [(y, z + 0.019) for y, z in wardrobe.pick_outline(0.036, 0.038, n=6)]))
 
     # ---- tee (front + a tail under the cropped jacket), bomber, strap
     tee = wardrobe.tee_front(ch, pal['paper'], hem='pelvis', drop=0.0)
     wardrobe.band(ch, 'TeeTail', pal['paper'], fit=0.022, ext=0.014, lip=0.010, torso=('hip', 'pelvis'))
-    wardrobe.bomber(ch, pal['teal'], trim=pal['dark'], zip_color=pal['paper'], fit=0.022, box=0.055, puff=0.026, yoke=0.022,
+    wardrobe.bomber(ch, pal['teal'], trim=pal['dark'], zip_color=pal['paper'], fit=0.026, box=0.062, puff=0.042, yoke=0.034, rib=pal['rib'],
                     sleeve=0.36, cuff_from=0.14, cuff_fit=0.030, hem='pelvis', drop=0.020, hem_in=0.040, bands=0.014,
                     collar=0.021, collar_rise=0.012)
-    wardrobe.strap(ch, pal['paper'], a=(0.150, 0.0, h.sz + 0.055), b=(-0.125, 0.0, h.hz + 0.25), width=0.06, thick=0.009, gap=0.002, n=20, squares=6, square_color=pal['ink'])
+    wardrobe.strap(ch, pal['paper'], a=(0.150, 0.0, h.sz + 0.055), b=(-0.150, 0.0, h.hz + 0.07), width=0.06, thick=0.009, gap=0.007, n=20, squares=6, square_color=pal['ink'])
     pk = [(x * 1.2 - 0.040, z * 1.2 - 0.010) for x, z in wardrobe.pick_outline(0.052, 0.062, n=12)]
     wardrobe.patch(ch, 'Patch', [dict(ring=(0.090, 0.066), n=18), pk], pal['paper'], centre=(-0.035, h.hz + 0.70 * sp.torso_len), levels=2)
-    wardrobe.band(ch, 'Sweatband', pal['sun'], fit=0.012, ext=0.010, forearm=(0.62, 0.86), sides='R')
+    wardrobe.band(ch, 'Sweatband', pal['sun'], fit=0.012, ext=0.010, forearm=(0.52, 0.76), sides='R')
 
     # ---- the small things
     ear_x = sp.head_w * 0.5 * 0.955 + 0.024
