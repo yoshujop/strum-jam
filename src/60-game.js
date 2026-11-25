@@ -218,18 +218,26 @@ const G = {
     this.showFeedback(ev, now);
     this.practiceHint(ev, now);
   },
-  // the neural listener: judge the latest strum once the model has heard ~0.35 s of it
+  // the neural listener: judge EVERY strum since this chord came up, once the model has heard ~0.3 s of it. Any one that
+  // passes wins, so a phantom or a re-strum can't cancel a good strum that is still being listened to.
   practiceListen(ev){
-    let ts = null; for (const t of Listen.strums) if (t > this.chordStart - 0.25 && t >= Mic.deafUntil) ts = t;
-    if (ts == null) return false;
-    const upto = Math.min(ts + 0.8, Listen.reliableT);
-    if (upto < ts + 0.3 || Listen.lastT < ts + 0.52 || (this.judgedUpto && this.judgedStrum === ts && upto - this.judgedUpto < 0.05)) return false;
+    const pj = this.pj && this.pj.ev === ev ? this.pj : (this.pj = { ev, at: new Map() });
     const midis = ev.notes.map(n => n.midi);
-    if (this.judgedStrum !== ts) { this.judgedStrum = ts; this.strumFresh = Listen.freshness(ts, midis); }
-    this.judgedUpto = upto;
+    for (const ts of Listen.strums) {
+      if (!(ts > this.chordStart - 0.25 && ts >= Mic.deafUntil)) continue;
+      const st = pj.at.get(ts) || { upto: 0, fresh: undefined };
+      const upto = Math.min(ts + 0.8, Listen.reliableT);
+      if (upto < ts + 0.3 || upto - st.upto < 0.05) continue;
+      if (st.fresh === undefined) st.fresh = Listen.freshness(ts, midis);
+      st.upto = upto; pj.at.set(ts, st);
+      if (this.practiceJudge(ev, ts, upto, midis, st.fresh)) return true;
+    }
+    return false;
+  },
+  practiceJudge(ev, ts, upto, midis, fr){
     const r = Listen.judge(Listen.heard(ts + 0.04, upto), midis, G.strictMode());
-    // the model says WHICH notes; the spectrum says they're NEW at this strum
-    const fr = this.strumFresh; r.freshDsp = fr;
+    // the model says WHICH notes, and that they're NEW at this strum
+    r.freshDsp = fr;
     if (fr && !fr.ok) r.ok = false;
     const isNew = m => !fr || fr.roseSet.has(m) || fr.rose(m);          // only notes that started at your strum are shown
     this.lastR = r; this.lastEvalAt = AudioEngine.now();
@@ -374,14 +382,17 @@ const G = {
       for (let i = 0; i < this.list.length; i++) {
         const ev = this.list[i]; if (ev.final || ev.listened) continue;
         if (ev.t > Listen.reliableT) break;
-        const next = this.list[i + 1], t0 = (ev.onsetT != null ? ev.onsetT : ev.t) + 0.04;
-        const t1 = Math.min(t0 + 0.55, next ? Math.max(t0 + 0.25, next.t - 0.02) : t0 + 0.55);
-        if (Listen.reliableT < t1) continue;
-        if (Listen.lastT < t0 + 0.5) continue;
+        // every strum around this chord's beat is tried (Hear.spanVerdict), not just the one that took the timing slot
+        const next = this.list[i + 1], lat = Settings.latency / 1000, midisS = ev.notes.map(n => n.midi);
+        const v = Hear.spanVerdict(ev.t + lat - 0.3, ev.t + lat + 0.3, midisS, G.strictMode(), { at: ev.onsetT != null ? ev.onsetT + lat : null, end: next ? next.t + lat : null });
+        if (!v) continue;
         ev.listened = true;
-        const midisS = ev.notes.map(n => n.midi);
-        const r = Listen.judge(Listen.heard(t0, t1), midisS, G.strictMode());
-        const frS = Listen.freshness(t0 - 0.04, midisS); if (frS && !frS.ok) { r.ok = false; r.attempt = false; r.wrongNotes = []; }
+        // a sound took this chord's timing slot but the model found no strum and none of the chord there (the band through the
+        // speakers, a knock, a voice): nobody played, so it is a MISS, not a WRONG CHORD
+        if (!v.ok && !v.strum && !v.attempt && ev.timing && ev.timing !== 'miss') { ev.timing = 'miss'; ev.onsetT = null; this.counts.miss++; Stage.popup('MISS', COL.bad); this.lastMissAt = now; Stage.shake = 5; Sfx.miss(); this.addHype(-0.22); }
+        const r = { ok: v.ok, noteState: v.noteState, attempt: v.attempt && v.fresh, wrongNotes: v.fresh ? v.wrong : [] };
+        // the strum that carried the chord is the one that's timed
+        if (v.ok && v.t != null && ev.timing !== 'miss' && (ev.onsetT == null || Math.abs(v.t - lat - ev.onsetT) > 0.05)) { const d = v.t - lat - ev.t, a = Math.abs(d); if (a <= 0.3) { ev.timing = a <= 0.07 ? 'perfect' : a <= 0.13 ? 'great' : a <= 0.22 ? 'good' : 'ok'; ev.side = d < 0 ? 'EARLY' : 'LATE'; ev.onsetT = v.t - lat; } }
         ev.earN = 1; ev.earOk = r.ok ? 2 : 0;
         ev.heardAtS = ev.heardAtS || [-9,-9,-9,-9,-9,-9]; ev.missAtS = ev.missAtS || [-9,-9,-9,-9,-9,-9]; ev.wrongSeenS = ev.wrongSeenS || {};
         for (const n of ev.notes) { const st = r.noteState[n.midi]; if (st === 'heard') { ev.heard.add(n.string); ev.heardAtS[n.string] = now; } else if (st === 'missing' && r.attempt) { ev.missed.add(n.string); ev.missAtS[n.string] = now; } }

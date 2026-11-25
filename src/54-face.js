@@ -26,15 +26,24 @@
 // ---- face spec (all optional; FaceDecal.SPEC holds the defaults, FaceDecal.SPECS a few ready-made faces) ------
 //   { ink: '#1E1B2E', line: 7.5, scale: 1.16 (everything, about the point between the eyes: big graphic features read at
 //     stage distance; the numbers below are before this scale),
-//     eyes:  { shape: 'oval' | 'round' | 'almond' | 'half' | 'rect' | 'dot', x: 44 (half the spacing), y: 0, w: 21, h: 27
+//     eyes:  { shape: 'oval' | 'round' | 'almond' | 'half' | 'rect' | 'dot' | 'dee' (a D, flat side up), x: 44 (half the spacing), y: 0, w: 21, h: 27
 //              (radii), tilt: degrees (outer corners up), white: '#fff', iris: null | colour, pupil: 0.56 (of the eye),
-//              shine: true, lash: 0..3, lidLine: 1 (weight of the lid line, x line) },
-//     brows: { style: 'bar' | 'arc' | 'taper' | 'thin', x: 44, y: -42, w: 22 (half length), thick: 9, color },
+//              shine: true | 'square', lash: 0..3, lidLine: 1 (weight of the lid line, x line),
+//              pupilShape: null | 'pick' (a rounded triangle, point down), lid: 0 (always draw the upper lid line when > 0),
+//              L: { scale, open, lidLine }, R: { ... } permanent per-eye differences (the CHARACTER's left / right):
+//              size, a multiplier on the openness, the lid weight },
+//     brows: { style: 'bar' | 'arc' | 'taper' | 'thin' | 'slab' (a parallelogram), x: 44, y: -42, w: 22 (half length),
+//              thick: 9, color, slit: null | 'L' | 'R' (a shaved slit through that brow),
+//              L: { dy, a }, R: { ... } a permanent offset of one brow: units down, degrees inner end down },
 //     mouth: { y: 68, w: 29 (half width), inner: '#6b1730', tongue: '#ff6f91', teeth: 'top' | 'both' | 'none' | 'grill' |
-//              'gap' | 'fangs', teethColor: '#fff', lip: null | colour },
+//              'gap' | 'fangs', teethColor: '#fff', lip: null | colour, x: 0 (off-centre), hook: 0..1 (a hooked-up end on
+//              the high side of a skewed shut mouth) },
 //     extras: [ { type: 'blush', style: 'oval' | 'lines', color, x, y }, { type: 'freckles' }, { type: 'moustache', style:
 //              'handlebar' | 'brush', color }, { type: 'goatee', color }, { type: 'shades', color, shine }, { type:
-//              'glasses', color }, { type: 'mole', x, y }, { type: 'scar', x, y }, { type: 'bags' }, { type: 'star', x, y, color } ] }
+//              'glasses', color }, { type: 'mole', x, y }, { type: 'scar', x, y }, { type: 'bags' }, { type: 'star', x, y, color },
+//              { type: 'dots', x, y, r, pts: [[dx, dy], ...] } (ink dots: a freckle chord; they hop with the `jump` parameter),
+//              { type: 'tick', x, y, w, h } (a nose tick), { type: 'pick', color, size, rot, dx, dy, line } (a pick in the low corner of a shut
+//              mouth; hidden by the `pick: 0` parameter and whenever the mouth opens) ] }
 //
 // ---- expression parameters -----------------------------------------------------------------------------------
 //   eoL, eoR   eye openness 0..1.25 (eo sets both; L / R are the CHARACTER's left / right)
@@ -43,7 +52,8 @@
 //   browA      degrees: + angry (inner ends down), - worried        browY  raise (+) / lower (-), in brow thicknesses
 //   browAs     asymmetry: + raises the character's left brow, lowers the right one (the "oh really" brow)
 //   lx, ly     pupil look target, -1..1 (also face.look)     pup   pupil size multiplier
-//   glyph      null | 'x' | 'squeeze' (> <) | 'star'         replaces the eyes
+//   glyph      null | 'x' | 'squeeze' (> <) | 'star' | 'flat' (two flat lines)        replaces the eyes
+//   pick       1 | 0  show the mouth pick (spec extras)        jump   units the 'dots' extra hops up
 //   mouth      a shape name from FaceDecal.MOUTHS (neutral, flat, smile, smirk, grin, open, ah, oh, oo, ee, yell, grit,
 //              laugh, frown, wobble, pout, tongue, whistle) or its raw numbers { w, o, c, s, r, t, g, wob }:
 //              width, open, curve (+ smile / - frown), skew (smirk), round, teeth (1 = top row, 2 = clenched), tongue
@@ -66,9 +76,9 @@ const FaceDecal = (function(){
   const TAU = Math.PI * 2, DEG = Math.PI / 180;
   const SPEC = {
     ink: '#1E1B2E', line: 7.5, scale: 1.16,
-    eyes: { shape: 'oval', x: 44, y: 0, w: 21, h: 27, tilt: 0, white: '#ffffff', iris: null, pupil: 0.56, shine: true, lash: 0, lidLine: 1 },
-    brows: { style: 'taper', x: 44, y: -42, w: 22, thick: 9, color: null },
-    mouth: { y: 68, w: 29, inner: '#6b1730', tongue: '#ff6f91', teeth: 'top', teethColor: '#ffffff', lip: null },
+    eyes: { shape: 'oval', x: 44, y: 0, w: 21, h: 27, tilt: 0, white: '#ffffff', iris: null, pupil: 0.56, shine: true, lash: 0, lidLine: 1, pupilShape: null, lid: 0, L: null, R: null },
+    brows: { style: 'taper', x: 44, y: -42, w: 22, thick: 9, color: null, slit: null },
+    mouth: { y: 68, w: 29, inner: '#6b1730', tongue: '#ff6f91', teeth: 'top', teethColor: '#ffffff', lip: null, x: 0, hook: 0 },
     extras: []
   };
   // ready-made faces: original band members used by the demos (specs are plain data; make your own)
@@ -80,8 +90,8 @@ const FaceDecal = (function(){
     boss: { eyes: { shape: 'rect', w: 20, h: 17, iris: '#2EC4B6' }, brows: { style: 'bar', thick: 12, w: 26, color: '#3a2a20' }, mouth: { teeth: 'both', w: 30 }, extras: [{ type: 'goatee', color: '#3a2a20' }, { type: 'scar', x: 66, y: -18 }] },
     shady: { eyes: { shape: 'round', w: 20, h: 20 }, brows: { style: 'bar', color: '#1E1B2E' }, extras: [{ type: 'shades', color: '#FF8FC7' }] }
   };
-  const E0 = { eoL: 1, eoR: 1, ec: -1, sq: 0, lid: 0, browA: 0, browY: 0, browAs: 0, lx: 0, ly: 0, pup: 1, glyph: null, mouth: 'neutral', blush: 0, mark: null };
-  const NUM = ['eoL', 'eoR', 'ec', 'sq', 'lid', 'browA', 'browY', 'browAs', 'pup', 'blush'];
+  const E0 = { eoL: 1, eoR: 1, ec: -1, sq: 0, lid: 0, browA: 0, browY: 0, browAs: 0, lx: 0, ly: 0, pup: 1, glyph: null, mouth: 'neutral', blush: 0, mark: null, pick: 1, jump: 0 };
+  const NUM = ['eoL', 'eoR', 'ec', 'sq', 'lid', 'browA', 'browY', 'browAs', 'pup', 'blush', 'jump'];
   const M0 = { w: 1, o: 0, c: 0, s: 0, r: 0, t: 0, g: 0, wob: 0 }, MK = ['w', 'o', 'c', 's', 'r', 't', 'g', 'wob'];
   const MOUTHS = {
     neutral: { w: 0.62, c: 0.25 }, flat: { w: 0.75, c: 0 }, smile: { w: 1, c: 0.85 }, smirk: { w: 0.8, c: 0.7, s: 0.75 },
@@ -123,7 +133,7 @@ const FaceDecal = (function(){
   function mix(a, b, t, out){
     for (const k of NUM) out[k] = a[k] + (b[k] - a[k]) * t;
     for (const k of MK) out.mouth[k] = a.mouth[k] + (b.mouth[k] - a.mouth[k]) * t;
-    const s = t < 0.5 ? a : b; out.glyph = s.glyph; out.mark = s.mark; out.lx = b.lx; out.ly = b.ly;
+    const s = t < 0.5 ? a : b; out.glyph = s.glyph; out.mark = s.mark; out.pick = s.pick; out.lx = b.lx; out.ly = b.ly;
     if (out.eoL < 0) out.eoL = 0; if (out.eoR < 0) out.eoR = 0; if (out.mouth.o < 0) out.mouth.o = 0;
     return out;
   }
@@ -196,16 +206,23 @@ const FaceDecal = (function(){
       if (shape === 'almond') { c.moveTo(-w, 0); c.quadraticCurveTo(0, -h * 2, w, 0); c.quadraticCurveTo(0, h * 2, -w, 0); c.closePath(); }
       else if (shape === 'half') { c.moveTo(-w, -h * 0.3); c.lineTo(w, -h * 0.3); c.bezierCurveTo(w, h * 1.45, -w, h * 1.45, -w, -h * 0.3); c.closePath(); }
       else if (shape === 'rect') { const r = Math.min(w, h) * 0.5; c.moveTo(-w + r, -h); c.arcTo(w, -h, w, h, r); c.arcTo(w, h, -w, h, r); c.arcTo(-w, h, -w, -h, r); c.arcTo(-w, -h, w, -h, r); c.closePath(); }
+      else if (shape === 'dee') { const r = Math.min(w, h) * 0.3; c.moveTo(-w + r, -h); c.lineTo(w - r, -h); c.quadraticCurveTo(w, -h, w, -h + r); c.bezierCurveTo(w, h * 1.62, -w, h * 1.62, -w, -h + r); c.quadraticCurveTo(-w, -h, -w + r, -h); c.closePath(); }
       else c.ellipse(0, 0, w, shape === 'round' ? w : h, 0, 0, TAU);
     },
+    _pick(c, x, y, rw, rh){                                 // a guitar pick, point down, centred on (x, y)
+      c.beginPath(); c.moveTo(x - rw * 0.62, y - rh); c.lineTo(x + rw * 0.62, y - rh); c.bezierCurveTo(x + rw * 1.25, y - rh, x + rw * 1.2, y - rh * 0.1, x + rw * 0.32, y + rh * 0.82);
+      c.quadraticCurveTo(x, y + rh * 1.2, x - rw * 0.32, y + rh * 0.82); c.bezierCurveTo(x - rw * 1.2, y - rh * 0.1, x - rw * 1.25, y - rh, x - rw * 0.62, y - rh); c.closePath();
+    },
     _eye(c, sx, open, e){
-      const sp = this.spec, E = sp.eyes, w = E.w, lw = sp.line; let h = E.shape === 'round' ? E.w : E.h;
+      const sp = this.spec, E = sp.eyes, sd = (sx > 0 ? E.L : E.R) || {}, k = sd.scale || 1, w = E.w * k, lw = sp.line; let h = (E.shape === 'round' ? E.w : E.h) * k;
+      if (sd.open != null && open > 0.1) open = open > 1 ? sd.open + (open - 1) * 0.5 : open * sd.open;
       c.save(); c.translate(sx * E.x, E.y); c.rotate(-sx * E.tilt * DEG);
       c.strokeStyle = sp.ink; c.fillStyle = sp.ink; c.lineWidth = lw;
       if (e.glyph) {
         const g = e.glyph, r = Math.max(w, h * 0.8);
         if (g === 'x') { c.lineWidth = lw * 1.15; c.beginPath(); c.moveTo(-r * 0.75, -r * 0.75); c.lineTo(r * 0.75, r * 0.75); c.moveTo(r * 0.75, -r * 0.75); c.lineTo(-r * 0.75, r * 0.75); c.stroke(); }
         else if (g === 'squeeze') { c.lineWidth = lw * 1.15; c.beginPath(); c.moveTo(sx * r * 0.85, -r * 0.7); c.lineTo(-sx * r * 0.6, 0); c.lineTo(sx * r * 0.85, r * 0.7); c.stroke(); }
+        else if (g === 'flat') { c.lineWidth = lw * 1.5; c.beginPath(); c.moveTo(-w * 0.95, 0); c.lineTo(w * 0.95, 0); c.stroke(); }
         else if (g === 'star') { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = (i % 2 ? 0.5 : 1.15) * r; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); c.fillStyle = '#FFCE3A'; c.fill(); c.lineWidth = lw * 0.8; c.stroke(); }
         c.restore(); return;
       }
@@ -224,19 +241,23 @@ const FaceDecal = (function(){
       this._shape(c, E.shape, ww, h); c.fillStyle = E.white; c.fill();
       c.save(); c.clip();
       const pr = Math.min(ww, h) * E.pupil * e.pup, px = e.lx * (ww - pr * 0.8) * 0.8, py = e.ly * (h - pr) * 0.75 + (E.shape === 'half' ? h * 0.25 : 0);
-      if (E.iris) { c.fillStyle = E.iris; c.beginPath(); c.ellipse(px, py, pr * 1.25, pr * 1.5, 0, 0, TAU); c.fill(); c.lineWidth = lw * 0.45; c.stroke();
+      if (E.pupilShape === 'pick') {
+        if (E.iris) { c.fillStyle = E.iris; this._pick(c, px, py, pr * 1.3, pr * 1.52); c.fill(); }
+        c.fillStyle = sp.ink; this._pick(c, px, py + pr * 0.04, pr * 0.98, pr * 1.2); c.fill(); }
+      else if (E.iris) { c.fillStyle = E.iris; c.beginPath(); c.ellipse(px, py, pr * 1.25, pr * 1.5, 0, 0, TAU); c.fill(); c.lineWidth = lw * 0.45; c.stroke();
         c.fillStyle = sp.ink; c.beginPath(); c.ellipse(px, py, pr * 0.62, pr * 0.8, 0, 0, TAU); c.fill(); }
       else { c.fillStyle = sp.ink; c.beginPath(); c.ellipse(px, py, pr * 0.92, pr * 1.2, 0, 0, TAU); c.fill(); }
-      if (E.shine) { c.fillStyle = '#fff'; c.beginPath(); c.arc(px - pr * 0.36, py - pr * 0.5, pr * 0.33, 0, TAU); c.fill(); }
+      if (E.shine === 'square') { const q = pr * 0.46; c.fillStyle = E.white; c.fillRect(px - pr * 0.62, py - pr * 0.86, q, q); if (e.pup < 0.72) c.fillRect(px + pr * 0.1, py - pr * 0.2, q * 0.7, q * 0.7); }
+      else if (E.shine) { c.fillStyle = '#fff'; c.beginPath(); c.arc(px - pr * 0.36, py - pr * 0.5, pr * 0.33, 0, TAU); c.fill(); }
       c.restore();
       c.strokeStyle = sp.ink; c.lineWidth = lw; this._shape(c, E.shape, ww, h); c.stroke();
       // lids: erase what they cover (the skin shows through), then ink the lid line
       const cut = 1 - Math.min(1, open), yi = -h + 2 * h * cut + Math.max(0, e.lid) * h * 0.95, yo = -h + 2 * h * cut + Math.max(0, -e.lid) * h * 0.95;
       const xi = -sx * (ww + lw), xo = sx * (ww + lw), B = 200;
-      if (cut > 0.01 || Math.abs(e.lid) > 0.02) {
+      if (cut > 0.01 || Math.abs(e.lid) > 0.02 || E.lid > 0) {
         c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.moveTo(xi, yi - lw * 0.4); c.lineTo(xo, yo - lw * 0.4); c.lineTo(xo, -B); c.lineTo(xi, -B); c.closePath(); c.fill();
         c.globalCompositeOperation = 'source-over'; c.save(); this._shape(c, E.shape, ww + lw * 0.5, h + lw * 0.5); c.clip();
-        c.lineWidth = lw * 1.25 * E.lidLine; c.beginPath(); c.moveTo(xi, yi); c.lineTo(xo, yo); c.stroke(); c.restore();
+        c.lineWidth = lw * 1.25 * (sd.lidLine || E.lidLine); c.beginPath(); c.moveTo(xi, yi); c.lineTo(xo, yo); c.stroke(); c.restore();
       }
       if (e.sq > 0.02) {
         const ys = h - e.sq * h * 0.75, yc = h - e.sq * h * 1.35;
@@ -252,24 +273,29 @@ const FaceDecal = (function(){
     _brows(c, e){
       const sp = this.spec, B = sp.brows, lw = B.thick; if (B.style === 'none') return;
       for (const sx of [-1, 1]) {
-        const as = e.browAs * (sx > 0 ? 1 : -1), y = B.y - (e.browY + as) * lw * 0.9, A = (e.browA - as * 5) * DEG, w = B.w;
+        const as = e.browAs * (sx > 0 ? 1 : -1), bd = (sx > 0 ? B.L : B.R) || {}, y = B.y - (e.browY + as) * lw * 0.9 + (bd.dy || 0), A = (e.browA - as * 5 + (bd.a || 0)) * DEG, w = B.w;
         const yi = Math.sin(A) * w, yo = -Math.sin(A) * w * 0.75;
         c.save(); c.translate(sx * B.x, y); c.scale(sx, 1);              // local: -x = inner end, +x = outer end
         c.strokeStyle = B.color; c.fillStyle = B.color; c.lineWidth = lw;
         if (B.style === 'taper') { const t = lw * 0.62; c.beginPath(); c.moveTo(-w, yi - t); c.quadraticCurveTo(0, (yi + yo) / 2 - t * 1.5, w, yo - t * 0.2); c.lineTo(w + 1, yo + t * 0.25); c.quadraticCurveTo(0, (yi + yo) / 2 + t * 0.3, -w, yi + t); c.closePath(); c.fill(); c.lineWidth = lw * 0.3; c.stroke(); }
+        else if (B.style === 'slab') { const t = lw * 0.5, k = lw * 0.45; c.beginPath(); c.moveTo(-w + k, yi - t); c.lineTo(w + k, yo - t); c.lineTo(w - k, yo + t); c.lineTo(-w - k, yi + t); c.closePath(); c.fill(); c.lineJoin = 'round'; c.lineWidth = lw * 0.28; c.stroke(); }
         else if (B.style === 'arc') { c.beginPath(); c.moveTo(-w, yi + 3); c.quadraticCurveTo(0, (yi + yo) / 2 - 11, w, yo + 4); c.stroke(); }
         else { if (B.style === 'thin') c.lineWidth = lw * 0.6; c.beginPath(); c.moveTo(-w, yi); c.lineTo(w, yo); c.stroke(); }
+        if (B.slit && (B.slit === 'L') === (sx > 0)) { const x = w * 0.42, y = yi + (yo - yi) * 0.71; c.globalCompositeOperation = 'destination-out'; c.lineCap = 'butt'; c.lineWidth = lw * 0.42;
+          c.beginPath(); c.moveTo(x + lw * 0.5, y - lw); c.lineTo(x - lw * 0.5, y + lw); c.stroke(); c.globalCompositeOperation = 'source-over'; c.lineCap = 'round'; }
         c.restore();
       }
     },
-    _mouth(c, m){
+    _mouth(c, m){ c.save(); c.translate(this.spec.mouth.x || 0, 0); this._mouth2(c, m); c.restore(); },
+    _mouth2(c, m){
       const sp = this.spec, M = sp.mouth, lw = sp.line, W = Math.max(3, M.w * m.w), y0 = M.y, lift = m.c * W * 0.42, dx = m.s * W * 0.22;
       const yl = y0 - lift * (1 - m.s), yr = y0 - lift * (1 + m.s * 0.6);
       c.strokeStyle = sp.ink; c.lineWidth = lw; c.fillStyle = M.inner;
       if (m.o < 0.07) {                                    // shut: one stroke
         c.beginPath();
         if (m.wob > 0.05) { const n = 18; for (let i = 0; i <= n; i++) { const t = i / n, x = -W + 2 * W * t, base = (1 - t) * yl + t * yr + 4 * t * (1 - t) * lift * 0.9, y = base + Math.sin(t * Math.PI * 5) * 4.2 * m.wob * Math.sin(t * Math.PI); if (i) c.lineTo(x + dx, y); else c.moveTo(x + dx, y); } }
-        else { c.moveTo(-W + dx, yl); c.quadraticCurveTo(dx, y0 + lift * 1.15, W + dx, yr); }
+        else { c.moveTo(-W + dx, yl); c.quadraticCurveTo(dx, y0 + lift * 1.15, W + dx, yr);
+          if (M.hook && m.s > 0.3 && m.c > 0) { const k = M.hook * Math.min(1, m.s) * lw; c.quadraticCurveTo(W + dx + k * 1.1, yr - k * 0.5, W + dx + k * 0.9, yr - k * 2.1); } }
         if (M.lip) { c.strokeStyle = M.lip; c.lineWidth = lw * 1.9; c.stroke(); c.strokeStyle = sp.ink; c.lineWidth = lw * 0.7; }
         c.stroke(); return;
       }
@@ -310,6 +336,11 @@ const FaceDecal = (function(){
         else { c.fillStyle = x.color || '#FF5E7E'; c.globalAlpha = a * 0.6; for (const sx of [-1, 1]) { c.beginPath(); c.ellipse(sx * bx, by, 17, 10, 0, 0, TAU); c.fill(); } }
         c.globalAlpha = 1; }
       else if (x.type === 'freckles') { c.fillStyle = x.color || '#b5653a'; for (const sx of [-1, 1]) for (const p of [[-9, 0], [0, 6], [9, -1]]) { c.beginPath(); c.arc(sx * (x.x || 66) + p[0], (x.y || 30) + p[1], 2.6, 0, TAU); c.fill(); } }
+      else if (x.type === 'dots') { c.fillStyle = x.color || sp.ink; const r = x.r || 3.2; for (const p of x.pts || [[-8, 0], [8, 0], [0, 10]]) { c.beginPath(); c.arc((x.x || 62) + p[0], (x.y || 44) + p[1] - (e.jump || 0), r, 0, TAU); c.fill(); } }
+      else if (x.type === 'tick') { c.strokeStyle = x.color || sp.ink; c.lineWidth = lw * 0.62; const X = x.x || 0, Y = x.y == null ? 30 : x.y, w = x.w || 5, h = x.h || 7; c.beginPath(); c.moveTo(X - w, Y - h); c.lineTo(X + w * 0.2, Y); c.lineTo(X - w * 0.9, Y + h * 0.35); c.stroke(); }
+      else if (x.type === 'pick') { const M = sp.mouth, m = e.mouth; if (e.pick !== 0 && m.o < 0.07 && !m.wob) { const W = Math.max(3, M.w * m.w), lift = m.c * W * 0.42, dx = m.s * W * 0.22, yl = M.y - lift * (1 - m.s), s = x.size || 13;
+        c.save(); c.translate((M.x || 0) - W + dx + s * 0.25 + (x.dx || 0), yl + s * 0.1 + (x.dy || 0)); c.rotate((x.rot == null ? 118 : x.rot) * DEG); c.fillStyle = x.color || '#FFF1D0'; c.strokeStyle = sp.ink; c.lineWidth = lw * (x.line || 0.6); c.lineJoin = 'round';
+        this._pick(c, 0, -s * 1.05, s * 0.86, s); c.fill(); c.stroke(); c.restore(); } }
       else if (x.type === 'bags') { c.strokeStyle = sp.ink; c.lineWidth = lw * 0.5; for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(sx * sp.eyes.x - 14, sp.eyes.h + 9); c.quadraticCurveTo(sx * sp.eyes.x, sp.eyes.h + 16, sx * sp.eyes.x + 14, sp.eyes.h + 9); c.stroke(); } }
       else if (x.type === 'star') { c.save(); c.translate(x.x || 76, x.y || 34); c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 6 : 14; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); c.fillStyle = x.color || '#FFCE3A'; c.fill(); c.strokeStyle = sp.ink; c.lineWidth = lw * 0.6; c.stroke(); c.restore(); }
     },

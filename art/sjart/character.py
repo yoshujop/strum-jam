@@ -48,6 +48,34 @@ def face_uv(ob, mask, centre_x, centre_z, size):
     return ok
 
 
+def flatten_face(mesh, eye_z, size, head_cy, amount=0.7):
+    """Bend the SHADING normals of the skin on the front of the head towards the front (the outline normals are not
+    touched). A cel terminator across a cheek cuts the 2D face in half; with amount 0.7 the face plate stays in one
+    tone until the head has turned about 60 degrees from the key light, and the sides of the head shade as before."""
+    me = mesh.data
+    nl = len(me.loops)
+    cn = np.zeros(nl * 3, dtype=np.float32)
+    me.corner_normals.foreach_get('vector', cn)
+    cn = cn.reshape(-1, 3)
+    lv = np.zeros(nl, dtype=np.int32)
+    me.loops.foreach_get('vertex_index', lv)
+    P = bl.co(mesh)[lv]
+    mats = [m.name if m else '' for m in me.materials]
+    mi = np.zeros(len(me.polygons), dtype=np.int32)
+    me.polygons.foreach_get('material_index', mi)
+    tot = np.zeros(len(me.polygons), dtype=np.int32)
+    me.polygons.foreach_get('loop_total', tot)
+    skin = np.repeat(np.array([mats[i] in ('sj_skin', 'sj_face') for i in mi]), tot)
+    facing = -cn[:, 1]
+    ss = lambda e0, e1, x: np.clip((x - e0) / (e1 - e0), 0, 1) ** 2 * (3 - 2 * np.clip((x - e0) / (e1 - e0), 0, 1))
+    w = amount * ss(0.0, 0.45, facing) * ss(0.75, 0.55, np.abs(P[:, 2] - eye_z) / size) * ss(0.8, 0.6, np.abs(P[:, 0]) / size)
+    w = np.where(skin & (P[:, 1] < head_cy + 0.02), w, 0.0)[:, None]
+    out = cn * (1 - w) + np.array([0.0, -1.0, 0.0]) * w
+    out /= np.maximum(np.linalg.norm(out, axis=1), 1e-9)[:, None]
+    me.normals_split_custom_set([tuple(v) for v in out])
+    me.update()
+
+
 class Character:
     def __init__(self, name, human, skin='#F2B48C'):
         self.name = name
@@ -60,6 +88,7 @@ class Character:
         self.extras = {}
         self.rig = None
         self.mesh = None
+        self.face_flat = 0.0        # 0..1: bend the shading normals of the face towards the front (see flatten_face)
 
     # ------------------------------------------------------------ adding parts
     def hide(self, faces, interior=True):
@@ -152,6 +181,8 @@ class Character:
                 z = np.zeros(len(o.data.loops) * 2, dtype=np.float32)
                 o.data.uv_layers[FACE_UV].data.foreach_set('uv', z)
         mesh = bl.join(objs, self.name.capitalize())
+        if self.face_flat > 0:
+            flatten_face(mesh, lm['eye_z'], size, h.head_cy, self.face_flat)
         self.rig = rig.build_armature('SJ_rig', self.joints, self.parents)
         rig.clean_weights(mesh, smooth=weight_smooth)
         rig.bind(mesh, self.rig)

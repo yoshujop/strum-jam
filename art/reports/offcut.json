@@ -1,0 +1,52 @@
+{
+ "animations": [],
+ "bounds": {
+  "max": [
+   0.865,
+   0.1784,
+   0.049
+  ],
+  "min": [
+   -0.2255,
+   -0.1688,
+   -0.0275
+  ]
+ },
+ "bytes": 177520,
+ "draw_calls": 2,
+ "errors": [],
+ "extras": {
+  "offcut": {
+   "sj_asset": "prop",
+   "sj_frets": 7,
+   "sj_scale_length": 1.1
+  }
+ },
+ "file": "offcut.glb",
+ "kind": "prop",
+ "materials": [
+  "sj_gloss",
+  "sj_toon"
+ ],
+ "max_influences": 0,
+ "nodes": 9,
+ "primitives": [
+  {
+   "material": "sj_gloss",
+   "mesh": "offcut_body",
+   "outline_agree": 0.942,
+   "tris": 1278,
+   "verts": 1032
+  },
+  {
+   "material": "sj_toon",
+   "mesh": "offcut_body",
+   "outline_agree": 0.742,
+   "tris": 1766,
+   "verts": 2214
+  }
+ ],
+ "triangles": 3044,
+ "vertices": 3246,
+ "warnings": []
+}

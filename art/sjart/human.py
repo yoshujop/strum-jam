@@ -89,6 +89,10 @@ class HumanSpec:
     foot_h: float = 0.088      # ankle joint height
     # --- build
     levels: int = 1            # Catmull-Clark levels (1 = game mesh, 2 = close-up LOD)
+    # --- designed shapes
+    knee_fwd: float = 0.006    # how far the knee joint sits in front of the hip-ankle line (a rest bend; 0.02 = about 5 degrees)
+    tweak: dict = None         # per-ring edits of torso_rows(): {'mouth': dict(rx=0.85, ryf=1.0, ryb=1.0, dz=0.0, cy=0.0, ef=..., eb=...)}
+                               # rx / ryf / ryb multiply, dz / cy add (m), ef / eb replace. E.g. a pick-shaped head.
 
     def but(self, **kw):
         """A copy with some fields changed: spec.but(height=1.9, r_thigh=0.06)."""
@@ -172,7 +176,7 @@ class Human:
         # leg chain (left)
         self.H = vec(self.hjx, 0.004, self.hz)
         self.A = vec(self.hjx * sp.stance, 0.012, self.ankle_z)
-        self.K = lerp(self.H, self.A, sp.knee) + vec(0, -0.006, 0)
+        self.K = lerp(self.H, self.A, sp.knee) + vec(0, -sp.knee_fwd, 0)
         # head
         Hh = sp.head_h
         self.head_cy = -0.012
@@ -219,6 +223,15 @@ class Human:
             R('crown', cz + 0.945 * Hh, hw * 0.64, hd * 0.305, hd * 0.325, hc + 0.004, ef=2.05, part='head'),
             R('top', cz + 1.005 * Hh, hw * 0.30, hd * 0.142, hd * 0.150, hc + 0.004, ef=2.0, part='head'),
         ]
+        for r in rows:
+            t = (sp.tweak or {}).get(r['name'])
+            if t:
+                for k in ('rx', 'ryf', 'ryb'):
+                    r[k] *= t.get(k, 1.0)
+                r['z'] += t.get('dz', 0.0)
+                r['cy'] += t.get('cy', 0.0)
+                r['ef'] = t.get('ef', r['ef'])
+                r['eb'] = t.get('eb', r['eb'])
         return rows
 
     def _chain_w(self, z):

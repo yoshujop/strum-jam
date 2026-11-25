@@ -194,6 +194,31 @@ def outline(points, n=64, tension=0.5):
     return smooth_closed(np.asarray(points, dtype=np.float64), n, tension)
 
 
+def rounded(points, radius, steps=4):
+    """A closed polygon with its corners rounded: straight edges, arcs of `radius` (a number, or one per corner;
+    clamped to what the neighbouring edges allow). For hard-cut graphic outlines (headstocks, plates, signs)."""
+    P = np.asarray(points, dtype=np.float64)
+    n = len(P)
+    rs = [radius] * n if np.ndim(radius) == 0 else list(radius)
+    out = []
+    for i in range(n):
+        a, b, c = P[i - 1], P[i], P[(i + 1) % n]
+        u, v = a - b, c - b
+        lu, lv = np.linalg.norm(u), np.linalg.norm(v)
+        u, v = u / lu, v / lv
+        ang = math.acos(max(-1.0, min(1.0, float(np.dot(u, v)))))
+        r = rs[i]
+        if r <= 0 or ang > math.pi - 1e-3:
+            out.append(b)
+            continue
+        t = min(r / math.tan(ang / 2), lu * 0.45, lv * 0.45)
+        p0, p1 = b + u * t, b + v * t
+        for k in range(steps + 1):
+            f = k / float(steps)
+            out.append((1 - f) ** 2 * p0 + 2 * f * (1 - f) * b + f * f * p1)
+    return np.array(out)
+
+
 def polygon_area(P):
     P = np.asarray(P)
     x, y = P[:, 0], P[:, 1]
@@ -346,3 +371,32 @@ def union(name, objs, voxel=None, smooth=0, exact=True):
 
 def decimate(ob, ratio=0.5):
     return bl.modify(ob, 'DECIMATE', ratio=ratio)
+
+
+# ------------------------------------------------------------------ plane cuts
+def cut(ob, co, no, fill=True, clear=True, smooth_angle=None):
+    """Slice a solid with the plane through `co` with normal `no` and throw away the side the normal points to
+    (the hole is capped flat): chamfers, wedges, a quiff's sloped back.  clear=False only scores the mesh: it
+    adds the edge loop where the plane crosses, so faces on each side can be painted separately (see `score`)."""
+    import bmesh
+    me = ob.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+    res = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=tuple(co), plane_no=tuple(no), clear_outer=clear, clear_inner=False)
+    if clear and fill:
+        edges = [e for e in res['geom_cut'] if isinstance(e, bmesh.types.BMEdge)]
+        if edges:
+            bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=True, edges=edges)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    if smooth_angle is not None:
+        hard(ob, smooth_angle)
+    return ob
+
+
+def score(ob, co, no):
+    """Add an edge loop where a plane crosses the mesh (nothing is removed): a clean boundary to paint up to."""
+    return cut(ob, co, no, fill=False, clear=False)
