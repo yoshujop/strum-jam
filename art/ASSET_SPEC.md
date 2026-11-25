@@ -68,7 +68,7 @@ root
 ## Geometry
 
 - One skinned mesh per character (parts are joined), split by the exporter into one primitive per material class.
-  8-14k triangles per character. The mannequin: 12.4k triangles, 6.6k vertices, 5 primitives, 48 bones.
+  8-14k triangles per character (the hero, Riff, may use up to 18k: 17.8k today). The mannequin: 12.4k triangles, 6.6k vertices, 5 primitives, 48 bones.
 - Flat albedo in `COLOR_0` (authored as sRGB hex, stored linear). No textures, no images in the file.
 - `TEXCOORD_0` exists only for the face decal (zeros elsewhere).
 - Props: static meshes under one root node, 200-6000 triangles. Venues: 500-60000.
