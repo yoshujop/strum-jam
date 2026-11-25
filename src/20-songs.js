@@ -1,5 +1,44 @@
 /* =====================================================================
    Songs: library, validation, compile to a playable chart, song codes
+   =====================================================================
+   THE CHART DATA MODEL (plain data, no DOM; safe to port to iOS / Roblox)
+
+   1. A SONG is what every source (library, starter pack, Hooktheory, Chordonomicon, web, pasted sheet, song code)
+      produces and what is stored. validateSong() is the single gate; finishChart() fills in what a source left out.
+        { id, title, artist, album, year, trackId, durationMs, source,
+          bpm,            // FELT tempo: quarter notes for x/4, dotted quarters for 6/8 and 12/8 (normalizeTempo)
+          time,           // one of TIMES
+          feel,           // 'straight' | 'swing'
+          style,          // one of STYLES: picks the band's drum groove (30-audio.js P44) and the strum family
+          key,            // the key the song SOUNDS in ("F#m")
+          capo, tuning,   // the chords below are SHAPES for this capo (0 = none); tuning in semitones down
+          strum,          // legacy one-bar pattern (D U .): the Normal-tier verse pattern
+          drums,          // optional one-bar {kick, snare, hat} when a source knows the real groove, else null
+          level,          // 1 Easy, 2 Medium, 3 Hard (songDifficulty)
+          approx,         // true when the STRUCTURE (order / repeats of sections) is a best guess
+          sections: [ { name,            // "Verse 2"
+                        type,            // SECTION_TYPES: intro verse prechorus chorus bridge solo interlude outro
+                        bars: ['G', 'C D', 'Em . . D'],   // one string per bar: 1 chord, an even split, or one token per beat
+                        strum,           // strum FAMILY id for this section (STRUMS); absent = the song's default
+                        approx,          // this section was placed by the arranger, not by the source
+                        conf } ],
+          anchors: [[sec, beat], ...],   // recording time -> chart beat, when the chart follows the recording (lyrics)
+          orig: { capo, key, sections }, // the arrangement before the easy-capo pass ("as recorded")
+          prov }                         // provenance and checks (cleanProv)
+
+   2. A COMPILED CHART is what gameplay consumes: chartModel(song, { tier: 'easy' | 'normal' | 'hard' }).
+        { v: 2, id, title, artist, source, approx, bpm, time, beatsPerBar, stepsPerBeat, feel, style, key, capo, tuning,
+          tier, difficulty: { tier, label, score, reasons }, totalBars, totalBeats, durationSec,
+          chords: [{ name, sounds, count }],
+          sections: [ { index, name, type, intensity (0-3, for escalation), startBar, startBeat, barCount, approx,
+                        strum: { id, name, level, pattern, steps, swing,        // pattern: one bar; D down, U up, B bass note, X muted chuck, . rest
+                                 hits: [{ step, beat, dir, accent }] },        // beat = offset in the bar, in beats
+                        bars: [ { index, chords: [{ name, sounds, beat, len }] } ] } ],   // beat = offset in the bar
+          anchors }
+      compileSong() (below) is the older event timeline the current game screens use; both read the same song.
+
+   3. Helpers, all pure: normalizeTempo (felt tempo + metre), pickStrum / strumPattern (STRUMS library),
+      easyCapo (open shapes + capo), songDifficulty, sectionType, finishChart.
    ===================================================================== */
 const STYLES = ['rock','pop','ballad','halftime','funk','disco','shuffle','country','reggae','punk','hiphop','metal','folk','bossa','edm','waltz','none'];
 const TIMES = ['4/4','3/4','2/4','6/8','12/8'];
@@ -86,6 +125,7 @@ function validateSong(o, source){
   song.key = cleanStr(o.key, 8);
   song.strum = /^[DUdu.\-x ]{2,16}$/.test(o.strum || '') ? String(o.strum).toUpperCase().replace(/[-X ]/g, '.') : '';
   song.note = cleanStr(o.note, 220);
+  song.approx = !!o.approx;
   song.level = Math.round(clampNum(o.level, 1, 3, 0)) || 0;
   // the exact recording (iTunes) and where the chart came from
   song.album = cleanStr(o.album, 80);
@@ -118,7 +158,25 @@ function validateSong(o, source){
         if (t && total < 240) { bars.push(t); total++; }
       }
     }
-    if (bars.length) song.sections.push({ name: cleanStr(s.name, 24) || 'Part ' + (song.sections.length + 1), bars, conf: ['high', 'medium', 'low'].includes(s.conf) ? s.conf : undefined });
+    if (bars.length) {
+      const name = cleanStr(s.name, 24) || 'Part ' + (song.sections.length + 1);
+      const sec = { name, bars, conf: ['high', 'medium', 'low'].includes(s.conf) ? s.conf : undefined };
+      if (SECTION_TYPES.includes(s.type)) sec.type = s.type;
+      if (typeof s.strum === 'string' && STRUMS[s.strum]) sec.strum = s.strum;
+      if (s.approx) sec.approx = true;
+      song.sections.push(sec);
+    }
+  }
+  // recording time -> chart beat (strictly rising), for charts that follow the recording
+  if (Array.isArray(o.anchors)) {
+    const a = [];
+    for (const p of o.anchors.slice(0, 80)) { const t = +(p && p[0]), b = +(p && p[1]); if (Number.isFinite(t) && Number.isFinite(b) && t >= 0 && b >= 0 && (!a.length || (t > a[a.length - 1][0] && b > a[a.length - 1][1]))) a.push([+t.toFixed(2), +b.toFixed(2)]); }
+    if (a.length >= 2) song.anchors = a;
+  }
+  // the arrangement before the easy-capo pass ("as recorded")
+  if (o.orig && typeof o.orig === 'object' && Array.isArray(o.orig.sections)) {
+    const os = o.orig.sections.slice(0, 40).map(x => (Array.isArray(x) ? x : []).slice(0, 240).map(b => cleanStr(b, 48))).filter(x => x.length);
+    if (os.length === song.sections.length) song.orig = { capo: Math.round(clampNum(o.orig.capo, 0, 9, 0)), key: cleanStr(o.orig.key, 8), sections: os };
   }
   if (!song.sections.length) throw new Error('No chords were found in that song.');
   // at least one real chord
@@ -133,8 +191,12 @@ function validateSong(o, source){
 function cleanProv(p){
   if (!p || typeof p !== 'object') return null;
   const out = {}, str = (v, n) => cleanStr(v, n || 60), num = v => (v == null || !Number.isFinite(+v)) ? null : +v;
-  out.src = ['dataset', 'hooktheory', 'web', 'claude', 'library', 'paste', 'code'].includes(p.src) ? p.src : 'claude';
-  out.checked = !!p.checked; out.audioErr = str(p.audioErr, 120); out.route = str(p.route, 20);
+  out.src = ['dataset', 'hooktheory', 'pack', 'web', 'claude', 'library', 'paste', 'code'].includes(p.src) ? p.src : 'claude';
+  out.checked = !!p.checked; out.checkedAudio = !!p.checkedAudio; out.checkedHT = !!p.checkedHT; out.verified = p.verified == null ? null : !!p.verified;
+  out.tempo = p.tempo && typeof p.tempo === 'object' ? { raw: num(p.tempo.raw) || 0, rule: str(p.tempo.rule, 40), from: str(p.tempo.from, 20), conf: str(p.tempo.conf, 8) } : null;
+  out.form = ['source', 'anchored', 'template', 'loop'].includes(p.form) ? p.form : '';
+  out.easy = p.easy && typeof p.easy === 'object' ? { capo: num(p.easy.capo) || 0, from: num(p.easy.from) || 0, before: num(p.easy.before), after: num(p.easy.after) } : null;
+  out.audioErr = str(p.audioErr, 120); out.route = str(p.route, 20);
   out.row = num(p.row); out.spotifyId = /^[A-Za-z0-9]{10,30}$/.test(p.spotifyId || '') ? p.spotifyId : '';
   out.rows = Array.isArray(p.rows) ? p.rows.slice(0, 8).map(num).filter(v => v != null) : [];
   out.sources = Array.isArray(p.sources) ? p.sources.slice(0, 6).map(u => String(u).slice(0, 300)).filter(u => /^https?:\/\//.test(u)) : [];

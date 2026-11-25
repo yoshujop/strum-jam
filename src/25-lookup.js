@@ -31,10 +31,12 @@ const Lookup = {
       if (opts.signal) { if (opts.signal.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' }); opts.signal.addEventListener('abort', stop, { once: true }); }
       try {
         const r = await fetch(url, { signal: ctl.signal, method: opts.method || 'GET', headers: opts.headers, body: opts.body });
+        this.netFail = 0;
         if (r.status === 429 || r.status >= 500) { last = Object.assign(new Error('HTTP ' + r.status), { status: r.status }); await new Promise(z => setTimeout(z, 700 * (a + 1))); continue; }
         if (!r.ok) throw Object.assign(new Error('HTTP ' + r.status), { status: r.status });
         return await r.json();
       } catch (e) {
+        if (this.errKind(e) === 'offline') this.netFail = Date.now();   // the request never got an answer
         if (opts.signal && opts.signal.aborted) throw Object.assign(new Error('cancelled'), { name: 'AbortError' });
         last = e; if (e.status && e.status < 500 && e.status !== 429) throw e;
         if (a + 1 < (opts.tries || 2)) await new Promise(z => setTimeout(z, 600 * Math.pow(2, a)));
@@ -332,7 +334,7 @@ const Lookup = {
     return ids;
   },
   async hfRow(row, signal){
-    const j = await this.getJson(this.HF_ROWS + '&offset=' + row + '&length=1', { signal, timeout: 20000, tries: 3 });
+    const j = await this.getJson(this.HF_ROWS + '&offset=' + row + '&length=1', { signal, timeout: 9000, tries: 2 });
     const r = j && j.rows && j.rows[0] && j.rows[0].row;
     if (!r || +r.id !== row + 1) throw new Error('dataset row moved');
     return r;
@@ -344,13 +346,14 @@ const Lookup = {
     const k = track && track.trackId, m = k && this.rowsMemo.get(k);
     if (m) return m;
     const r = await this.findRowsFresh(track, opts);
-    if (k && r.rows.length) { this.rowsMemo.set(k, r); if (this.rowsMemo.size > 60) this.rowsMemo.delete(this.rowsMemo.keys().next().value); }
+    if (k && r.rows.length && r.rows.every(x => x.verified !== false)) { this.rowsMemo.set(k, r); if (this.rowsMemo.size > 60) this.rowsMemo.delete(this.rowsMemo.keys().next().value); }
     return r;
   },
   async findRowsFresh(track, opts){
     opts = opts || {};
     const signal = opts.signal, ix = this.loadIndex();
     if (!ix.ok) return { rows: [], note: 'no-index' };
+    if (this.isOffline()) { const tv0 = this.normTitle(track.title), av0 = this.artistVariants(track.artist); return { rows: [], hits: tv0.some(t => av0.some(a => this.findKey(t + '|' + a).length)) ? 1 : 0, failed: 1, offline: true }; }
     const tv = this.normTitle(track.title), av = this.artistVariants(track.artist);
     const tried = new Set(), cands = new Map();
     const tryKeys = (titles, route) => {
@@ -365,16 +368,138 @@ const Lookup = {
       const ts = await Promise.all(ids.slice(0, 8).map(id => this.spotifyTitle('track', id, signal).catch(() => '')));
       tryKeys([...new Set(ts.filter(Boolean).flatMap(t => this.normTitle(t)))], 'listenbrainz');
     }
-    const rows = [];
-    for (const c of [...cands.values()].slice(0, 6)) {
+    // every candidate row at once. A row counts as this song only when Spotify's own title for it matches; a row whose
+    // title couldn't be fetched is kept but marked unverified (the chart pipeline then needs a second check before using it),
+    // and rows that couldn't be fetched at all are counted, so "couldn't reach the data" is never reported as "not found".
+    const list = [...cands.values()].slice(0, 6);
+    let failed = 0, wrong = 0;
+    const got = await Promise.all(list.map(async c => {
       let r;
-      try { r = await this.hfRow(c.row, signal); } catch (e) { if (e.name === 'AbortError') throw e; continue; }
+      try { r = await this.hfRow(c.row, signal); } catch (e) { if (e.name === 'AbortError') throw e; failed++; return null; }
       let st = null;
       try { st = await this.spotifyTitle('track', r.spotify_song_id, signal); } catch (e) { if (e.name === 'AbortError') throw e; }
-      if (st != null && !this.normTitle(st).some(x => c.titles.includes(x) || tv.includes(x))) continue;   // a different song that shares the hash
-      rows.push({ row: c.row, route: c.route, verified: st != null, spotifyId: r.spotify_song_id, spotifyTitle: st, data: r, sections: this.parseCN(r.chords) });
+      if (st != null && !this.normTitle(st).some(x => c.titles.includes(x) || tv.includes(x))) { wrong++; return null; }   // a different song that shares the hash
+      return { row: c.row, route: c.route, verified: st != null, spotifyId: r.spotify_song_id, spotifyTitle: st, data: r, sections: this.parseCN(r.chords) };
+    }));
+    return { rows: got.filter(Boolean), hits: list.length, failed, wrong };
+  },
+
+  /* ---------- what kind of failure this is, for honest messages ---------- */
+  // 'offline' (the device has no connection, or a host couldn't be reached), 'busy' (rate limited), 'cancelled', or ''
+  errKind(e){
+    if (!e) return '';
+    if (e.name === 'AbortError' || e.code === 'cancelled') return 'cancelled';
+    if (e.status === 429 || e.status === 403) return 'busy';
+    if (e.code === 'offline' || e instanceof TypeError || /network|Failed to fetch|Load failed|timeout|tunnel/i.test(String(e.message))) return 'offline';
+    return '';
+  },
+  // isOffline: the browser says there is no connection. netDown: that, or a request got no answer in the last 20 s
+  // (navigator.onLine stays true on a dead Wi-Fi), so a song that isn't built in reads "no connection", not "not found"
+  netFail: 0,
+  isOffline(){ return typeof navigator !== 'undefined' && navigator.onLine === false; },
+  netDown(){ return this.isOffline() || (this.netFail > 0 && Date.now() - this.netFail < 20000); },
+
+  /* ---------- the built-in catalogue: every song the page can chart with no network ---------- */
+  // The starter pack (27-pack.js) and the Hooktheory table, as {title, artist, src, id}. Hooktheory keys are slugs
+  // ("oasis|wonderwall"), so its names are the slug's words in title case.
+  cat: null,
+  unslug(s){ return String(s).split('-').filter(Boolean).map(w => /^(a|an|and|at|by|de|for|in|of|on|or|the|to|la|le|el)$/.test(w) ? w : w[0].toUpperCase() + w.slice(1)).join(' ').replace(/^./, c => c.toUpperCase()); },
+  async catalog(){
+    if (this.cat) return this.cat;
+    const items = [], seen = new Set();
+    const add = (title, artist, src, id, pop) => {
+      const tt = this.core(this.base(title)), at = this.normArtist(artist), text = tt + ' | ' + at;
+      if (!tt || seen.has(text)) return; seen.add(text);
+      items.push({ title, artist, src, id, pop, text, tt: tt.split(' '), at: at.split(' ') });
+    };
+    if (typeof SONG_PACK !== 'undefined') for (const p of SONG_PACK) add(p.t, p.a, 'pack', 'pack:' + p.t, 1);
+    const db = await this.loadHT();
+    if (db) for (const k in db) { const i = k.indexOf('|'); add(this.unslug(k.slice(i + 1)), this.unslug(k.slice(0, i)), 'hooktheory', k, Math.min(db[k].length, 6) / 8); }
+    // trigram -> items
+    const tri = new Map();
+    items.forEach((it, n) => { for (const g of this.grams(it.text)) { let a = tri.get(g); if (!a) tri.set(g, a = []); a.push(n); } });
+    return (this.cat = { items, tri });
+  },
+  grams(t){ const s = '  ' + t.replace(' | ', '  ') + ' ', out = new Set(); for (let i = 0; i + 3 <= s.length; i++) out.add(s.slice(i, i + 3)); return out; },
+  editDist(a, b, max){
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i]; let lo = i;
+      for (let j = 1; j <= b.length; j++) { const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); cur[j] = v; if (v < lo) lo = v; }
+      if (lo > max) return max + 1;
+      prev = cur;
     }
-    return { rows };
+    return prev[b.length];
+  },
+  // how well one typed word matches one catalogue word: exact 1, a prefix (still typing) 0.85-0.95, a typo or two 0.5-0.7
+  wordFit(q, w, last){
+    if (q === w) return 1;
+    if (last && q.length >= 2 && w.startsWith(q)) return 0.85 + 0.1 * q.length / w.length;
+    if (q.length >= 4 && w.length >= 4) {
+      const max = q.length >= 8 ? 3 : q.length >= 6 ? 2 : 1, d = this.editDist(q, w, max);
+      if (d <= max) return 0.84 - 0.14 * d;
+      if (q.length >= 5 && (w.startsWith(q) || q.startsWith(w))) return 0.7;
+    }
+    return 0;
+  },
+  // Fuzzy search over the built-in catalogue. Works with no network; misspellings and half-typed words match.
+  // Returns [{title, artist, src, id, score, track}] best first; track is what Chart.make takes.
+  async searchLocal(q, opts){
+    opts = opts || {};
+    const cat = await this.catalog();
+    const nq = this.core(this.base(q).replace(/\s+by\s+/g, ' '));
+    const words = nq.split(' ').filter(Boolean);
+    if (!words.length) return [];
+    // recall: items sharing trigrams with the query
+    const hit = new Map(), qg = this.grams(nq);
+    for (const g of qg) { const a = cat.tri.get(g); if (a) for (const n of a) hit.set(n, (hit.get(n) || 0) + 1); }
+    const pool = [...hit.entries()].sort((x, y) => y[1] - x[1]).slice(0, 500);
+    const out = [];
+    for (const [n, shared] of pool) {
+      const it = cat.items[n];
+      let sum = 0, inTitle = 0, miss = 0;
+      words.forEach((w, i) => {
+        const last = i === words.length - 1;
+        const ft = Math.max(0, ...it.tt.map(x => this.wordFit(w, x, last))), fa = Math.max(0, ...it.at.map(x => this.wordFit(w, x, last)));
+        const f = Math.max(ft, fa * 0.95);
+        if (!f) miss++; else if (ft >= fa) inTitle += ft;
+        sum += f;
+      });
+      if (miss > (words.length >= 3 ? 1 : 0)) continue;
+      const fit = sum / words.length, tri = shared / qg.size;
+      // the whole title typed (or nearly) beats a song that merely contains the words
+      const cover = Math.min(1, inTitle / Math.max(1, it.tt.length));
+      const score = fit * 0.6 + tri * 0.2 + cover * 0.15 + it.pop * 0.05 - miss * 0.25;
+      if (score >= (opts.min || 0.45)) out.push({ title: it.title, artist: it.artist, src: it.src, id: it.id, score: +score.toFixed(3), track: { title: it.title, artist: it.artist, trackId: '', local: it.id } });
+    }
+    out.sort((a, b) => b.score - a.score || a.title.length - b.title.length);
+    return out.slice(0, opts.limit || 8);
+  },
+  // One search for the song picker: the built-in catalogue at once (onLocal), then Apple's recordings with the original
+  // studio recording first. Offline, the local results are the answer and `offline` says why there are no recordings.
+  // Returns { local, online, offline, error }.
+  async search(q, opts){
+    opts = opts || {};
+    const local = await this.searchLocal(q, { limit: opts.localLimit || 6 });
+    if (opts.onLocal) opts.onLocal(local);
+    if (opts.localOnly || this.isOffline()) return { local, online: [], offline: this.isOffline(), error: null };
+    try {
+      const recs = await this.itunes(q, { signal: opts.signal, limit: opts.limit || 15 });
+      // studio originals before live cuts, covers and karaoke (unless the query asks for one); Apple's order otherwise
+      const asked = this.VER.test(q);
+      const online = recs.map((r, i) => ({ r, s: (asked || !this.isVersion(r) ? 0 : 100) + i })).sort((a, b) => a.s - b.s).map(x => x.r);
+      return { local, online, offline: false, error: null };
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
+      return { local, online: [], offline: this.errKind(e) === 'offline', error: e };
+    }
+  },
+  // the starter-pack entry for a recording (title + original artist, or a local search hit)
+  findPack(track){
+    if (typeof SONG_PACK === 'undefined') return null;
+    const tv = this.normTitle(track.title), av = this.artistVariants(track.artist);
+    return SONG_PACK.find(p => [p.t].concat(p.alt || []).flatMap(x => this.normTitle(x)).some(x => tv.includes(x)) && this.artistVariants(p.a).some(x => av.includes(x))) || null;
   },
 
   /* ---------- Chordonomicon's notation -> ours ---------- */

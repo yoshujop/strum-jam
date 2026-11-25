@@ -152,3 +152,16 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
   hair slab, strap, patches) are in `art/sjart/wardrobe.py`. `node test/castshot.js <outdir> [faces,turn,heads,hold,poses,sil,stage]`
   renders him through the engine (`MODELS=a.glb,b.glb` for scratch builds).
 - Test models: `/opt/sj-bpy/bin/python test/fixtures/mk_fixtures.py` -> `test/fixtures/models/*.glb` (not shipped).
+
+## Hearing (mic recognition, 2026-11)
+- `src/42-hearcore.js` (`HearCore`: onset detector, resampler, tuning estimate, sample-exact ring; plain maths, no DOM, also runs
+  under Node and is pasted into the worklet and the model worker), `src/43-capture.js` (`Capture`: AudioWorklet from an inline
+  Blob / data: module, ScriptProcessor fallback; counts every sample frame), `src/44-hear.js` (`Hear`: the API gameplay calls).
+  The file headers list the API. Two speeds: `Hear.onOnset(cb)` fires a few tens of ms after a strum / hit (timing, feel);
+  `Hear.chordVerdict` / `Hear.spanVerdict` / `Hear.timed` say which notes it was once the note model has heard it.
+- The mic's audio goes worklet -> model worker over a MessagePort (resampling + Basic Pitch + tuning in the worker); the page's
+  main thread is not in that path. `Listen.freshness` asks the model's own onsets (the old spectrum test is `freshnessDsp`).
+- Keep `Listen.judge`'s thresholds as they are (measured); `Mic.onsetListeners` / `Listen.strumListeners` still work.
+- Tests: `node test/hear/core.js` (Node only, 1 min), `bash test/hear/suite.sh <outdir> [quick]` (the live suite in the built game:
+  dropped audio, onset latency, Practice / Stage right + wrong chords, D-DU-UDU at 80-140 bpm, piano, drums, bass, a flat guitar;
+  `HEAR_PAGE=old.html` runs it against another build), `node test/hear/offline.js quick` (26-chord accept / reject matrix, 4 min).

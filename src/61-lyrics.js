@@ -82,25 +82,64 @@ const Lyrics = {
     for (let i = 1; i < p.length; i++) if (t <= p[i][0]) { const [a, x] = p[i - 1], [b, y] = p[i]; return x + (y - x) * (t - a) / (b - a || 1) + (map.nudge || 0); }
     const [a, x] = p[p.length - 1]; return x + (t - a) / spb + (map.nudge || 0);
   },
-  // no song file: the chart plays straight through at its tempo, so beat = (t - T0) / spb. Choose T0 so the lines start
-  // on beats (most on bar lines), the first line lands after the intro, and the chart roughly covers the recording.
+  // No song file. Lyrics run on the recording's clock and the chart on its own, so they are put on ONE clock here and
+  // every line lands inside the chart:
+  // 1. a chart that follows the recording (song.anchors: Hooktheory passages at their own times) maps through them;
+  // 2. a chart about as long as the sung part plays straight through: beat = (t - T0) / spb, with T0 chosen (among the
+  //    offsets that keep every line inside the chart) so the lines start on beats, mostly bar lines, the first after the intro;
+  // 3. a chart that is shorter or much longer than the recording (a default tempo, a part of the song) is stretched over
+  //    it: the recording's start and end are pinned to the chart's, and the first line to the first section it can start.
+  // Returns { pts, spb, fit, how: 'anchors' | 'offset' | 'stretch', ratio (chart seconds per recording second) }.
   fitMap(lines, chart, durSec){
     const spb = 60 / chart.bpm, B = chart.beats, total = chart.totalBeats * spb;
-    const st = lines.filter(l => !l.guessed).map(l => l.t0);
-    const lo = -4 * B * spb, hi = Math.max(8, (durSec || total) - total + 12);
-    if (!st.length) return { pts: [[Math.max(0, ((durSec || total) - total) / 2), 0]], spb, fit: 0 };
-    let best = 0, bestS = -1e9;
-    for (let T0 = lo; T0 <= hi; T0 += 0.01) {
-      let s = 0;
-      for (const t of st) { const b = (t - T0) / spb; if (b < -0.5 || b > chart.totalBeats) { s -= 1; continue; }
-        const fb = b - Math.round(b), fbar = (b / B) - Math.round(b / B);
-        s += Math.cos(fb * Math.PI * 2) * 0.6 + Math.cos(fbar * Math.PI * 2) * 0.4; }
-      // the singing usually starts where a section does (after the intro): a pull toward the first line landing on one
-      const b1 = (st[0] - T0) / spb; if (chart.sections.some(sec => Math.abs(sec.startBeat - b1) < 0.4)) s += 1.5;
-      s -= Math.abs(T0) / (60 * spb) * 0.02;          // small pull toward the chart starting with the recording
-      if (s > bestS) { bestS = s; best = T0; }
+    const real = lines.filter(l => !l.guessed), st = real.map(l => l.t0);
+    const an = chart.song && chart.song.anchors;
+    if (an && an.length >= 2 && an[an.length - 1][1] <= chart.totalBeats + 0.5) {
+      const pts = an.map(p => [p[0], p[1]]), last = st.length ? Math.max(...real.map(l => l.t1)) : 0;
+      // lines sung after the last anchor still have to fit before the chart ends
+      const end = pts[pts.length - 1]; if (last > end[0] && end[1] + (last - end[0]) / spb > chart.totalBeats) pts.push([last + 1, chart.totalBeats]);
+      return { pts, spb, fit: 1, how: 'anchors', ratio: 1 };
     }
-    return { pts: [[best, 0]], spb, fit: bestS / st.length };
+    const dur = durSec || (lines.length ? lines[lines.length - 1].t1 + 5 : total);
+    if (!st.length) {
+      // guessed lines (plain lyrics spread over the recording): the recording maps onto the chart end to end
+      return { pts: [[0, 0], [Math.max(1, dur), chart.totalBeats]], spb, fit: 0, how: 'stretch', ratio: total / Math.max(1, dur) };
+    }
+    const first = st[0], lastEnd = Math.max(...real.map(l => l.t1));
+    // offsets that keep every line inside the chart
+    const lo = lastEnd - total, hi = first;
+    if (hi - lo >= 0 && total >= dur * 0.8 && total <= dur * 1.25) {
+      let best = Math.max(lo, Math.min(hi, 0)), bestS = -1e9;
+      for (let T0 = Math.max(lo, -4 * B * spb); T0 <= hi + 1e-9; T0 += 0.01) {
+        let s = 0;
+        for (const t of st) { const b = (t - T0) / spb, fb = b - Math.round(b), fbar = (b / B) - Math.round(b / B); s += Math.cos(fb * Math.PI * 2) * 0.6 + Math.cos(fbar * Math.PI * 2) * 0.4; }
+        // the singing usually starts where a section does (after the intro): a pull toward the first line landing on one
+        const b1 = (first - T0) / spb; if (chart.sections.some(sec => Math.abs(sec.startBeat - b1) < 0.4)) s += 1.5;
+        s -= Math.abs(T0) / (60 * spb) * 0.02;          // small pull toward the chart starting with the recording
+        if (s > bestS) { bestS = s; best = T0; }
+      }
+      return { pts: [[best, 0]], spb, fit: bestS / st.length, how: 'offset', ratio: 1 };
+    }
+    // stretch. The first line goes to the start of the section nearest to where it falls proportionally (so the intro
+    // stays an intro), the rest of the recording is spread evenly over the rest of the chart.
+    const pts = [[0, 0]], k = chart.totalBeats / Math.max(1, dur);
+    const want = first * k, secs = chart.sections.filter(sec => sec.startBeat > 0 && sec.startBeat < chart.totalBeats * 0.4);
+    const sec = secs.sort((x, y) => Math.abs(x.startBeat - want) - Math.abs(y.startBeat - want))[0];
+    if (sec && first > 1 && Math.abs(sec.startBeat - want) < Math.max(4 * B, want * 0.6)) pts.push([first, sec.startBeat]);
+    const endT = Math.max(dur, lastEnd + 1);
+    if (endT > pts[pts.length - 1][0]) pts.push([endT, chart.totalBeats]);
+    return { pts, spb, fit: 0, how: 'stretch', ratio: total / Math.max(1, dur) };
+  },
+  // how the lines sit on the chart: how many start (and end) inside it, how many start within a quarter beat of a beat
+  coverage(lines, map, chart){
+    let inside = 0, onBeat = 0, onBar = 0;
+    for (const l of lines) {
+      const b0 = this.mapBeat(map, l.t0), b1 = this.mapBeat(map, l.t1);
+      if (b0 >= -0.5 && b1 <= chart.totalBeats + 0.5) inside++;
+      if (Math.abs(b0 - Math.round(b0)) <= 0.25) onBeat++;
+      if (Math.abs(b0 / chart.beats - Math.round(b0 / chart.beats)) <= 0.25 / chart.beats) onBar++;
+    }
+    return { lines: lines.length, inside, onBeat, onBar };
   },
   // with the song file: Analyze.run lines the chart's chords up against the recording's beats. Each tracked beat k
   // that sits on chord token i gives a (time, chart beat) pair; keep the ones that move forward in step, smooth the offset.
