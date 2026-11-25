@@ -116,6 +116,9 @@ def sneaker_cage(h, length=1.22, width=1.40, sole=0.046, collar=0.050, toe_up=0.
     d2 = [deep[(k + d * m) % 10] for m in range(10)]
     c.bridge(o2, i2, part='shoe', zone='collar')
     c.bridge(i2, d2, part='shoe', zone='lining')
+    # for add-ons (wardrobe.chunky): the plan outline [(y, x centre, half width)], and the main sizes
+    c.plan = [(heel_y - f * L, A[0] + dx, hw * Wd * 1.10) for f, hw, tp, dx, lift in table]
+    c.dims = dict(L=L, heel_y=heel_y, top=top, sole=sole, collar_z=cz, collar_y=cy, collar_r=rr, toe_up=toe_up)
     return c
 
 

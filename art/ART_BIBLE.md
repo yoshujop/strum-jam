@@ -101,6 +101,13 @@ Gradients, soft shadows, painted textures, normal maps, realistic cloth simulati
 
 **Personality:** self-taught busker from the pavement outside Side B. Unbothered until the count-in, then all in. Teaches by showing off slowly. Looks at the player, not the fretboard, because Riff is the player's stand-in. Flaw: vanity. He checks his hair in the guitar's lacquer, and a miss is funny because it ruins the pose. Chews a cream pick (never coral: coral picks are Pip).
 
+> **Art direction v3 (owner, overrides 3.1's proportions and hair construction; the identity below stays):** Riff is a lanky
+> virtual-band frontman, not a 3.5-head chibi. About 6 heads to the crown at 1.67 m (1.88 m with the hair), a small long-jawed
+> head on a long neck, narrow sloped shoulders, a thin slouched torso, very long thin limbs, big hands, oversized chunky
+> high-tops. The hair is no longer the extruded Slab with hype plates: it is a sculpted quiff of big swept chunks growing
+> off a short undercut, leaning to the strumming side, ink with a tangerine streak and tangerine tips, a ducktail flick at
+> the back; the whole quiff grows with the hype level (one slider bone). Built in `art/chars/riff.py`.
+
 ### 3.1 Modelling brief
 
 **Height:** 1.80 m to the hair's high step; 3.5 heads to the skull top. Head 0.45 m tall.

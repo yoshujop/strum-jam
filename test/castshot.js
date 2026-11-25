@@ -3,12 +3,14 @@
 // what (default: all), comma separated:
 //   faces    <m>-faces.png: every named expression as 2D ink (large, and at 40 px = a face on a phone)
 //   turn     <m>-turntable.png: the rest pose, no instrument, 8 angles
+//   hair     (with turn) <m>-hair.png: the head close up from 8 angles (the last one from above)
 //   heads    <m>-heads.png: the head in 3D with 6 expressions, front and three-quarter
 //   hold     <m>-hold.png: the hands on the instrument from three sides;  <m>-hype.png: the hair's hype levels 0..4
 //   poses    <m>-poses.png: the signature poses, front and three-quarter;  <m>-pose-<name>.png large
 //   sil      <m>-silhouette.png: ART_BIBLE 12.1, black silhouettes at 64 px (and x4), without and with the instrument
-//   stage    <m>-stage-1280x665-<pose>.png / -390x844-<pose>.png: on the lit club stage at real in-game size
-// Env: MODELS=path/a.glb,path/b.glb to use scratch builds instead of vendor/models.
+//   stage    <m>-stage-1280x665-<pose>.png / -390x844-<pose>.png: on the lit club stage at real in-game size, framed as the
+//            hero (low, close camera); FRAME=wide for the old whole-band distance
+// Env: FRAME=wide (stage);  MODELS=path/a.glb,path/b.glb to use scratch builds instead of vendor/models.
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const { findModel, buildPage } = require('./gfxpage.js');
@@ -57,6 +59,10 @@ Shot.studio = async (what) => {
     const cv2 = document.createElement('canvas'); cv2.width = 2400; cv2.height = 1200; const c2 = cv2.getContext('2d');
     c2.drawImage(snap(box(-0.45, 1.0, -0.3, 0.45, 1.82, 0.3), -25, 4, 1200, 1200, 1.0), 0, 0); c2.drawImage(snap(box(-0.5, 0, -0.3, 0.5, 0.7, 0.3), 30, 12, 1200, 1200, 1.0), 1200, 0);
     outs.detail = Shot.png(cv2);
+    if (what.includes('hair')) { A.rig.worldPos('head', hp); const S = 480, hv = document.createElement('canvas'); hv.width = S * 4; hv.height = S * 2; const hc = hv.getContext('2d');
+      const hb = box(hp.x - 0.3, hp.y - 0.12, hp.z - 0.3, hp.x + 0.3, hp.y + 0.52, hp.z + 0.3);
+      for (let i = 0; i < 8; i++) hc.drawImage(snap(hb, i * 45, i === 7 ? 40 : 6, S, S, 1.0), (i % 4) * S, (i >> 2) * S);
+      outs.hair = Shot.png(hv); }
     A.root.visible = false;
   }
   if (what.includes('sil')) {
@@ -80,14 +86,14 @@ Shot.studio = async (what) => {
   if (what.includes('heads') || what.includes('hold') || what.includes('poses')) {
     const A = Cast.spawn(M); scene.add(A.root); A.lookAt(front);
     if (what.includes('heads')) {
-      A.pose('rest'); const names = ['smirk', 'locked', 'grin', 'yell', 'flinch', 'camera'], S = 520, cv = document.createElement('canvas'); cv.width = S * 6; cv.height = S * 2; const c = cv.getContext('2d');
-      names.forEach((n, i) => { A.express(n, { snap: true }); Shot.settle(A, 6); A.rig.worldPos('head', hp); const b = box(hp.x - 0.4, hp.y - 0.08, hp.z - 0.3, hp.x + 0.4, hp.y + 0.72, hp.z + 0.3);
+      A.pose('rest'); const names = ['smirk', 'locked', 'grin', 'yell', 'rock', 'camera'], S = 520, cv = document.createElement('canvas'); cv.width = S * 6; cv.height = S * 2; const c = cv.getContext('2d');
+      names.forEach((n, i) => { A.express(n, { snap: true }); Shot.settle(A, 6); A.rig.worldPos('head', hp); const b = box(hp.x - 0.26, hp.y - 0.1, hp.z - 0.3, hp.x + 0.26, hp.y + 0.42, hp.z + 0.3);
         c.drawImage(snap(b, 0, 2, S, S, 1.0), i * S, 0); c.drawImage(snap(b, i % 2 ? 38 : -38, 6, S, S, 1.0), i * S, S); Shot.label(c, n, i * S, 0); });
       outs.heads = Shot.png(cv); A.express(DEF.face.base, { snap: true });
     }
     if (what.includes('hold')) {
       A.pose('lean'); A.strum(1, { in: 0 }); Shot.settle(A); A.rig.worldPos('att_hip', hp); const S = 760, cv = document.createElement('canvas'); cv.width = S * 3; cv.height = S * 2; const c = cv.getContext('2d');
-      const b = box(hp.x - 0.45, hp.y - 0.3, hp.z - 0.2, hp.x + 0.75, hp.y + 0.55, hp.z + 0.3);
+      const b = box(hp.x - 0.45, hp.y - 0.38, hp.z - 0.2, hp.x + 0.75, hp.y + 0.98, hp.z + 0.3);
       [[0, 8], [48, 22], [-52, 14]].forEach((v, k) => c.drawImage(snap(b, v[0], v[1], S, S, 0.92), k * S, 0));
       A.strum(-1, { in: 0 }); Shot.settle(A, 10);
       [[0, 60], [20, 4], [-25, 30]].forEach((v, k) => c.drawImage(snap(b, v[0], v[1], S, S, 0.92), k * S, S));
@@ -97,7 +103,7 @@ Shot.studio = async (what) => {
       outs.hype = Shot.png(hv); A.hype(0);
     }
     if (what.includes('poses')) {
-      const list = [['lean', 0, 'smirk'], ['lean_dip', 1, 'locked'], ['lean', -1, 'grin'], ['kickstand', 1, 'yell']], CW = 640, CH = 760, cv = document.createElement('canvas'); cv.width = CW * 4; cv.height = CH * 2; const c = cv.getContext('2d');
+      const list = [['lean', 0, 'smirk'], ['lean_dip', 1, 'locked'], ['lean', -1, 'grin'], ['kickstand', 1, 'rock']], CW = 640, CH = 760, cv = document.createElement('canvas'); cv.width = CW * 4; cv.height = CH * 2; const c = cv.getContext('2d');
       const b = box(-0.8, 0, -0.4, 0.8, 1.85, 0.5);
       list.forEach((p, i) => { A.pose(p[0]); A.strum(p[1], { in: 0 }); A.express(p[2], { snap: true }); Shot.settle(A, 50);
         c.drawImage(snap(b, 0, 5, CW, CH, 1.04), i * CW, 0); c.drawImage(snap(b, i === 3 ? 55 : -40, 8, CW, CH, 1.04), i * CW, CH);
@@ -113,11 +119,16 @@ Shot.stage = async (tier) => {
   const T = THREE; GFX.init(document.getElementById('c'), { tier, auto: false });
   const scene = Shot.scene = new T.Scene(), portrait = innerHeight > innerWidth, cam = new T.PerspectiveCamera(portrait ? 34 : 30, innerWidth / innerHeight, 0.1, 200);
   GFX.setScene(scene, cam); GfxTest.stage(scene); if (typeof VFX !== 'undefined') scene.add(VFX.init());
-  if (portrait) { cam.position.set(0, 1.5, 7.6); cam.lookAt(0, 1.02, 0); } else { cam.position.set(0, 1.7, 10.4); cam.lookAt(0, 1.25, 0); }
-  cam.updateMatrixWorld(true);
+  // hero framing (default): low and close, the character fills about two thirds of the frame height. FRAME=wide: the old band shot.
+  if (${JSON.stringify(process.env.FRAME || 'hero')} === 'wide') { if (portrait) { cam.position.set(0, 1.5, 7.6); cam.lookAt(0, 1.02, 0); } else { cam.position.set(0, 1.7, 10.4); cam.lookAt(0, 1.25, 0); } }
+  else if (portrait) { cam.position.set(1.5, 0.8, 4.5); cam.lookAt(0.06, 0.98, 0); } else { cam.fov = 28; cam.updateProjectionMatrix(); cam.position.set(0.9, 0.85, 4.9); cam.lookAt(0.2, 1.0, 0); }
+  cam.updateMatrixWorld(true); Shot.cam = cam; Shot.hero = ${JSON.stringify(process.env.FRAME || 'hero')} !== 'wide';
+  Toon.look({ rim: { dir: { az: 160, el: 28 }, color: '#bff4ff', threshold: 0.5, strength: 1.15 } });      // a back light: the hero comes off the backdrop
   const A = Shot.A = Cast.spawn(M); scene.add(A.root); StageKit.blob(A.root, 0.5); A.lookAt(cam.position);
 };
-Shot.pose = async (p, strum, face, hype) => { const A = Shot.A; A.pose(p); A.strum(strum, { in: 0 }); A.express(face, { snap: true }); A.hype(hype || 0); Shot.settle(A, 50);
+// (on a phone the camera pulls back for the Kickstand: the kick is wide)
+Shot.pose = async (p, strum, face, hype) => { const A = Shot.A;
+  if (Shot.cam && innerHeight > innerWidth && Shot.hero) { if (p === 'kickstand') { Shot.cam.position.set(1.1, 0.8, 6.1); Shot.cam.lookAt(0.0, 1.08, 0); } else { Shot.cam.position.set(1.5, 0.8, 4.5); Shot.cam.lookAt(0.06, 0.98, 0); } Shot.cam.updateMatrixWorld(true); A.lookAt(Shot.cam.position); } A.pose(p); A.strum(strum, { in: 0 }); A.express(face, { snap: true }); A.hype(hype || 0); Shot.settle(A, 50);
   for (let i = 0; i < 4; i++) { GFX.render(1 / 60); await new Promise(r => requestAnimationFrame(r)); } return Object.assign({ errors: Shot.errors }, GFX.stats); };
 `;
 
@@ -134,7 +145,7 @@ Shot.pose = async (p, strum, face, hype) => { const A = Shot.A; A.pose(p); A.str
     const o = await p.evaluate(w => Shot.studio(w), what); for (const k in o) save(k, o[k]); await p.close(); }
   if (what.includes('stage')) for (const [w, h] of [[1280, 665], [390, 844]]) {
     const p = await open(w, h); await p.evaluate(t => Shot.stage(t), process.env.TIER || 'medium');
-    for (const [pose, strum, face, hype] of [['lean', 1, 'smirk', 0], ['kickstand', 1, 'yell', 4]]) { const st = await p.evaluate(a => Shot.pose(a[0], a[1], a[2], a[3]), [pose, strum, face, hype]);
+    for (const [pose, strum, face, hype] of [['lean', 1, 'smirk', 0], ['kickstand', 1, 'rock', 4]]) { const st = await p.evaluate(a => Shot.pose(a[0], a[1], a[2], a[3]), [pose, strum, face, hype]);
       const f = path.join(out, member + '-stage-' + w + 'x' + h + '-' + pose + '.png'); await p.screenshot({ path: f }); console.log(f, st.calls + ' draws', st.tris + ' tris', st.errors.length ? st.errors : ''); }
     await p.close(); }
   await b.close(); if (bad) process.exitCode = 2;
