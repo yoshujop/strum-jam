@@ -8,7 +8,8 @@
    - Bass / Vocals: how loud your notes come in, which sets the level a
      note has to reach to count (and whether the pitch is read at all).
    - Drums: what your kick, snare and hats look like to the mic, so
-     acoustic drums into the mic are told apart (not just timed).
+     acoustic drums into the mic are told apart (not just timed). The
+     features come from the capture worklet at the hit itself.
    Learned per mic, next to its room noise (Mic profiles).
    ===================================================================== */
 const Calib = {
@@ -25,13 +26,14 @@ const Calib = {
     return [q];
   },
   sleep(ms){ return new Promise(r => setTimeout(r, ms)); },
-  // spectrum features of a hit: brightness (centroid, Hz) and how much sits below 150 Hz
-  hitFeatures(){
-    const db = Mic.smallDb; if (!db) return null;
-    const binHz = Mic.sr / (2 * db.length); let tot = 0, cen = 0, low = 0;
-    for (let i = 1; i < db.length; i++) { const p = Math.pow(10, db[i] / 10); tot += p; cen += p * i * binHz; if (i * binHz < 150) low += p; }
-    return tot ? { cen: cen / tot, low: low / tot } : null;
+  // spectrum features of the latest hit, taken by the capture worklet AT the attack: brightness (centroid, Hz) and how
+  // much sits below 150 Hz. (They used to be read from the analyser when the game got round to it, ~0.6 s later: the room.)
+  hitFeatures(o){
+    o = o || Mic.lastFast; const f = o && o.feat; if (!f || !(f.cen > 0)) return null;
+    if (!arguments.length && Hear.now() - o.t > 0.4) return null;
+    return { cen: f.cen, low: f.low };
   },
+  drumStep: false,
   async run(inst, onStep){
     if (!Mic.on && !(await Mic.start())) return { ok: false, why: 'mic' };
     this.running = true; Mic.calibrating = true;
@@ -43,8 +45,8 @@ const Calib = {
         await this.sleep(st.id === 'quiet' ? 400 : 900);             // time to get ready
         const t0 = performance.now(), end = t0 + st.sec * 1000;
         let maxExp = 0, maxOther = 0, ok = 0, n = 0, got = 0, tries = 0; const lvls = [];
-        const onHit = () => { const f = this.hitFeatures(); if (f && st.id === 'drum') res.hits[st.lane].push(f); };
-        if (st.id === 'drum') Mic.onsetListeners.add(onHit);
+        const onHit = (t, o) => { const f = o ? this.hitFeatures(o) : this.hitFeatures(); if (f && st.id === 'drum') res.hits[st.lane].push(Object.assign({ s: o ? o.strength : 1 }, f)); };
+        if (st.id === 'drum') { Mic.onsetListeners.add(onHit); this.drumStep = true; }
         while (performance.now() < end) {
           await this.sleep(st.id === 'voice' || st.id === 'bass' ? 60 : 140);
           if (st.id === 'quiet') { noise.push(Mic.rms); continue; }
@@ -58,12 +60,12 @@ const Calib = {
             else if (Mic.rms > 0.004) lvls.push(Mic.rms);
           }
         }
-        if (st.id === 'drum') Mic.onsetListeners.delete(onHit);
+        if (st.id === 'drum') { Mic.onsetListeners.delete(onHit); this.drumStep = false; }
         if (st.id === 'note') { res.played.push(maxExp); res.ghosts.push(maxOther); }
         if (st.id === 'chord') { res.chords++; if (n && ok / n > 0.2) res.chordsOk++; }
         if (st.id === 'voice' || st.id === 'bass') { res.rms.push(...lvls); res.want += tries; if (st.id === 'voice') res.seen += got; }
       }
-    } finally { this.running = false; Mic.calibrating = false; }
+    } finally { this.running = false; Mic.calibrating = false; this.drumStep = false; }
     noise.sort((a, b) => a - b); const floor = noise[noise.length >> 1] || Mic.noiseRms;
     return this.learn(inst, res, floor);
   },
@@ -85,8 +87,12 @@ const Calib = {
         : rate > 0.4 ? 'Got it: your voice comes through clearly. The level a note needs is set to your voice.' : 'Your voice was hard to read. Sing a bit louder or closer to the mic, and wear headphones.';
     } else if (inst === 'drums') {
       const cen = {}; let n = 0;
-      for (const l of ['kick', 'snare', 'hat']) { const hs = r.hits[l]; if (hs.length >= 2) { cen[l] = { cen: this.q(hs.map(h => h.cen), 0.5), low: this.q(hs.map(h => h.low), 0.5) }; n++; } }
-      ears.drums = n >= 2 ? { cen } : null;
+      for (const l of ['kick', 'snare', 'hat']) {
+        // "4 times": the 4 clearest attacks of the step are the drum; anything fainter is bleed, a stick click or an echo
+        let hs = r.hits[l]; if (hs.length > 4 && hs[0].s != null) hs = hs.slice().sort((a, b) => b.s - a.s).slice(0, 4);
+        if (hs.length >= 2) { cen[l] = { cen: this.q(hs.map(h => h.cen), 0.5), low: this.q(hs.map(h => h.low), 0.5) }; n++; }
+      }
+      ears.drums = n >= 2 ? { cen, v: 2 } : null;                    // v 2: features measured at the attack
       out.msg = n >= 2 ? `Learned ${n} drums. Hits into the mic now count for the right drum.` : 'I didn’t hear enough hits. Play each drum 4 times, a little harder, then try again.';
     }
     Mic.saveEars();
@@ -95,7 +101,7 @@ const Calib = {
   },
   // which drum a mic hit was, from what calibration learned (null = untrained: timing only)
   classify(){
-    const e = Mic.ears && Mic.ears.drums; if (!e) return null;
+    const e = Mic.ears && Mic.ears.drums; if (!e || e.v !== 2) return null;       // older trainings described the room's tail
     const f = this.hitFeatures(); if (!f) return null;
     let best = null, bd = 1e9;
     for (const [l, c] of Object.entries(e.cen)) { const d = Math.abs(Math.log2(f.cen / c.cen)) + Math.abs(f.low - c.low) * 3; if (d < bd) { bd = d; best = l; } }

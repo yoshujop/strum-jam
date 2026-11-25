@@ -1,6 +1,6 @@
 /* =====================================================================
    Mic: live listening on any microphone.
-   - Strum onsets from spectral flux, gated against the mic's own noise floor.
+   - Strum / hit onsets from the capture worklet (Capture -> Hear -> Mic.fastOnset), sample-exact.
    - Chord listening via Ear (long FFT + note estimation), every 3rd frame.
    - Learns each mic's background noise (hum, fans, hiss) and saves it per device.
    - McLeod pitch tracker for the tuner.
@@ -116,31 +116,8 @@ const Mic = {
       else if (now - this.lastOnset > 2.5) this.noiseRms = this.noiseRms * 0.985 + p10 * 0.015;
       this.noiseRms = Math.max(0.0002, this.noiseRms);
     }
-    const gate = this.gate();
-    // --- strum onsets from the small window ---
-    this.anSmall.getFloatFrequencyData(this.smallDb);
-    const kb = this.sr / this.anSmall.fftSize;
-    const lo = Math.floor(80 / kb), hi = Math.min(this.smallDb.length - 1, Math.floor(5000 / kb));
-    let flux = 0;
-    for (let k = lo; k <= hi; k++) {
-      const d = this.smallDb[k]; const p = this.prevDb[k];
-      if (d > -95) { const inc = d - Math.max(p, -95); if (inc > 0) flux += inc; }
-      this.prevDb[k] = d;
-    }
-    const fh = this.fluxHist; fh.push(flux); if (fh.length > 40) fh.shift();
-    const sorted = fh.slice().sort((a, b) => a - b); const med = sorted[Math.floor(sorted.length / 2)] || 0;
-    const sens = Settings.sens;
-    const thr = Math.max(med * 2.2, 260 + (10 - sens) * 40);
-    const loudEnough = this.rms > gate * (1.9 - sens * 0.09);
-    if (this.rms > gate * 1.25) this.lastLoud = now;
-    if (flux > thr && loudEnough && now - this.lastOnset > 0.11 && now > this.muteUntil) {
-      this.lastOnset = now;
-      const t = now - 0.012;
-      if (Listen.ready) { /* the neural listener reports strums itself; raw loudness jumps are ignored */ } else {
-      this.onsets.push(t); if (this.onsets.length > 40) this.onsets.shift();
-      this.onsetListeners.forEach(fn => fn(t));
-      }
-    }
+    if (this.rms > this.gate() * 1.25) this.lastLoud = now;
+    // (strum / hit onsets come from the capture worklet: Mic.fastOnset)
     Listen.tick(wantEar);
     // --- chord listening (and noise learning when the room is quiet) ---
     if (this.frame % 3 !== 0) return;
@@ -165,6 +142,23 @@ const Mic = {
     this.anLong.getFloatTimeDomainData(this.longBuf);
     this.an = Ear.analyze(this.longBuf, this.sr, this.noiseReady ? this.noise : null);
     this.anTime = now; this.anSeq++; this.remember(now, this.an);
+  },
+  // An attack the capture worklet heard (Hear.fastOnset), a few tens of ms after the sound; o.t is its exact time.
+  // Listeners get it at once: fn(t, o). During a guitar / piano run a noisy attack (a clap, a voice, a knock) waits for
+  // the note model to confirm a strum there instead (Listen.findStrums -> Listen.strumListeners, same t).
+  lastFast: null,
+  fastMode(){ return (typeof Parts !== 'undefined' && Parts.active && Parts.inst === 'drums') || (typeof Calib !== 'undefined' && Calib.drumStep); },
+  fastOnset(o){
+    if (!this.on) return;
+    const drums = this.fastMode();
+    if (o.t < this.muteUntil || (drums && o.t < this.deafUntil)) return;          // the game's own sounds
+    // the sensitivity setting (0-10, 6 = as measured): lower it and only clear attacks count
+    if (o.strength < 1 + (6 - Settings.sens) * 0.25) return;
+    this.lastFast = o; this.lastOnset = Math.max(this.lastOnset, o.t); this.lastLoud = Math.max(this.lastLoud, o.t);
+    if (!drums && o.kind === 'noise' && Listen.ready && Listen.linked && typeof G !== 'undefined' && G.running) return;
+    o.sent = true;
+    this.onsets.push(o.t); if (this.onsets.length > 40) this.onsets.shift();
+    this.onsetListeners.forEach(fn => fn(o.t, o));
   },
   // a short history of frames, so a strum can be compared with what was already sounding before it
   hist: [],
