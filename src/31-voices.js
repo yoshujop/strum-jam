@@ -187,7 +187,7 @@ const Voices = (() => {
     const x = c(), f = hz(midi), d = dest || O('pad'); v = v == null ? 0.6 : v;
     const safe = kind === 'safe' || leaky();
     if (safe) dur = Math.max(0.15, dur - 0.16);            // out of the way before the next chord is judged
-    const [att, rel, fc, pk] = safe ? [0.3, 0.25, 900, 0.12] : kind === 'strings' ? [0.16, 0.3, 2600, 0.034] : kind === 'saw' ? [0.02, 0.12, 3600, 0.06] : [0.12, 0.3, 1300, 0.042];
+    const [att, rel, fc, pk] = safe ? [0.3, 0.25, 900, 0.055] : kind === 'strings' ? [0.16, 0.3, 2600, 0.034] : kind === 'saw' ? [0.02, 0.12, 3600, 0.06] : [0.12, 0.3, 1300, 0.042];
     const amp = held(t, dur, pk * v, att, 0.6, 0.85, rel / 3);
     const lp = x.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = fc; lp.Q.value = 0.6; lp.connect(amp).connect(d);
     const end = endOf(t, dur, rel / 3);
@@ -239,7 +239,7 @@ const Voices = (() => {
       return;
     }
     const cfg = { brass: ['sawtooth', 0.05, 0.018, 700, 3000, 1500, 0.2, 1.5], pluck: ['sawtooth', 0.09, 0.003, 3400, 3400, 500, 0.12, 2.5], saw: ['sawtooth', 0.055, 0.01, 2600, 3200, 2200, 0.3, 1],
-      kazoo: ['sawtooth', 0.11, 0.015, 1150, 1150, 1150, 0.3, 5] }[kind] || ['square', 0.05, 0.01, 2600, 2600, 2600, 0.3, 1];
+      kazoo: ['sawtooth', 0.3, 0.015, 1150, 1150, 1150, 0.3, 3.5] }[kind] || ['square', 0.05, 0.01, 2600, 2600, 2600, 0.3, 1];
     const [type, pk, att, f0, f1, f2, ft, q] = cfg;
     const amp = held(t, dur, pk * v, att, kind === 'pluck' ? 0.12 : 0.4, kind === 'pluck' ? 0.1 : 0.85, 0.03);
     const lp = x.createBiquadFilter(); lp.type = kind === 'kazoo' ? 'bandpass' : 'lowpass'; lp.Q.value = q;

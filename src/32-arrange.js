@@ -23,7 +23,7 @@
    chorus rhythm, crash), bridge (a one-bar drop, ride + rim, pad), fills into every section change (a snare build with a
    riser into a chorus), a small fill every fourth bar, a full-bar fill into the last hit.
    Leak 'safe' (mic open on speakers): unpitched drums, bass on root / fifth / octave only, one soft slow pad on the
-   chord's own notes, no hook, no 'whoa'.  Leak 'drums': drums only.
+   chord's third and fifth (C5 and up), no hook, no 'whoa'.  Leak 'drums': drums only.
    ===================================================================== */
 const Arranger = (() => {
   const m12 = n => ((n % 12) + 12) % 12;
@@ -62,7 +62,7 @@ const Arranger = (() => {
     shuffle:  { kit: { k: 0.95, kd: 0.9, s: 1.05, sd: 0.9 }, bass: 'finger', chHat: 'ride', perc: 'tamb', ghost: 1, prim: ['organ', '', '....s..s....s..s', 'h...s..sh...s..s'], sec: ['gtr', 'D', 'p..pp..pp..pp..p', 'p..pp..pp..pp..p'], hook: ['brass', 'stab'] },
     country:  { kit: { kd: 0.7, s: 1.1, sd: 0.7 }, bass: 'upright', chHat: 'same', perc: 'tamb', prim: ['gtr', 'A', '....t.u.....t.u.', 'c...t.u.c...t.u.'], sec: ['gtr', 'E', '..2...3...2...4.', '..2.3.4...2.3.4.'], hook: ['pluck', 'line'] },
     reggae:   { kit: { k: 0.9, kd: 0.9, s: 1.4, sd: 0.5 }, bass: 'finger', chHat: 'same', perc: 'shaker', prim: ['gtr', 'E', '..t...t...t...t.', '..t...t...t...t.'], sec: ['organ', '', '...s...s...s...s', 'h..s...sh..s...s'], hook: ['brass', 'stab'] },
-    punk:     { kit: { k: 1.1, kd: 0.7, s: 1.15, sd: 0.8 }, bass: 'pick', chHat: 'crash', perc: null, prim: ['gtr', 'D', 'P.P.P.P.P.P.P.P.', 'P.P.P.P.P.P.P.P.'], sec: null, hook: ['saw', 'line'] },
+    punk:     { kit: { k: 1.1, kd: 0.7, s: 1.15, sd: 0.8 }, bass: 'pick', chHat: 'crash', perc: 'tamb', prim: ['gtr', 'D', 'P.P.P.P.P.P.P.P.', 'P.P.P.P.P.P.P.P.'], sec: null, hook: ['saw', 'line'] },
     hiphop:   { kit: { k: 0.75, kd: 1.6, sd: 0.9 }, bass: 'sub', chHat: 'same', perc: 'shaker', ghost: 1, rolls: 1, prim: ['ep', '', 'h.........h.....', 'h.....h...h.....'], sec: null, pad: ['pad', 2], hook: ['bell', 'line'] },
     metal:    { kit: { k: 1.2, kd: 0.5, s: 1.1, sd: 0.9, click: 2 }, bass: 'pick', chHat: 'crash', perc: null, prim: ['gtr', 'D', 'pppppppppppppppp', 'P..P..P.P..P..P.'], sec: null, pad: ['strings', 4], hook: ['saw', 'line'] },
     folk:     { kit: { k: 0.95, kd: 0.7, sd: 0.7 }, bass: 'upright', chHat: 'same', perc: 'shaker', prim: ['gtr', 'A', 'b.2.b.3.b.2.b.4.', 'c...c.u...u.c.u.'], sec: ['organ', '', 'h...............', 'h...............'], hook: ['whistle', 'line'] },
@@ -103,6 +103,10 @@ const Arranger = (() => {
     let pcs = ch.pcs.slice(0, 5); if (pcs.length >= 4) pcs = pcs.slice(1);          // the bass has the root
     return pcs.slice(0, 4).map(pc => inWin(pc, lo)).sort((a, b) => a - b);
   }
+  // the leak-safe pad: the chord's third and fifth above every note an open-position shape frets (the bass has the root).
+  // A close triad lower down is harmonics 4:5:6 of the root two octaves below, and the note model then hears that root
+  // (measured: a false light on the root's strings); two high notes do not.
+  const safeV = ch => ch.pcs.slice(1, 3).map(pc => inWin(pc, 72));
   const padV = (ch, lo) => ch.pcs.slice(0, 4).map(pc => inWin(pc, lo)).sort((a, b) => a - b);
   // barre-chord shapes: root on the 6th or 5th string, then 5th, octave (or 7th), 3rd, 5th, octave
   function gtrV(ch){
@@ -243,7 +247,7 @@ const Arranger = (() => {
 
     /* ---------- chords ---------- */
     if (leak === 'safe') {
-      if (L >= 1 && !q.noComp && !introThin) for (const s of spans) if (s.ch) padV(s.ch, 60).slice(0, 3).forEach(m => push(s.i0, 'pad', 0.7, { midi: m, len: s.i1 - s.i0, o: 'safe' }));
+      if (L >= 1 && !q.noComp && !introThin) for (const s of spans) if (s.ch) safeV(s.ch).forEach(m => push(s.i0, 'pad', 0.7, { midi: m, len: s.i1 - s.i0, o: 'safe' }));
     } else if (leak === 'full') {
       const layers = [];
       if (!q.noComp) {
@@ -282,7 +286,7 @@ const Arranger = (() => {
       if (!q.noComp && kind !== 'intro' && (L >= pd[1] || (chorusy && L >= Math.max(1, pd[1] - 1)) || (kind === 'bridge' && L >= 1)))
         for (const s of spans) if (s.ch) { const v = padV(s.ch, 60); if (L >= 4 && pd[0] !== 'saw') v.push(v[0] + 12); v.forEach(m => push(s.i0, 'pad', 0.7, { midi: m, len: s.i1 - s.i0, o: pd[0] })); }
       // hook
-      if (pk.hook && L >= 3 && (chorusy || L >= 4) && kind !== 'intro' && !drop && !F) {
+      if (pk.hook && L >= 3 && (chorusy || L >= 4 || q.barIn % 4 >= 2) && kind !== 'intro' && !drop && !F) {      // at hype 3 a verse gets the hook as an answer in the second half of each 4-bar phrase
         const [hk, type] = pk.hook, odd = q.barIn % 2;
         if (type === 'stab') {
           const str = n === 16 ? STAB[odd] : 's' + '.'.repeat(n - 1);
@@ -307,7 +311,7 @@ const Arranger = (() => {
     if (!ch || leak === 'drums') return E;
     if (!q.noBass) E.push({ i: 0, inst: 'bass', v: 1, midi: ch.root, len: hold, o: pk.bass });
     if (q.noComp) return E;
-    if (leak === 'safe') { padV(ch, 60).slice(0, 3).forEach(m => E.push({ i: 0, inst: 'pad', v: 0.7, midi: m, len: hold, o: 'safe' })); return E; }
+    if (leak === 'safe') { safeV(ch).forEach(m => E.push({ i: 0, inst: 'pad', v: 0.7, midi: m, len: hold, o: 'safe' })); return E; }
     const [inst, gk] = pk.prim;
     if (inst === 'gtr') E.push({ i: 0, inst: 'gtr', v: 0.95, notes: gk === 'D' ? powerV(ch) : gtrV(ch), len: hold, o: { kind: gk, gap: 0.02 } });
     else keysV(ch, 57).forEach(m => E.push({ i: 0, inst: inst === 'pluck' ? 'ep' : inst, v: 0.85, midi: m, len: hold }));

@@ -464,6 +464,7 @@ function buildPattern(chart, styleOverride){
    Groove.beatAt(t) / timeOf(k) / swingOff(i)      the grid
    Groove.plan(k) / events(now)                    what the drummer plays (kinds: stick kick snare hat tom crash)
    Groove.harmony(t) -> { root, pcs, fifth } | null     the chord sounding at t (for in-key effects)
+   Groove.sounding(t) -> [{ midi, inst, t, end }]       the band's own pitched notes at t (reference for the note check)
    Groove.nextTime(div)   audio time of the next beat (div = 1), half beat (0.5), 'bar'
    Groove.stinger(name, div)   Sfx.stinger(name) on the next beat / bar
    Groove.sectionAt(t) -> { name, kind, index, bar, barIn, bars }
@@ -596,6 +597,9 @@ const Groove = {
     const beats = div === 'bar' ? c.pattern.n / c.sub : (div || 1);
     return c.startTime + Math.ceil(this.beatAt(now + 0.03) / beats) * beats * c.beatDur;
   },
+  // the pitched notes the band itself has sounding at audio time t (default now): [{ midi, inst, t, end }]. A reference
+  // for the recognizer: a note heard at the mic that is in this list may be the speakers, not the player.
+  sounding(t){ const ns = this.run && this.run.notes; if (!ns || !this.running) return []; if (t == null) t = AudioEngine.now(); return ns.filter(n => n.t <= t + 0.03 && n.end > t - 0.05); },
   stinger(name, div){ const t = this.nextTime(div); if (typeof Sfx !== 'undefined' && Sfx.stinger) Sfx.stinger(name, t); return t; },
   sectionAt(t){
     const c = this.cfg; if (!c || !this.run) return null;
@@ -641,6 +645,7 @@ const Groove = {
     if (e.kind) this.hits.push({ t: gridT + (e.f || 0) * sd, kind: e.kind });
     if (skip) return;
     const t = Math.max(at + (e.f || 0) * sd + (e.dt || 0), AudioEngine.ctx.currentTime), v = e.v, len = (e.len || 1) * sd;
+    if (e.midi != null || (e.notes && e.notes.length)) { const ns = this.run.notes || (this.run.notes = []); for (const m of e.midi != null ? [e.midi] : e.notes) ns.push({ t, end: t + Math.max(len, 0.15), midi: m, inst: e.inst }); if (ns.length > 160) ns.splice(0, ns.length - 160); }
     switch (e.inst) {
       case 'kick': { V.kick(t, v); const pm = Arranger.pack(c.style).pump; if (pm) AudioEngine.pump(t, pm, ['pad', 'keys']); break; }
       case 'tom': V.tom(t, v, e.o); break;

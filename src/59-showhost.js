@@ -51,7 +51,13 @@ const ShowHost = {
     Groove.start({ mode: 'song', bpm: track.bpm, sub: chart.sub, swing, pattern, click: (typeof Settings !== 'undefined' && Settings.click) || pattern.none,
       countIn: opts.countIn != null ? opts.countIn : (chart.beats <= 2 ? chart.beats * 2 : chart.beats), firstBar: 0, endBar: chart.totalBars,
       sectionStarts: new Set(chart.sections.map(s => s.startBar)), fillBars: new Set(chart.sections.map(s => s.startBar + s.bars - 1).filter(b => b < chart.totalBars - 1)),
-      noKit: inst === 'drums', onEnd: () => {} });
+      noKit: inst === 'drums', noBass: inst === 'bass', noComp: inst === 'piano', sections: chart.sections,
+      // the chord under step k, so the band's bass and chord instruments play the song (see Groove.start in 30-audio.js)
+      harmAt: k => { const beat = k / chart.sub; let e = null; for (const x of chart.events) { if (x.beat <= beat + 1e-6) e = x; else break; }
+        if (!e || e.rest || !e.shape) return null;
+        const cap = chart.capo || 0, iv = (typeof QUALITIES !== 'undefined' && QUALITIES[e.shape.quality]) || [0, 4, 7];
+        return { root: 28 + mod12(mod12((e.shape.bass != null ? e.shape.bass : e.shape.root) + cap) - 4), fifth: iv.includes(7) ? 7 : iv.includes(6) ? 6 : iv.includes(8) ? 8 : 7, pcs: iv.map(i => mod12(e.shape.root + cap + i)) }; },
+      onEnd: () => {} });
     this.hookMic(mode, inst);
     this.loop();
     return track;

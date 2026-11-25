@@ -163,10 +163,14 @@ Every instrument can record takes; drums (and MIDI keys/bass) record the game's 
   hype level and leak mode), `src/35-music.js` (menu theme on the same voices, mix follows the screen), `src/36-sfx.js` (in-key
   hit sounds, jingles). Each file starts with its API.
 - Leak modes (`AudioEngine.leakMode()`): `full` (mic off or headphones), `safe` (mic on, speakers: unpitched drums, root/fifth
-  bass, one soft pad on the chord's notes), `drums` (`Settings.leakBand = 'drums'`, or `cfg.leakSafe: 'drums'`).
+  bass, one soft pad on the chord's third and fifth from C5 up), `drums` (`Settings.leakBand = 'drums'`, or `cfg.leakSafe: 'drums'`).
+  Measured with the band fed back into the mic: `safe` never passed a chord or flagged a wrong note for a silent player, but the
+  bass lights the chord's root string about a fifth of the time (`drums`: never). `Groove.sounding(t)` lists the band's own
+  pitched notes, for a recognizer that wants to discount them.
 - `node test/audiotest.js offline|rt|stall|sfx|menu [outdir]` (`WAV=1` keeps the renders): loudness, clipping, spectrum, stereo,
   note density per style / hype level / leak mode; `node test/audioleak.js silence|test/right.wav [secs] [level] [safe|drums]`:
   does the band leaking into the mic fool the note check.
+- `node test/arrangetest.js` (Node only, seconds): the arranger's rules for every style, section, hype level, metre and leak mode.
 
 ## Hearing (mic recognition, 2026-11)
 - `src/42-hearcore.js` (`HearCore`: onset detector, resampler, tuning estimate, sample-exact ring; plain maths, no DOM, also runs

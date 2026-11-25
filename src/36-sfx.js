@@ -78,7 +78,7 @@ const Sfx = (() => {
       N(t, 0.14, 1.4, 'bandpass', 420, 0.8);
       [67, 66, 65, 63].forEach((m, i) => L(t + 0.5 + i * 0.32, m, i === 3 ? 0.8 : 0.26, 0.9, 'kazoo'));
     },
-    fail(c, t){ L(t, 64, 0.1, 0.6, 'pluck'); L(t + 0.14, 58, 0.2, 0.6, 'pluck'); },
+    fail(c, t){ L(t, 64, 0.1, 1, 'pluck'); L(t + 0.14, 58, 0.25, 1, 'pluck'); L(t + 0.14, 46, 0.25, 0.8, 'pluck'); N(t + 0.14, 0.2, 0.1, 'lowpass', 300); },
     whoosh(c, t){
       const src = c.createBufferSource(); src.buffer = AudioEngine.noiseBuf;
       const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 0.9; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(2800, t + 0.3); f.frequency.exponentialRampToValueAtTime(600, t + 0.6);
